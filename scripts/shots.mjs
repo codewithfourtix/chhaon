@@ -47,7 +47,7 @@ const run = async () => {
   // 6. Site plate open
   await page.getByRole('button', { name: /^Priority/ }).click()
   await settle(page)
-  await page.mouse.click(900, 480)
+  await page.mouse.click(843, 590)
   await settle(page, 1200)
   await page.screenshot({ path: `${OUT}/06-site-plate.png` })
 

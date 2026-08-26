@@ -3,7 +3,8 @@ import { REGIONS, RESOLUTION, UNIT, VIEWS, YEARS } from '../data/regions'
 import { PLACEHOLDER_SITES } from '../data/placeholderSites'
 import { useApp } from '../state/store'
 
-const RAMP = ['--heat-1', '--heat-2', '--heat-3', '--heat-4', '--heat-5', '--heat-6']
+const HEAT_RAMP = ['--heat-1', '--heat-2', '--heat-3', '--heat-4', '--heat-5', '--heat-6']
+const CANOPY_RAMP = ['--canopy-1', '--canopy-2', '--canopy-3', '--canopy-4', '--canopy-5', '--canopy-6']
 
 export function InstrumentRail() {
   const view = useApp((s) => s.view)
@@ -89,11 +90,14 @@ export function ThermalScale() {
           ? ['0.1', '0.8']
           : ['0.3', '1.0']
 
+  // Each view brings its own ramp; the geometry never changes, so nothing shifts.
+  const ramp = view === 'canopy' ? CANOPY_RAMP : HEAT_RAMP
+
   return (
     <aside className="scale" aria-label={`Legend, ${UNIT[view]}`}>
       <span className="t-label scale__unit">{UNIT[view]}</span>
       <div className="scale__bar">
-        {RAMP.map((token, i) => (
+        {ramp.map((token, i) => (
           <span
             key={token}
             className="scale__stop"

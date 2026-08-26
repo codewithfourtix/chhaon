@@ -24,6 +24,15 @@
   --heat-5: #9E3626;
   --heat-6: #5F1218;
 
+  /* Canopy ramp — the canopy view's own scale. Same geometry as the thermal
+     scale so nothing shifts when the view changes. */
+  --canopy-1: #DDE5D2;
+  --canopy-2: #BCCFAE;
+  --canopy-3: #94B487;
+  --canopy-4: #6D9865;
+  --canopy-5: #477A47;
+  --canopy-6: #1D5C3A;
+
   --shadow-plate: 0 2px 8px rgb(31 27 20 / 0.10), 0 12px 32px rgb(31 27 20 / 0.14);
 
   /* Type */
@@ -39,7 +48,7 @@
   /* Layout */
   --rail-w: 264px;
   --rail-w-collapsed: 72px;
-  --scale-w: 56px;
+  --scale-w: 88px;
   --scrubber-h: 88px;
 
   /* Motion */
@@ -76,6 +85,13 @@
     --heat-5: #E89A3C;
     --heat-6: #FFD166;
 
+    --canopy-1: #1E3327;
+    --canopy-2: #2A5138;
+    --canopy-3: #37714A;
+    --canopy-4: #46925D;
+    --canopy-5: #5FBF7E;
+    --canopy-6: #9BE0AE;
+
     --shadow-plate: 0 2px 8px rgb(0 0 0 / 0.40), 0 12px 32px rgb(0 0 0 / 0.50);
   }
 }
@@ -101,6 +117,13 @@
   --heat-4: #C86A2A;
   --heat-5: #E89A3C;
   --heat-6: #FFD166;
+
+  --canopy-1: #1E3327;
+  --canopy-2: #2A5138;
+  --canopy-3: #37714A;
+  --canopy-4: #46925D;
+  --canopy-5: #5FBF7E;
+  --canopy-6: #9BE0AE;
 
   --shadow-plate: 0 2px 8px rgb(0 0 0 / 0.40), 0 12px 32px rgb(0 0 0 / 0.50);
 }

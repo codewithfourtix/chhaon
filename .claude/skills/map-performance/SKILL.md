@@ -65,21 +65,26 @@ Do this in the Python pipeline, not at runtime:
 - **Quantise scores** to the buckets the legend actually shows. Storing
   `0.7834129` when the legend has six stops is wasted bytes.
 
-## deck.gl update discipline
+## MapLibre update discipline
 
-deck.gl re-uploads a layer's data to the GPU whenever it thinks the data
-changed. Most stutter in a React map comes from this, not from the data size.
+Most stutter in a React map comes from rebuilding things that should be
+mutated in place.
 
-- Layer `data` must be a **stable reference**. Never build an array inline in
-  render. Memoise it, or hold it in the store.
-- Use `updateTriggers` for accessors that depend on state (the active year, the
-  active view). This recomputes only the changed attribute rather than the
-  whole buffer.
-- Prefer changing `visible` and `opacity` over unmounting and remounting layers.
-  A cross-fade between two mounted layers is cheap; a remount is not.
-- For the year scrubber, precompute **all** years into one buffer with a year
-  attribute, and filter on the GPU with `DataFilterExtension`. Do not swap
-  datasets per year — that reuploads on every drag frame.
+- **Never rebuild a layer to change how it looks.** `setPaintProperty` mutates
+  in place. Removing and re-adding a layer drops its transition state and
+  re-uploads the source.
+- **Selection is a paint expression, not a new layer.** Drive it with
+  `['case', ['==', ['get', 'id'], selectedId], 2.5, 0]` on `circle-stroke-width`.
+  For very large sources, use `feature-state` and `setFeatureState` instead so
+  only the touched feature updates.
+- **Animate with paint transitions.** `circle-radius-transition: { duration }`
+  gives you interpolation on the GPU for free. Do not animate by setting a new
+  radius every frame from JavaScript.
+- **`setData` beats remove-and-re-add** when only the data changed. Keep the
+  source, swap its contents.
+- **Filter, do not refetch.** For the year scrubber, load every year once and
+  drive the view with a layer `filter` or a paint expression on a year property.
+  Swapping datasets per year re-parses GeoJSON on every drag frame.
 
 ## React discipline
 

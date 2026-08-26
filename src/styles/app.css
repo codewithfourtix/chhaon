@@ -21,7 +21,7 @@
   padding: 2px 8px !important;
 }
 .maplibregl-ctrl-attrib a { color: var(--ink-1) !important; }
-.maplibregl-ctrl-bottom-right { margin: 0 calc(var(--scale-w) + 8px) 4px 0; }
+.maplibregl-ctrl-bottom-right { margin: 0 calc(var(--scale-w) + 8px) calc(var(--scrubber-h) + 8px) 0; }
 
 /* ---------- Overture ---------- */
 
@@ -195,6 +195,8 @@
   position: relative;
   flex: 1;
   width: 14px;
+  /* Shifted right so the tick values have room to run leftward without clipping. */
+  margin-left: 34px;
   display: flex;
   flex-direction: column-reverse;
   border: 1px solid var(--hairline);
@@ -204,7 +206,7 @@
 .scale__stop { flex: 1; border-top: 1px solid color-mix(in srgb, var(--plate-1) 50%, transparent); }
 .scale__stop:first-child { border-top: 0; }
 
-.scale__tick { position: absolute; left: 20px; color: var(--ink-1); white-space: nowrap; }
+.scale__tick { position: absolute; right: 22px; color: var(--ink-1); white-space: nowrap; }
 .scale__tick--hi { top: -2px; }
 .scale__tick--lo { bottom: -2px; }
 

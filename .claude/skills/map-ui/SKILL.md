@@ -5,9 +5,15 @@ description: How to build a map that reads as a professional city instrument rat
 
 # Map UI
 
-The stack is **MapLibre GL JS** (basemap, vector tiles, camera) with a
-**deck.gl** overlay (data layers, GPU). No Mapbox token, no Leaflet, no
-Kepler.gl. This is settled — do not reintroduce alternatives.
+The stack is **MapLibre GL JS**, rendering everything natively — basemap,
+camera, and data layers alike. No Mapbox token, no Leaflet, no Kepler.gl.
+
+**No deck.gl.** deck.gl 9.3's `MapboxOverlay` reads `map.transform`, which
+MapLibre 5+ no longer exposes publicly, so it throws on every rendered frame in
+both interleaved and overlaid modes. Native `circle` layers are also simply
+better at our scale: they live inside the style, so `beforeId` puts place labels
+above the data for free. Revisit deck.gl only past ~50k features, and only if
+the compatibility has actually been fixed upstream.
 
 Read `chhaon-design-system` first. This file is how that system gets applied to
 a map specifically.
@@ -53,9 +59,9 @@ The result should look like a survey sheet someone is about to draw on.
 6. Basemap labels — labels always sit **above** data so the map stays readable
 7. Chrome (rail, scale, scrubber) in DOM, not in WebGL
 
-Putting labels under data is the second most common amateur mistake. Use
-MapLibre's `beforeId` with the first symbol layer to slot deck.gl beneath the
-label layer.
+Putting labels under data is the second most common amateur mistake. Pass the
+first symbol layer's id as the third argument to `addLayer` — that argument is
+`beforeId`, and it slots the data layer underneath the labels.
 
 ## Switching views
 
@@ -89,8 +95,11 @@ keeps identical geometry, so nothing in the frame jumps.
 - Click: opens the site plate, and the feature keeps a persistent `--canopy`
   ring. The ring, not a fill change — a fill change corrupts the data reading.
 - Escape clears selection. Clicking the basemap clears selection.
-- Hit areas are generous: use deck.gl's `pickingRadius: 8`. Precise clicking on
-  small marks is a desktop-only luxury.
+- Hit areas are generous. `queryRenderedFeatures` accepts a bounding box, so
+  query a ~6px box around the click point rather than the bare point. Precise
+  clicking on small marks is a desktop-only luxury.
+- One click handler on the map, not one per layer: query the live data layers,
+  and treat an empty result as "clear the selection".
 
 ## Legend — the thermal scale
 
@@ -142,3 +151,31 @@ A canvas is invisible to a screen reader. This is not optional polish:
 - Rainbow / jet colour ramps.
 - Markers as pins. Use circles or extruded polygons sized by data.
 - A basemap in one visual language and data in another.
+
+
+## Gotchas that have already cost us a day
+
+**`isStyleLoaded()` is not "the style is ready".** It reports whether *tiles and
+sources* have finished loading, so it flaps to `false` whenever tiles stream in.
+Gating layer updates on it means the gate closes mid-session and never reopens,
+and every later view switch silently does nothing — with no error thrown.
+
+Use the **`style.load` event** instead. It fires exactly once per style, on
+first load and again after every `setStyle`. Set the flag false when you call
+`setStyle`, and true in the handler.
+
+**`setStyle` wipes your layers.** A theme change means re-adding every data
+source and layer once the new style has loaded. Structure the layer code so it
+can run repeatedly from scratch, and let the `style.load` flag drive it.
+
+**MapLibre 6 has no default export.** Import named: `import { Map as MapLibreMap,
+AttributionControl } from 'maplibre-gl'`.
+
+**Vite breaks MapLibre's worker.** The dep optimiser rewrites the worker import
+and it 404s, leaving a blank map with no console error. Fix in `vite.config.ts`:
+`optimizeDeps: { exclude: ['maplibre-gl'] }` and `worker: { format: 'es' }`.
+
+**Urdu and Arabic labels need the RTL text plugin.** Without
+`setRTLTextPlugin`, MapLibre renders the glyphs unjoined and in reverse order,
+which looks worse than not showing them at all. Until the plugin is self-hosted,
+prefer `['coalesce', ['get', 'name:en'], ['get', 'name:latin'], ['get', 'name']]`.

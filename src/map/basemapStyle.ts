@@ -129,7 +129,9 @@ export function buildBasemapStyle(t: BasemapTokens): StyleSpecification {
         'source-layer': 'place',
         filter: ['in', 'class', 'city', 'town', 'suburb', 'neighbourhood'],
         layout: {
-          'text-field': ['get', 'name'],
+          // Urdu needs the RTL text plugin to shape correctly; until that is
+          // self-hosted, prefer the English name so labels are never mangled.
+          'text-field': ['coalesce', ['get', 'name:en'], ['get', 'name:latin'], ['get', 'name']],
           'text-font': ['Noto Sans Regular'],
           'text-size': ['interpolate', ['linear'], ['zoom'], 10, 10, 15, 12],
           'text-letter-spacing': 0.02,
