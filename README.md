@@ -1,3 +1,5 @@
+![Chhaon — 120 ranked planting sites over Model Town](docs/images/02-priority.png)
+
 <div align="center">
 
 # چھاؤں &nbsp;Chhaon
@@ -11,8 +13,6 @@ Built for **Smart City Hackathon Lahore 2026** · Theme Two: City Intelligence
 
 </div>
 
-![The opening claim](docs/images/01-overture.png)
-
 ---
 
 ## The finding
@@ -25,6 +25,8 @@ well-vegetated ground **in the same satellite pass** — a correlation of
 
 That is a within-scene comparison: same day, same sensor, same atmosphere. It
 needs no trend, and it is what the entire priority map is built on.
+
+![The opening claim](docs/images/01-overture.png)
 
 | Region | Shade worth | NDVI ↔ heat | Baseline | Ranked sites |
 |---|---|---|---|---|
@@ -57,8 +59,6 @@ makes the positive finding believable.
 **600 ranked planting sites across five Lahore neighbourhoods.** Each one carries
 its measured heat cost, the population it serves, an open score breakdown, and a
 species matched to that site's conditions.
-
-![Priority sites over satellite imagery](docs/images/02-priority.png)
 
 Click any site and every figure is traceable back to a named satellite scene.
 
