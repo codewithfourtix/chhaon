@@ -1,5 +1,5 @@
 import { MapCanvas } from './map/MapCanvas'
-import { InstrumentRail, LoadingBar, ThermalScale, YearScrubber } from './ui/Chrome'
+import { BasemapToggle, InstrumentRail, LoadingBar, ThermalScale, YearScrubber } from './ui/Chrome'
 import { SitePlate } from './ui/SitePlate'
 import { Overture } from './ui/Overture'
 import { Methodology } from './ui/Methodology'
@@ -22,6 +22,7 @@ export default function App() {
       {stage === 'workspace' && (
         <>
           <InstrumentRail />
+          <BasemapToggle />
           <ThermalScale />
           <YearScrubber />
           <SitePlate />

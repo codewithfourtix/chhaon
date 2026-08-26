@@ -14,8 +14,6 @@ export function InstrumentRail() {
   const setRegion = useApp((s) => s.setRegion)
   const theme = useApp((s) => s.theme)
   const toggleTheme = useApp((s) => s.toggleTheme)
-  const basemap = useApp((s) => s.basemap)
-  const setBasemap = useApp((s) => s.setBasemap)
   const showMethodology = useApp((s) => s.showMethodology)
 
   const { grid, sites, meta, loading } = useRegionData(region)
@@ -59,21 +57,6 @@ export function InstrumentRail() {
         ))}
       </div>
 
-      <div className="rail__group">
-        <h2 className="t-label rail__legend">Basemap</h2>
-        {([{ id: 'map', name: 'Map' }, { id: 'satellite', name: 'Satellite' }] as const).map((b) => (
-          <button
-            key={b.id}
-            type="button"
-            className={`switch switch--tight ${basemap === b.id ? 'is-active' : ''}`}
-            aria-current={basemap === b.id}
-            onClick={() => setBasemap(b.id)}
-          >
-            <span className="switch__name">{b.name}</span>
-          </button>
-        ))}
-      </div>
-
       {/* The readout is what makes this an instrument. It is never hidden, and
           every figure in it comes from the scene that was actually used. */}
       <footer className="readout">
@@ -113,6 +96,32 @@ export function InstrumentRail() {
         </button>
       </footer>
     </nav>
+  )
+}
+
+/**
+ * Sits on the map rather than in the rail. In the rail it fell below the fold
+ * on a 1000px-tall window and was covered by the pinned readout, so satellite
+ * view was effectively invisible.
+ */
+export function BasemapToggle() {
+  const basemap = useApp((s) => s.basemap)
+  const setBasemap = useApp((s) => s.setBasemap)
+
+  return (
+    <div className="basemapToggle" role="group" aria-label="Basemap">
+      {([{ id: 'map', name: 'Map' }, { id: 'satellite', name: 'Satellite' }] as const).map((b) => (
+        <button
+          key={b.id}
+          type="button"
+          className={`basemapToggle__btn t-label ${basemap === b.id ? 'is-active' : ''}`}
+          aria-pressed={basemap === b.id}
+          onClick={() => setBasemap(b.id)}
+        >
+          {b.name}
+        </button>
+      ))}
+    </div>
   )
 }
 

@@ -198,6 +198,50 @@
 }
 .readout__theme:hover { background: var(--plate-2); color: var(--ink-0); }
 
+/* ---------- Basemap toggle (sits on the map) ---------- */
+
+.basemapToggle {
+  position: absolute;
+  top: calc(var(--u) * 4);
+  right: calc(var(--scale-w) + var(--u) * 4);
+  z-index: 4;
+  display: flex;
+  background: var(--plate-1);
+  border: 1px solid var(--hairline-firm);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-plate);
+  overflow: hidden;
+}
+
+.basemapToggle__btn {
+  background: transparent;
+  border: 0;
+  border-left: 1px solid var(--hairline);
+  padding: 0 calc(var(--u) * 4);
+  min-height: 40px;
+  cursor: pointer;
+  color: var(--ink-1);
+  font-family: var(--font-body);
+  transition: background var(--dur-tick) var(--ease-instrument),
+              color var(--dur-tick) var(--ease-instrument);
+}
+.basemapToggle__btn:first-child { border-left: 0; }
+.basemapToggle__btn:hover { background: var(--plate-2); color: var(--ink-0); }
+.basemapToggle__btn.is-active { background: var(--plate-2); color: var(--ink-0); }
+.basemapToggle__btn.is-active::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 2px;
+  background: var(--canopy);
+}
+.basemapToggle__btn { position: relative; }
+
+@media (max-width: 700px) {
+  .basemapToggle { right: calc(var(--scale-w) + var(--u) * 2); top: calc(var(--u) * 2); }
+  .basemapToggle__btn { padding: 0 calc(var(--u) * 3); }
+}
+
 /* ---------- Thermal scale ---------- */
 
 .scale {
