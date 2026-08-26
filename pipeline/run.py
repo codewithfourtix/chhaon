@@ -605,18 +605,18 @@ def run_region(region_id):
     }
 
 
-def main():
-    targets = sys.argv[1:] or list(REGIONS)
-    meta = {}
-    for rid in targets:
-        meta[rid] = run_region(rid)
-
+def write_meta(new_regions):
+    """
+    Written after *every* region, not once at the end. A run that dies partway
+    through should still leave the app with usable data for what finished.
+    """
     path = f"{OUT}/meta.json"
     existing = {}
     if os.path.exists(path):
         with open(path, encoding="utf-8") as f:
             existing = json.load(f).get("regions", {})
-    existing.update(meta)
+    existing.update(new_regions)
+    os.makedirs(OUT, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump({
             "generated": time.strftime("%Y-%m-%d"),
@@ -628,7 +628,14 @@ def main():
                            "pop": "100 m / px", "grid": f"{CELL_M} m / cell"},
             "regions": existing,
         }, f, indent=1)
-    log(f"wrote {path}")
+    return path
+
+
+def main():
+    targets = sys.argv[1:] or list(REGIONS)
+    for rid in targets:
+        meta = run_region(rid)
+        log(f"  wrote {write_meta({rid: meta})}")
 
 
 if __name__ == "__main__":
