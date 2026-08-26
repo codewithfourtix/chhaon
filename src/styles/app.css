@@ -203,7 +203,7 @@
 .basemapToggle {
   position: absolute;
   top: calc(var(--u) * 4);
-  right: calc(var(--scale-w) + var(--u) * 4);
+  left: calc(var(--rail-w) + var(--u) * 4);
   z-index: 4;
   display: flex;
   background: var(--plate-1);
@@ -237,8 +237,12 @@
 }
 .basemapToggle__btn { position: relative; }
 
+@media (max-width: 1100px) {
+  .basemapToggle { left: calc(var(--rail-w-collapsed) + var(--u) * 3); }
+}
+
 @media (max-width: 700px) {
-  .basemapToggle { right: calc(var(--scale-w) + var(--u) * 2); top: calc(var(--u) * 2); }
+  .basemapToggle { top: calc(var(--u) * 2); }
   .basemapToggle__btn { padding: 0 calc(var(--u) * 3); }
 }
 

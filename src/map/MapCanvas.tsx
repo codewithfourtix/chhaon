@@ -45,7 +45,12 @@ export function MapCanvas() {
   // addSource mid-setStyle and make MapLibre throw. The state mirror below is
   // what actually re-triggers the effect once the new style has landed.
   const styleReadyRef = useRef(false)
-  const [styleLive, setStyleLive] = useState(false)
+  // A monotonic counter, NOT a boolean. setStyle sets the flag false and
+  // style.load sets it true; if React batches both into one render a boolean
+  // goes true -> true, React sees no change, and the layer effect never re-runs
+  // — which silently dropped every data layer when the basemap switched. A
+  // counter always differs, so the effect always fires.
+  const [styleEpoch, setStyleEpoch] = useState(0)
 
   const view = useApp((s) => s.view)
   const region = useApp((s) => s.region)
@@ -85,7 +90,7 @@ export function MapCanvas() {
     // recovers, silently freezing every later layer update.
     const onStyleLoad = () => {
       styleReadyRef.current = true
-      setStyleLive(true)
+      setStyleEpoch((n) => n + 1)
     }
     m.on('style.load', onStyleLoad)
 
@@ -103,7 +108,6 @@ export function MapCanvas() {
   useEffect(() => {
     if (!map.current) return
     styleReadyRef.current = false
-    setStyleLive(false)
     map.current.setStyle(
       buildBasemapStyle(dark ? DARK_TOKENS : LIGHT_TOKENS, basemap), { diff: false })
   }, [dark, basemap])
@@ -206,7 +210,7 @@ export function MapCanvas() {
         },
       }, FIRST_LABEL_LAYER)
     }
-  }, [view, grid, cells, sites, dark, year, styleLive, basemap])
+  }, [view, grid, cells, sites, dark, year, styleEpoch, basemap])
 
   // Selection ring — a paint update, never a layer rebuild.
   useEffect(() => {
@@ -215,7 +219,7 @@ export function MapCanvas() {
     m.setPaintProperty('sites-circles', 'circle-stroke-width', [
       'case', ['==', ['get', 'id'], selectedSiteId ?? ' '], 2.5, 0,
     ])
-  }, [selectedSiteId, styleLive, view])
+  }, [selectedSiteId, styleEpoch, view])
 
   // Click picking, with a forgiving box so small marks stay hittable.
   useEffect(() => {
