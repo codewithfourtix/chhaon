@@ -21,16 +21,17 @@ export function Overture() {
       setI(0)
       return
     }
+    // Step outside the updater — calling setYear inside it writes to another
+    // store during render, which React rightly complains about.
+    let n = YEARS.length - 1
     const t = setInterval(() => {
-      setI((prev) => {
-        const next = prev - 1
-        if (next < 0) {
-          clearInterval(t)
-          return 0
-        }
-        setYear(YEARS[next])
-        return next
-      })
+      n -= 1
+      if (n < 0) {
+        clearInterval(t)
+        return
+      }
+      setI(n)
+      setYear(YEARS[n])
     }, 900)
     return () => clearInterval(t)
   }, [reduced, setYear])

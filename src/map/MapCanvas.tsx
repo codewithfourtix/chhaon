@@ -78,7 +78,7 @@ export function MapCanvas() {
 
     // Interleaved so beforeId works and place labels stay above the data.
     const o = new MapboxOverlay({
-      interleaved: true,
+      interleaved: false,
       layers: [],
       // One top-level handler: deck resolves the pick, so a miss means bare map.
       onClick: (info) => selectSite((info.object as Site | undefined)?.id ?? null),

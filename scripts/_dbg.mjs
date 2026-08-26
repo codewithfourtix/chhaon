@@ -1,0 +1,16 @@
+import { chromium } from 'playwright'
+const b = await chromium.launch({ channel: 'chrome' })
+const p = await b.newPage({ viewport: { width: 1400, height: 900 } })
+p.on('console', m => console.log('CONSOLE', m.type(), m.text().slice(0, 300)))
+p.on('pageerror', e => console.log('PAGEERROR', (e.stack || String(e)).slice(0, 900)))
+p.on('requestfailed', r => console.log('REQFAIL', r.url().slice(0, 120), r.failure()?.errorText))
+p.on('response', r => { if (r.status() >= 400) console.log('HTTP', r.status(), r.url().slice(0, 120)) })
+await p.goto('http://localhost:5173/', { waitUntil: 'networkidle', timeout: 60000 })
+await p.waitForTimeout(6000)
+console.log('WEBGL:', await p.evaluate(() => {
+  const c = document.createElement('canvas')
+  return !!(c.getContext('webgl2') || c.getContext('webgl'))
+}))
+console.log('CANVAS COUNT:', await p.evaluate(() => document.querySelectorAll('canvas').length))
+console.log('MAP BOX:', await p.evaluate(() => { const e = document.querySelector('.map-canvas'); return e ? JSON.stringify(e.getBoundingClientRect()) : 'none' }))
+await b.close()
