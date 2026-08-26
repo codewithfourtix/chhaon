@@ -112,11 +112,17 @@
   overflow-y: auto;
 }
 
+/* The rail scrolls when the viewport is short, but the wordmark and the live
+   readout must never scroll away — they are what identify the instrument. */
 .rail__head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   align-items: baseline;
   gap: calc(var(--u) * 2.5);
-  padding: calc(var(--u) * 5) calc(var(--u) * 5) calc(var(--u) * 4);
+  padding: calc(var(--u) * 4) calc(var(--u) * 5) calc(var(--u) * 3.5);
+  background: var(--plate-1);
   border-bottom: 1px solid var(--hairline);
 }
 
@@ -130,7 +136,7 @@
   letter-spacing: -0.01em;
 }
 
-.rail__group { padding: calc(var(--u) * 4) 0; border-bottom: 1px solid var(--hairline); }
+.rail__group { padding: calc(var(--u) * 3) 0; border-bottom: 1px solid var(--hairline); }
 .rail__legend { display: block; padding: 0 calc(var(--u) * 5) calc(var(--u) * 2); }
 
 .switch {
@@ -159,7 +165,16 @@
 .switch--tight { min-height: 40px; }
 .switch--tight .switch__name { font-weight: 500; }
 
-.readout { margin-top: auto; padding: calc(var(--u) * 4) calc(var(--u) * 5) calc(var(--u) * 5); }
+.readout {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-top: auto;
+  padding: calc(var(--u) * 3) calc(var(--u) * 5) calc(var(--u) * 4);
+  background: var(--plate-1);
+  border-top: 1px solid var(--hairline);
+}
+.readout__theme + .readout__theme { margin-top: calc(var(--u) * 2); }
 .readout__row {
   display: flex;
   justify-content: space-between;
@@ -170,7 +185,7 @@
 .readout__row .t-data { color: var(--ink-0); }
 
 .readout__theme {
-  margin-top: calc(var(--u) * 4);
+  margin-top: calc(var(--u) * 3);
   background: transparent;
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
@@ -428,6 +443,7 @@
 
 .databar--error {
   height: auto;
+  z-index: 3;
   background: var(--plate-1);
   border-bottom: 1px solid var(--heat-5);
   padding: calc(var(--u) * 2) calc(var(--u) * 4);
