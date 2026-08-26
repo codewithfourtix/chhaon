@@ -375,11 +375,31 @@
 
 @media (max-width: 1100px) {
   .rail { width: var(--rail-w-collapsed); }
-  .rail__name, .switch__blurb, .readout__row, .rail__legend { display: none; }
-  .switch { padding: calc(var(--u) * 3) calc(var(--u) * 2); text-align: center; }
+  .rail__name, .switch__blurb, .readout__row, .rail__legend,
+  .readout__themeword { display: none; }
+
+  /* The Urdu mark must never be clipped — centre it and let it shrink. */
+  .rail__head { justify-content: center; padding: calc(var(--u) * 4) calc(var(--u) * 2); }
+  .rail__mark { font-size: 1.125rem; }
+
+  .switch {
+    padding: calc(var(--u) * 3) calc(var(--u) * 1.5);
+    text-align: center;
+  }
+  .switch__name { font-size: 0.8125rem; }
+
+  .readout { padding: calc(var(--u) * 3) calc(var(--u) * 2); }
+  .readout__theme { padding: calc(var(--u) * 2) calc(var(--u) * 1); letter-spacing: 0.04em; }
+
   .scrubber { left: var(--rail-w-collapsed); }
   .scrubber__note { display: none; }
-  .plate { width: 320px; }
+
+  /* Below this width the plate would swallow the map, so it docks to the side
+     and gives the map the rest. */
+  .plate {
+    width: min(340px, 42vw);
+    max-height: calc(100% - var(--scrubber-h) - var(--u) * 12);
+  }
 }
 
 @media (max-width: 700px) {

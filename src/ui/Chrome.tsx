@@ -72,7 +72,8 @@ export function InstrumentRail() {
           <span className="t-data">{RESOLUTION[view]}</span>
         </div>
         <button type="button" className="readout__theme t-label" onClick={toggleTheme}>
-          {theme === 'light' ? 'Dark' : 'Light'} theme
+          {theme === 'light' ? 'Dark' : 'Light'}
+          <span className="readout__themeword"> theme</span>
         </button>
       </footer>
     </nav>
