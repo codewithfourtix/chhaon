@@ -1,6 +1,6 @@
 ---
 name: map-ui
-description: How to build a map that reads as a professional city instrument rather than a student project — MapLibre + deck.gl craft, basemap styling, layer choreography, legends, selection, camera, and map-specific states. Load before touching any map code in this repo.
+description: How to build a map that reads as a professional city instrument rather than a student project — MapLibre-native craft, basemap styling, layer choreography, legends, selection, camera, and map-specific states. Load before touching any map code in this repo.
 ---
 
 # Map UI

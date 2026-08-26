@@ -42,7 +42,13 @@ const BREAKS: Partial<Record<ViewId, { prop: string; at: number[] }>> = {
 export function MapCanvas() {
   const container = useRef<HTMLDivElement>(null)
   const map = useRef<MapLibreMap | null>(null)
-  const [styleReady, setStyleReady] = useState(false)
+  // Readiness is held in a ref so it flips *synchronously*. A state flag alone
+  // is not enough: effects in the same commit still see the previous value, so
+  // the layer effect would run while setStyle is mid-flight and MapLibre would
+  // throw "Style is not done loading". The epoch counter is what re-triggers
+  // the layer effect once the new style has landed.
+  const styleReadyRef = useRef(false)
+  const [styleEpoch, setStyleEpoch] = useState(0)
 
   const view = useApp((s) => s.view)
   const region = useApp((s) => s.region)
@@ -98,7 +104,10 @@ export function MapCanvas() {
     // Do NOT use isStyleLoaded() here — that reports *tile* loading, so it flaps
     // to false while tiles stream in and never recovers, which silently freezes
     // every later layer update.
-    const onStyleLoad = () => setStyleReady(true)
+    const onStyleLoad = () => {
+      styleReadyRef.current = true
+      setStyleEpoch((n) => n + 1)
+    }
     m.on('style.load', onStyleLoad)
 
     map.current = m
@@ -114,7 +123,7 @@ export function MapCanvas() {
   // `styledata` reports the new style ready.
   useEffect(() => {
     if (!map.current) return
-    setStyleReady(false)
+    styleReadyRef.current = false
     map.current.setStyle(buildBasemapStyle(dark ? DARK_TOKENS : LIGHT_TOKENS), { diff: false })
   }, [dark])
 
@@ -129,7 +138,7 @@ export function MapCanvas() {
   // Source + layers.
   useEffect(() => {
     const m = map.current
-    if (!m || !styleReady) return
+    if (!m || !styleReadyRef.current) return
 
     for (const id of DATA_LAYERS) if (m.getLayer(id)) m.removeLayer(id)
     if (m.getSource(SRC)) m.removeSource(SRC)
@@ -197,19 +206,19 @@ export function MapCanvas() {
         FIRST_LABEL_LAYER
       )
     }
-  }, [view, geojson, dark, canopyFactor, styleReady])
+  }, [view, geojson, dark, canopyFactor, styleEpoch])
 
   // Selection ring — a paint update, never a layer rebuild.
   useEffect(() => {
     const m = map.current
-    if (!m || !styleReady || !m.getLayer('sites-data')) return
+    if (!m || !styleReadyRef.current || !m.getLayer('sites-data')) return
     m.setPaintProperty('sites-data', 'circle-stroke-width', [
       'case',
       ['==', ['get', 'id'], selectedSiteId ?? ' '],
       2.5,
       0,
     ])
-  }, [selectedSiteId, styleReady, view])
+  }, [selectedSiteId, styleEpoch, view])
 
   // Click picking, with a forgiving box so small circles stay hittable.
   useEffect(() => {

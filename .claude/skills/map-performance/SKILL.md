@@ -1,6 +1,6 @@
 ---
 name: map-performance
-description: Keeping the Chhaon map at 60fps with real geospatial data on static hosting — PMTiles, tiling, geometry simplification, deck.gl update discipline, and the demo-day checklist. Load before adding data to the map or when the map feels heavy.
+description: Keeping the Chhaon map at 60fps with real geospatial data on static hosting — PMTiles, tiling, geometry simplification, MapLibre update discipline, and the demo-day checklist. Load before adding data to the map or when the map feels heavy.
 ---
 
 # Map Performance

@@ -23,6 +23,17 @@
 .maplibregl-ctrl-attrib a { color: var(--ink-1) !important; }
 .maplibregl-ctrl-bottom-right { margin: 0 calc(var(--scale-w) + 8px) calc(var(--scrubber-h) + 8px) 0; }
 
+/* Map failure — never a blank screen. */
+.mapfail {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--plate-0);
+}
+.mapfail__inner { max-width: 28rem; text-align: center; }
+.mapfail__msg { color: var(--ink-1); margin: calc(var(--u) * 2) 0 calc(var(--u) * 6); }
+
 /* ---------- Overture ---------- */
 
 .overture {
