@@ -1,29 +1,38 @@
 import { useEffect, useState } from 'react'
-import { YEARS } from '../data/regions'
+import { useRegionData } from '../data/useRegionData'
 import { useApp } from '../state/store'
 
 /**
- * The cold open. The map is already live behind this; shade is already
- * retreating. No hero headline, no feature grid — the map is the hero.
+ * The cold open. The map is already live behind this and already scrubbing.
+ *
+ * It leads with the heat gap, not with a loss narrative, because that is what
+ * the measurement actually supports: comparing vegetated against bare ground
+ * inside a single scene is immune to the year-to-year noise that makes a
+ * "canopy is falling" claim unsafe here. See the Method screen.
  */
 export function Overture() {
   const enter = useApp((s) => s.enterWorkspace)
   const setYear = useApp((s) => s.setYear)
-  const [i, setI] = useState(YEARS.length - 1)
+  const { grid, meta } = useRegionData('model-town')
+  const [i, setI] = useState(0)
+
+  const years = grid?.years ?? []
+  const rmeta = meta?.regions?.['model-town']
 
   const reduced =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
   useEffect(() => {
+    if (!years.length) return
     if (reduced) {
-      setYear(YEARS[0])
       setI(0)
+      setYear(years[0])
       return
     }
-    // Step outside the updater — calling setYear inside it writes to another
-    // store during render, which React rightly complains about.
-    let n = YEARS.length - 1
+    let n = years.length - 1
+    setI(n)
+    setYear(years[n])
     const t = setInterval(() => {
       n -= 1
       if (n < 0) {
@@ -31,27 +40,53 @@ export function Overture() {
         return
       }
       setI(n)
-      setYear(YEARS[n])
+      setYear(years[n])
     }, 900)
     return () => clearInterval(t)
-  }, [reduced, setYear])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [years.length, reduced])
 
-  const progress = 1 - i / (YEARS.length - 1)
+  const last = years[years.length - 1]
+  const progress = years.length > 1 ? 1 - i / (years.length - 1) : 0
+  const gap = rmeta?.heatGapC ?? null
 
   return (
     <div className="overture">
       <div className="overture__inner">
         <p className="overture__mark t-urdu" lang="ur" dir="rtl">چھاؤں</p>
 
-        <h1 className="t-plate-title overture__title">
-          Lahore is<br />running out<br />of shade.
-        </h1>
+        {gap !== null ? (
+          <h1 className="t-plate-title overture__title">
+            In Lahore,<br />shade is worth<br />{gap.toFixed(1)}&deg;C.
+          </h1>
+        ) : (
+          <h1 className="t-plate-title overture__title">
+            In Lahore,<br />shade is<br />measurable.
+          </h1>
+        )}
 
         <p className="overture__line t-body">
-          Between <span className="t-data">{YEARS[0]}</span> and{' '}
-          <span className="t-data">{YEARS[YEARS.length - 1]}</span>, green cover fell across
-          Model Town, Gulberg and DHA. Chhaon measures what that cost in degrees,
-          then ranks where to plant it back.
+          {gap !== null ? (
+            <>
+              Bare ground in Model Town runs{' '}
+              <span className="t-data">{gap.toFixed(1)}&deg;C</span> hotter at the
+              surface than well-vegetated ground in the same satellite pass
+              {rmeta?.ndviLstCorr != null && (
+                <> &mdash; a correlation of{' '}
+                  <span className="t-data">{rmeta.ndviLstCorr.toFixed(2)}</span>{' '}
+                  across every cell we measured</>
+              )}.
+            </>
+          ) : (
+            <>Chhaon measures green cover and surface temperature across three
+              Lahore neighbourhoods from open satellite data.</>
+          )}
+        </p>
+
+        <p className="overture__line t-body">
+          Chhaon finds where that shade is missing, works out how many people
+          each gap affects, and ranks the ground worth planting &mdash; with a
+          species chosen for the site.
         </p>
 
         <div className="overture__meter" aria-hidden="true">
@@ -59,7 +94,10 @@ export function Overture() {
         </div>
 
         <p className="overture__year t-data">
-          {YEARS[i]} <span className="t-unit">of {YEARS[YEARS.length - 1]}</span>
+          {years.length ? years[i] : '····'}{' '}
+          <span className="t-unit">
+            {years.length ? `green cover, ${years[0]}–${last}` : 'loading imagery'}
+          </span>
         </p>
 
         <button type="button" className="overture__enter" onClick={enter}>

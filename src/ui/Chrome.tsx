@@ -1,6 +1,7 @@
-import { useMemo } from 'react'
-import { REGIONS, RESOLUTION, UNIT, VIEWS, YEARS } from '../data/regions'
-import { PLACEHOLDER_SITES } from '../data/placeholderSites'
+import { useEffect } from 'react'
+import { LANDUSE_NAME, REGIONS, SOURCE_RES, UNIT, VIEWS } from '../data/regions'
+import { domainFor } from '../data/load'
+import { useRegionData } from '../data/useRegionData'
 import { useApp } from '../state/store'
 
 const HEAT_RAMP = ['--heat-1', '--heat-2', '--heat-3', '--heat-4', '--heat-5', '--heat-6']
@@ -13,11 +14,10 @@ export function InstrumentRail() {
   const setRegion = useApp((s) => s.setRegion)
   const theme = useApp((s) => s.theme)
   const toggleTheme = useApp((s) => s.toggleTheme)
+  const showMethodology = useApp((s) => s.showMethodology)
 
-  const count = useMemo(
-    () => PLACEHOLDER_SITES.filter((s) => s.region === region).length,
-    [region]
-  )
+  const { grid, sites, meta, loading } = useRegionData(region)
+  const rmeta = meta?.regions?.[region]
 
   return (
     <nav className="rail" aria-label="Map controls">
@@ -57,20 +57,39 @@ export function InstrumentRail() {
         ))}
       </div>
 
-      {/* The readout is what makes this an instrument. It is never hidden. */}
+      {/* The readout is what makes this an instrument. It is never hidden, and
+          every figure in it comes from the scene that was actually used. */}
       <footer className="readout">
         <div className="readout__row">
           <span className="t-label">Sites</span>
-          <span className="t-data">{count}</span>
+          <span className="t-data">{loading ? '—' : (sites?.features.length ?? 0)}</span>
         </div>
         <div className="readout__row">
           <span className="t-label">Years</span>
-          <span className="t-data">{YEARS[0]}&ndash;{YEARS[YEARS.length - 1]}</span>
+          <span className="t-data">
+            {grid ? `${grid.years[0]}–${grid.years[grid.years.length - 1]}` : '—'}
+          </span>
         </div>
         <div className="readout__row">
-          <span className="t-label">Resolution</span>
-          <span className="t-data">{RESOLUTION[view]}</span>
+          <span className="t-label">Source</span>
+          <span className="t-data">{SOURCE_RES[view]}</span>
         </div>
+        <div className="readout__row">
+          <span className="t-label">Baseline</span>
+          <span className="t-data">
+            {grid ? `${grid.baselineC.toFixed(1)}°C` : '—'}
+          </span>
+        </div>
+        {rmeta && (
+          <p className="t-unit readout__scene">
+            Heat from {rmeta.lstScene.id.split('_').slice(0, 4).join(' ')},{' '}
+            {rmeta.lstScene.datetime}
+          </p>
+        )}
+
+        <button type="button" className="readout__theme t-label" onClick={showMethodology}>
+          Method<span className="readout__themeword">ology</span>
+        </button>
         <button type="button" className="readout__theme t-label" onClick={toggleTheme}>
           {theme === 'light' ? 'Dark' : 'Light'}
           <span className="readout__themeword"> theme</span>
@@ -80,18 +99,46 @@ export function InstrumentRail() {
   )
 }
 
+/**
+ * Sits on the map rather than in the rail. In the rail it fell below the fold
+ * on a 1000px-tall window and was covered by the pinned readout, so satellite
+ * view was effectively invisible.
+ */
+export function BasemapToggle() {
+  const basemap = useApp((s) => s.basemap)
+  const setBasemap = useApp((s) => s.setBasemap)
+
+  return (
+    <div className="basemapToggle" role="group" aria-label="Basemap">
+      {([{ id: 'map', name: 'Map' }, { id: 'satellite', name: 'Satellite' }] as const).map((b) => (
+        <button
+          key={b.id}
+          type="button"
+          className={`basemapToggle__btn t-label ${basemap === b.id ? 'is-active' : ''}`}
+          aria-pressed={basemap === b.id}
+          onClick={() => setBasemap(b.id)}
+        >
+          {b.name}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function ThermalScale() {
   const view = useApp((s) => s.view)
-  const ends =
-    view === 'heat'
-      ? ['34', '44']
-      : view === 'people'
-        ? ['0.4', '5.6k']
-        : view === 'canopy'
-          ? ['0.1', '0.8']
-          : ['0.3', '1.0']
+  const region = useApp((s) => s.region)
+  const year = useApp((s) => s.year)
+  const { grid } = useRegionData(region)
 
-  // Each view brings its own ramp; the geometry never changes, so nothing shifts.
+  // Exactly the domain the map is drawing with — same function, same numbers.
+  let ends: [string, string] = ['—', '—']
+  if (grid) {
+    const [lo, hi] = domainFor(grid, view, year)
+    const dp = view === 'canopy' || view === 'priority' ? 2 : 0
+    ends = [lo.toFixed(dp), hi.toFixed(dp)]
+  }
+
   const ramp = view === 'canopy' ? CANOPY_RAMP : HEAT_RAMP
 
   return (
@@ -102,14 +149,16 @@ export function ThermalScale() {
           <span
             key={token}
             className="scale__stop"
-            style={{ background: `var(${view === 'people' ? '--ink-0' : token})`,
-                     opacity: view === 'people' ? 0.15 + i * 0.17 : 1 }}
+            style={{
+              background: `var(${view === 'people' ? '--ink-0' : token})`,
+              opacity: view === 'people' ? 0.08 + i * 0.16 : 1,
+            }}
           />
         ))}
         <span className="t-data scale__tick scale__tick--hi">{ends[1]}</span>
         <span className="t-data scale__tick scale__tick--lo">{ends[0]}</span>
       </div>
-      <span className="t-unit scale__res">{RESOLUTION[view]}</span>
+      <span className="t-unit scale__res">{SOURCE_RES[view]}</span>
     </aside>
   )
 }
@@ -117,24 +166,49 @@ export function ThermalScale() {
 export function YearScrubber() {
   const year = useApp((s) => s.year)
   const setYear = useApp((s) => s.setYear)
-  const span = YEARS[YEARS.length - 1] - YEARS[0]
+  const region = useApp((s) => s.region)
+  const view = useApp((s) => s.view)
+  const { grid, meta } = useRegionData(region)
+
+  const years = grid?.years ?? []
+
+  // Default to the most recent year the data actually has.
+  useEffect(() => {
+    if (years.length && (year === null || !years.includes(year))) {
+      setYear(years[years.length - 1])
+    }
+  }, [years, year, setYear])
+
+  if (!years.length) {
+    return (
+      <div className="scrubber">
+        <span className="t-label">Loading imagery&hellip;</span>
+      </div>
+    )
+  }
+
+  const first = years[0]
+  const last = years[years.length - 1]
+  const span = Math.max(1, last - first)
+  const scene = meta?.regions?.[region]?.ndviScenes?.[String(year)]
 
   return (
     <div className="scrubber">
       <div className="scrubber__label">
         <span className="t-label">Year</span>
-        <span className="t-figure scrubber__year">{year}</span>
+        <span className="t-figure scrubber__year">{year ?? last}</span>
       </div>
 
       <div className="scrubber__track">
         <span className="scrubber__rule" aria-hidden="true" />
-        {/* Ticks sit at true temporal positions, so gaps in coverage read as gaps. */}
-        {YEARS.map((y) => (
+        {/* Ticks sit at true temporal positions, so a year with no usable
+            imagery shows up as a real gap rather than being quietly skipped. */}
+        {years.map((y) => (
           <button
             key={y}
             type="button"
             className={`scrubber__tick ${y === year ? 'is-active' : ''}`}
-            style={{ left: `${((y - YEARS[0]) / span) * 100}%` }}
+            style={{ left: `${((y - first) / span) * 100}%` }}
             aria-label={`Show ${y}`}
             aria-current={y === year}
             onClick={() => setYear(y)}
@@ -145,8 +219,28 @@ export function YearScrubber() {
       </div>
 
       <p className="t-unit scrubber__note">
-        Ticks mark years with usable imagery. 2018 is absent — cloud cover.
+        {view === 'canopy' && scene
+          ? <>Sentinel-2 {scene.date}, {scene.cloud}% cloud. Years without a usable
+              scene in the March&ndash;April window are absent.</>
+          : <>Ticks mark years with usable imagery in the fixed
+              March&ndash;April window.</>}
       </p>
     </div>
   )
 }
+
+/** Shown while region data is in flight — the map stays interactive throughout. */
+export function LoadingBar() {
+  const loading = useApp((s) => s.dataLoading)
+  const error = useApp((s) => s.dataError)
+  if (error) {
+    return (
+      <div className="databar databar--error">
+        <span className="t-data">Data failed to load: {error}</span>
+      </div>
+    )
+  }
+  return loading ? <div className="databar" aria-hidden="true" /> : null
+}
+
+export { LANDUSE_NAME }

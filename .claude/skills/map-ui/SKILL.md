@@ -49,6 +49,20 @@ look generic.
 
 The result should look like a survey sheet someone is about to draw on.
 
+## Satellite mode inverts the rule above
+
+Imagery is loud, saturated and high-contrast, so "the basemap is a substrate"
+stops holding by itself. Three things keep the data on top:
+
+- A **scrim** — a neutral fill at ~42% between imagery and data.
+- **Desaturated imagery** — `raster-saturation: -0.25`.
+- **Harder data** — fill/circle opacity rises to ~0.95, label halos widen to 1.8.
+
+Roads stay drawn in satellite mode, in the ground colour at low opacity, so the
+street grid still orients the eye. Satellite is an alternate reading mode, never
+the default. And Esri World Imagery carries its own attribution requirement —
+set it on the source, the same as OpenFreeMap.
+
 ## Layer order (bottom to top, never rearranged)
 
 1. Basemap land, water, roads

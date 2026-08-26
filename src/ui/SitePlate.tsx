@@ -1,18 +1,18 @@
 import { useEffect } from 'react'
-import { PLACEHOLDER_SITES } from '../data/placeholderSites'
+import { useRegionData } from '../data/useRegionData'
 import { useApp } from '../state/store'
 
-/** The ranking formula, shown openly. A hidden score is a score nobody trusts. */
-const TERMS = [
-  { key: 'heat', label: 'Heat need', weight: 0.45 },
-  { key: 'canopy', label: 'Canopy absence', weight: 0.3 },
-  { key: 'people', label: 'People served', weight: 0.25 },
-] as const
+const TERM_LABEL: Record<string, string> = {
+  heat: 'Heat need',
+  canopy: 'Canopy absence',
+  people: 'People served',
+}
 
 export function SitePlate() {
   const id = useApp((s) => s.selectedSiteId)
+  const region = useApp((s) => s.region)
   const selectSite = useApp((s) => s.selectSite)
-  const site = PLACEHOLDER_SITES.find((s) => s.id === id)
+  const { sites, meta } = useRegionData(region)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && selectSite(null)
@@ -20,23 +20,20 @@ export function SitePlate() {
     return () => window.removeEventListener('keydown', onKey)
   }, [selectSite])
 
-  if (!site) return null
+  const feature = sites?.features.find((f) => f.properties.id === id)
+  if (!feature) return null
 
-  const delta = site.lstC - site.baselineC
-  const parts = {
-    heat: Math.min(1, delta / 8),
-    canopy: 0.7,
-    people: Math.min(1, site.peopleServed / 5600),
-  }
+  const p = feature.properties
+  const [lon, lat] = feature.geometry.coordinates
+  const delta = p.lstC - p.baselineC
+  const weights = meta?.weights ?? { heat: 0.45, canopy: 0.3, people: 0.25 }
 
   return (
     <section className="plate" role="dialog" aria-label="Planting site detail">
       <header className="plate__head">
         <div>
           <h2 className="t-subhead plate__title">Planting site</h2>
-          <p className="t-data plate__coords">
-            {site.lat.toFixed(5)}, {site.lon.toFixed(5)}
-          </p>
+          <p className="t-data plate__coords">{lat.toFixed(5)}, {lon.toFixed(5)}</p>
         </div>
         <button type="button" className="plate__close" onClick={() => selectSite(null)} aria-label="Close">
           &times;
@@ -46,12 +43,12 @@ export function SitePlate() {
       <dl className="plate__facts">
         <div>
           <dt className="t-label">Land use</dt>
-          <dd className="t-data">{site.landuse}</dd>
+          <dd className="t-data">{p.landuse}</dd>
         </div>
         <div>
-          <dt className="t-label">Plantable area</dt>
+          <dt className="t-label">Cell area</dt>
           <dd className="t-data">
-            {site.areaM2.toLocaleString()} <span className="t-unit">m&sup2;</span>
+            {p.areaM2.toLocaleString()} <span className="t-unit">m&sup2;</span>
           </dd>
         </div>
       </dl>
@@ -62,40 +59,49 @@ export function SitePlate() {
           +{delta.toFixed(1)}<span className="t-unit plate__figureunit">&deg;C surface</span>
         </p>
         <p className="t-unit">
-          {site.lstC.toFixed(1)}&deg;C here against a {site.baselineC.toFixed(1)}&deg;C shaded
-          baseline for this neighbourhood. Surface temperature, not air.
+          {p.lstC.toFixed(1)}&deg;C measured here against a {p.baselineC.toFixed(1)}&deg;C
+          baseline taken from this region's own well-vegetated ground. Landsat
+          surface temperature, mid-morning overpass &mdash; not air temperature,
+          and not peak afternoon heat.
         </p>
       </div>
 
       <div className="plate__block">
         <h3 className="t-label">People served</h3>
         <p className="t-figure plate__figure">
-          {site.peopleServed.toLocaleString()}<span className="t-unit plate__figureunit">within 400 m</span>
+          {p.peopleServed.toLocaleString()}
+          <span className="t-unit plate__figureunit">within ~200 m</span>
         </p>
+        <p className="t-unit">WorldPop 2020 constrained, 100 m grid.</p>
       </div>
 
       <div className="plate__block">
-        <h3 className="t-label">Score {site.score.toFixed(2)}</h3>
-        {TERMS.map((t) => (
-          <div key={t.key} className="term">
-            <span className="t-data term__label">{t.label}</span>
+        <h3 className="t-label">Score {p.score.toFixed(2)}</h3>
+        {(['heat', 'canopy', 'people'] as const).map((k) => (
+          <div key={k} className="term">
+            <span className="t-data term__label">{TERM_LABEL[k]}</span>
             <span className="term__bar" aria-hidden="true">
-              <span className="term__fill" style={{ width: `${parts[t.key] * 100}%` }} />
+              <span className="term__fill" style={{ width: `${p.terms[k] * 100}%` }} />
             </span>
-            <span className="t-unit term__weight">&times;{t.weight}</span>
+            <span className="t-unit term__weight">&times;{weights[k]}</span>
           </div>
         ))}
+        <p className="t-unit plate__caveat">
+          Vegetation index here is {p.ndvi.toFixed(2)}.
+        </p>
       </div>
 
       <div className="plate__block">
         <h3 className="t-label">Plant here</h3>
         <div className="species">
-          <p className="t-subhead species__common">{site.species.common}</p>
-          <p className="t-body species__botanical">{site.species.botanical}</p>
-          <p className="t-unit species__because">{site.species.because}</p>
+          <p className="t-subhead species__common">{p.species.common}</p>
+          <p className="t-body species__botanical">{p.species.botanical}</p>
+          <p className="t-unit species__because">{p.species.because}</p>
         </div>
         <p className="t-unit plate__caveat">
-          Best-effort match from site conditions, not a horticulture guarantee.
+          Matched on the site's land use and available width, not on climate:
+          every weather API with free coverage of Lahore resolves all three
+          regions to one grid cell, so climate cannot distinguish these sites.
           Confirm with the Parks &amp; Horticulture Authority or a nursery.
         </p>
       </div>
