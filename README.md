@@ -1,4 +1,4 @@
-![Chhaon — 120 ranked planting sites over Model Town](docs/images/02-priority.png)
+![Chhaon — 120 ranked planting sites over Model Town](docs/images/02-priority.jpg)
 
 <div align="center">
 
@@ -26,7 +26,7 @@ well-vegetated ground **in the same satellite pass** — a correlation of
 That is a within-scene comparison: same day, same sensor, same atmosphere. It
 needs no trend, and it is what the entire priority map is built on.
 
-![The opening claim](docs/images/01-overture.png)
+![The opening claim](docs/images/01-overture.jpg)
 
 | Region | Shade worth | NDVI ↔ heat | Baseline | Ranked sites |
 |---|---|---|---|---|
@@ -62,34 +62,34 @@ species matched to that site's conditions.
 
 Click any site and every figure is traceable back to a named satellite scene.
 
-![A single site, fully sourced](docs/images/03-site.png)
+![A single site, fully sourced](docs/images/03-site.jpg)
 
 ### Four ways of seeing one neighbourhood
 
 **Heat** — Landsat surface temperature, rendered as a continuous field so the
 streets read *through* it.
 
-![Surface temperature](docs/images/04-heat.png)
+![Surface temperature](docs/images/04-heat.jpg)
 
 **Canopy** — Sentinel-2 vegetation index. Look where the green lands: Model
 Town's central park and its tree-lined avenues, visible in the photograph
 underneath. The layer validates itself against the imagery.
 
-![Green cover](docs/images/05-canopy.png)
+![Green cover](docs/images/05-canopy.jpg)
 
 **People** — WorldPop density, in ink rather than a third colour scale.
 
-![Population density](docs/images/06-people.png)
+![Population density](docs/images/06-people.jpg)
 
 Light theme and the survey-sheet basemap are equally first-class.
 
-![Light theme](docs/images/07-light.png)
+![Light theme](docs/images/07-light.jpg)
 
 ### The Method screen
 
 Written to survive a technical judge reading it closely — limits first.
 
-![Method](docs/images/08-method.png)
+![Method](docs/images/08-method.jpg)
 
 ---
 
