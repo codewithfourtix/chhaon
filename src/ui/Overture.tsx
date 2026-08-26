@@ -83,7 +83,7 @@ export function Overture() {
           )}
         </p>
 
-        <p className="overture__line t-body">
+        <p className="overture__line overture__line--second t-body">
           Chhaon finds where that shade is missing, works out how many people
           each gap affects, and ranks the ground worth planting &mdash; with a
           species chosen for the site.
