@@ -48,7 +48,10 @@ export function MapCanvas() {
   // throw "Style is not done loading". The epoch counter is what re-triggers
   // the layer effect once the new style has landed.
   const styleReadyRef = useRef(false)
-  const [styleEpoch, setStyleEpoch] = useState(0)
+  // Mirrored into state as well: the ref alone never re-triggers the effect, so
+  // a view change landing between setStyle and style.load would bail out and
+  // never re-run, stranding the map on the previous view.
+  const [styleLive, setStyleLive] = useState(false)
 
   const view = useApp((s) => s.view)
   const region = useApp((s) => s.region)
@@ -106,7 +109,7 @@ export function MapCanvas() {
     // every later layer update.
     const onStyleLoad = () => {
       styleReadyRef.current = true
-      setStyleEpoch((n) => n + 1)
+      setStyleLive(true)
     }
     m.on('style.load', onStyleLoad)
 
@@ -124,6 +127,7 @@ export function MapCanvas() {
   useEffect(() => {
     if (!map.current) return
     styleReadyRef.current = false
+    setStyleLive(false)
     map.current.setStyle(buildBasemapStyle(dark ? DARK_TOKENS : LIGHT_TOKENS), { diff: false })
   }, [dark])
 
@@ -206,7 +210,7 @@ export function MapCanvas() {
         FIRST_LABEL_LAYER
       )
     }
-  }, [view, geojson, dark, canopyFactor, styleEpoch])
+  }, [view, geojson, dark, canopyFactor, styleLive])
 
   // Selection ring — a paint update, never a layer rebuild.
   useEffect(() => {
@@ -218,7 +222,7 @@ export function MapCanvas() {
       2.5,
       0,
     ])
-  }, [selectedSiteId, styleEpoch, view])
+  }, [selectedSiteId, styleLive, view])
 
   // Click picking, with a forgiving box so small circles stay hittable.
   useEffect(() => {
