@@ -93,6 +93,12 @@ export function MapCanvas() {
     })
     m.addControl(new AttributionControl({ compact: false }), 'bottom-right')
 
+    // MapLibre reports an invalid paint expression here and then draws nothing.
+    // Without this the layer simply appears missing, which cost real time once.
+    m.on('error', (ev) => {
+      console.error('[map]', (ev as unknown as { error?: Error }).error ?? ev)
+    })
+
     // `style.load` fires once per style. Do NOT use isStyleLoaded() — that
     // reports *tile* loading, so it flaps false while tiles stream in and never
     // recovers, silently freezing every later layer update.
@@ -178,7 +184,15 @@ export function MapCanvas() {
       // scores that run 0.66-0.80 put every site in two of six buckets, so the
       // top site and the fortieth came out the same colour.
       const [slo, shi] = domainForScores(sites.features.map((f) => f.properties.score))
-      const bySize = ['interpolate', ['linear'], ['get', 'score'], slo, 0.62, shi, 1.35]
+      // Size by score. MapLibre requires the zoom expression at the TOP level of
+      // a paint property — wrapping it in a multiply makes the whole property
+      // invalid and the layer silently draws nothing, which is exactly what
+      // happened here. So zoom is the outer interpolate and the score scaling
+      // lives inside each stop.
+      const byScore = (px: number) =>
+        ['interpolate', ['linear'], ['get', 'score'], slo, px * 0.62, shi, px * 1.35]
+      const radius = (a: number, b: number, c: number) =>
+        ['interpolate', ['linear'], ['zoom'], 11, byScore(a), 14, byScore(b), 16, byScore(c)]
 
       // A soft halo so a dark pin still reads against dark imagery.
       m.addLayer({
@@ -186,8 +200,7 @@ export function MapCanvas() {
         type: 'circle',
         source: SITES,
         paint: {
-          'circle-radius': ['*', ['interpolate', ['linear'], ['zoom'],
-            11, 7, 14, 15, 16, 24], bySize] as never,
+          'circle-radius': radius(7, 15, 24) as never,
           'circle-color': dark ? '#000000' : '#FFFFFF',
           'circle-opacity': satellite ? 0.34 : 0.22,
           'circle-blur': 0.6,
@@ -201,8 +214,7 @@ export function MapCanvas() {
         paint: {
           // Rank is encoded twice — colour and size — so the order is readable
           // at a glance and still readable to anyone who cannot separate hues.
-          'circle-radius': ['*', ['interpolate', ['linear'], ['zoom'],
-            11, 5, 14, 11, 16, 18], bySize] as never,
+          'circle-radius': radius(5, 11, 18) as never,
           'circle-color': stepColor(['get', 'score'], rampBreaks(slo, shi),
             dark ? HEAT_DARK : HEAT_LIGHT) as never,
           'circle-opacity': satellite ? 0.96 : 0.92,

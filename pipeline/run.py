@@ -33,7 +33,8 @@ import pyproj
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import (  # noqa: E402
     CACHE, CANDIDATE_YEARS, LST_MAX_CLOUD, LST_WINDOW, MPC_SAS, NDVI_MAX_CLOUD,
-    LST_TARGET, MAX_SITES, MIN_SEPARATION_CELLS, NDVI_COMPOSITE_SCENES, NDVI_TARGET,
+    LST_TARGET, MAX_SITES, MIN_SEPARATION_CELLS, NDVI_COMPOSITE_SCENES,
+    NDVI_MAX_COMPOSITE_SCENES, NDVI_MIN_COVERAGE, NDVI_TARGET,
     NDVI_VEG_THRESHOLD, NDVI_WINDOW,
     OUT, OVERPASS_MIRRORS,
     REGIONS, SPECIES, STAC_MPC,
@@ -411,38 +412,54 @@ def run_region(region_id):
     # --- NDVI per year, fixed season window ---
     ndvi_by_year, ndvi_scenes = {}, {}
     for year in CANDIDATE_YEARS:
-        picks = find_scene("sentinel-2-l2a", STAC_S2, bbox, year, NDVI_WINDOW,
-                           NDVI_MAX_CLOUD, target=NDVI_TARGET,
-                           limit=NDVI_COMPOSITE_SCENES)
-        if not picks:
+        candidates = find_scene("sentinel-2-l2a", STAC_S2, bbox, year, NDVI_WINDOW,
+                                NDVI_MAX_CLOUD, target=NDVI_TARGET,
+                                limit=NDVI_MAX_COMPOSITE_SCENES)
+        if not candidates:
             log(f"  {year} NDVI: no usable scene in window — dropped")
             continue
 
-        layers = []
-        for it in picks:
-            def read_one(it=it):
-                a = it["assets"]
-                arr, tr, crs = ndvi_from(
-                    a["red"]["href"], a["nir"]["href"], a["scl"]["href"], bbox)
-                return resample_to_grid(arr, tr, crs, grid)
+        def read_one(it):
+            a = it["assets"]
+            arr, tr, crs = ndvi_from(
+                a["red"]["href"], a["nir"]["href"], a["scl"]["href"], bbox)
+            return resample_to_grid(arr, tr, crs, grid)
+
+        # Composite the nearest scenes, then keep pulling the next nearest until
+        # coverage clears the bar. A bbox straddling two Sentinel-2 tiles needs
+        # scenes from both, and nanmax mosaics them for free.
+        layers, used = [], []
+        cells = None
+        for it in candidates:
             try:
                 # Cached: COG reads are the slow part and must never be repeated.
-                layers.append(cached_grid(f"ndvi_{region_id}_{year}_{it['id']}", read_one))
+                layers.append(cached_grid(f"ndvi_{region_id}_{year}_{it['id']}",
+                                          lambda it=it: read_one(it)))
+                used.append(it)
             except Exception as e:
                 log(f"    {it['id'][:28]}: read failed ({e})")
+                continue
+            if len(layers) < NDVI_COMPOSITE_SCENES:
+                continue
+            with np.errstate(all="ignore"):
+                cells = np.nanmax(np.stack(layers), axis=0)
+            if np.isfinite(cells).mean() >= NDVI_MIN_COVERAGE:
+                break
+
         if not layers:
             log(f"  {year} NDVI: every scene failed to read — dropped")
             continue
+        if cells is None:
+            with np.errstate(all="ignore"):
+                cells = np.nanmax(np.stack(layers), axis=0)
+        picks = used
 
-        # Maximum-value composite. Cloud and haze both depress NDVI, so the
-        # per-cell maximum across the window's scenes rejects both. All-NaN
-        # cells stay NaN, which is what we want: a gap must read as a gap.
-        with np.errstate(all="ignore"):
-            cells = np.nanmax(np.stack(layers), axis=0)
         item = picks[0]
 
+        # A partly covered year is worse than a missing one: a hole in the
+        # raster reads as "no trees here" rather than "no data here".
         good = np.isfinite(cells).mean()
-        if good < 0.6:
+        if good < NDVI_MIN_COVERAGE:
             log(f"  {year} NDVI: only {good:.0%} of cells usable — dropped")
             continue
         ndvi_by_year[year] = cells

@@ -51,6 +51,21 @@ const run = async () => {
   const ok = after.includes('field-raster')
   console.log('after fast theme+view switch, layers =', after)
   console.log(ok ? 'PASS' : 'FAIL — stranded on the old view')
+
+  // Priority must draw every ranked site, not just the labelled ones. An
+  // invalid radius expression once left 120 circles rendering as zero.
+  await page.getByRole('button', { name: /^Priority/ }).click()
+  await page.waitForTimeout(3500)
+  const counts = await page.evaluate(() => ({
+    circles: window.__map.queryRenderedFeatures({ layers: ['sites-circles'] }).length,
+    labels: window.__map.queryRenderedFeatures({ layers: ['sites-rank'] }).length,
+  }))
+  console.log('priority dots:', counts)
+  if (counts.circles < 50) {
+    console.log(`FAIL — only ${counts.circles} site dots rendered`)
+    process.exitCode = 1
+  }
+  if (!ok) process.exitCode = 1
   if (errors.length) {
     console.log('page errors:', [...new Set(errors)].slice(0, 3))
   }

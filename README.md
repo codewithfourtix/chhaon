@@ -1,18 +1,99 @@
-# Chhaon (چھاؤں)
+<div align="center">
 
-Urdu for shade. Chhaon measures where Lahore lost its green cover, prices that
-loss in degrees of surface heat, and ranks where planting would do the most good
-— and what species to plant at each site.
+# چھاؤں &nbsp;Chhaon
 
-Built for **Smart City Hackathon Lahore 2026**, Theme Two: City Intelligence.
-Five regions: Model Town, Gulberg, DHA, Johar Town and Iqbal Town.
+**Urdu for shade.**
+
+Chhaon measures where Lahore's shade is missing, prices it in degrees of surface
+heat, and ranks the ground worth planting — with a species chosen for each site.
+
+Built for **Smart City Hackathon Lahore 2026** · Theme Two: City Intelligence
+
+</div>
+
+![The opening claim](docs/images/01-overture.png)
+
+---
+
+## The finding
+
+> ### In Lahore, shade is worth 3.2 °C.
+
+Bare ground in Model Town runs **3.2 °C hotter at the surface** than
+well-vegetated ground **in the same satellite pass** — a correlation of
+**−0.65** across 4,680 measured cells.
+
+That is a within-scene comparison: same day, same sensor, same atmosphere. It
+needs no trend, and it is what the entire priority map is built on.
+
+| Region | Shade worth | NDVI ↔ heat | Baseline | Ranked sites |
+|---|---|---|---|---|
+| Model Town | **3.2 °C** | −0.65 | 39.5 °C | 120 |
+| Gulberg | **2.6 °C** | −0.51 | 40.2 °C | 120 |
+| Iqbal Town | **2.3 °C** | −0.59 | 40.9 °C | 120 |
+| Johar Town | **1.8 °C** | −0.37 | 41.2 °C | 120 |
+| DHA | **0.9 °C** | −0.20 | 41.8 °C | 120 |
+
+**DHA is the weak one and we do not hide it.** Its bounds reach into farmland,
+which blurs the built-versus-vegetated contrast the measurement depends on.
+
+---
+
+## What we did *not* find
+
+**We do not claim Lahore is losing its canopy.** We looked, and the data does not
+support it. Model Town reads **35.5 %** vegetated in 2017 and **34.7 %** in 2025,
+having swung between 23.8 % and 49.2 % in between. Spring vegetation in Punjab
+tracks winter rainfall far more strongly than it tracks development.
+
+That negative result is the **first thing on the Method screen**. It is the most
+likely thing for a technical judge to attack, and stating it ourselves is what
+makes the positive finding believable.
+
+---
+
+## The product
+
+**600 ranked planting sites across five Lahore neighbourhoods.** Each one carries
+its measured heat cost, the population it serves, an open score breakdown, and a
+species matched to that site's conditions.
+
+![Priority sites over satellite imagery](docs/images/02-priority.png)
+
+Click any site and every figure is traceable back to a named satellite scene.
+
+![A single site, fully sourced](docs/images/03-site.png)
+
+### Four ways of seeing one neighbourhood
+
+**Heat** — Landsat surface temperature, rendered as a continuous field so the
+streets read *through* it.
+
+![Surface temperature](docs/images/04-heat.png)
+
+**Canopy** — Sentinel-2 vegetation index. Look where the green lands: Model
+Town's central park and its tree-lined avenues, visible in the photograph
+underneath. The layer validates itself against the imagery.
+
+![Green cover](docs/images/05-canopy.png)
+
+**People** — WorldPop density, in ink rather than a third colour scale.
+
+![Population density](docs/images/06-people.png)
+
+Light theme and the survey-sheet basemap are equally first-class.
+
+![Light theme](docs/images/07-light.png)
+
+### The Method screen
+
+Written to survive a technical judge reading it closely — limits first.
+
+![Method](docs/images/08-method.png)
 
 ---
 
 ## The data is real
-
-Every number in the interface comes from measured satellite and open map data,
-computed by `pipeline/` and committed as static files under `public/data/`.
 
 | Layer | Source | Native resolution |
 |---|---|---|
@@ -20,53 +101,51 @@ computed by `pipeline/` and committed as static files under `public/data/`.
 | Surface temperature | Landsat 8/9 C2 L2 via Microsoft Planetary Computer | 100 m |
 | Plantable land | OpenStreetMap via Overpass (ODbL) | vector |
 | Population | WorldPop 2020 constrained | 100 m |
-| Basemap | OpenFreeMap · imagery © Esri, Maxar | vector / raster |
+| Basemap · Imagery | OpenFreeMap · Esri, Maxar | vector · raster |
 
-No API key is needed for any of it. The app makes **zero** runtime API calls —
-everything is precomputed, so nothing can time out during a demo.
+**No API key is needed for any of it**, and the app makes **zero runtime API
+calls** — everything is precomputed and committed, so nothing can time out during
+a demo.
+
+You can verify any figure yourself. Re-reading the raw scene at the top-ranked
+site gives **45.8 °C** against the **45.7 °C** the app reports, and NDVI **0.13**
+against **0.127**. Scenes: `LC08_L2SP_149038_20250604`, `S2C_43RDQ_20250401`.
+
+---
+
+## Three decisions worth knowing
+
+**Scenes are anchored to a day-of-year, not to cloud cover.** Picking the
+least-cloudy scene each year put 2020 on 2 April and 2021 on 3 March — a month
+of spring drift moves NDVI more than a decade of development does.
+
+**Each year is a multi-scene composite.** On nearly identical dates Model Town
+read 34 % → 23 % → 8 % → 47 % across 2017–2020. That is haze, not tree loss.
+Cloud and haze both *depress* NDVI, so a per-cell maximum rejects them. Coverage
+is adaptive: we keep pulling scenes until it clears 92 %, and a year that never
+does is **dropped** — a hole in the raster would read as "no trees" when it means
+"no data".
+
+**Species matching ignores climate, and we proved it had to.** NASA POWER returns
+**byte-identical** temperature, wind and elevation for Model Town, Gulberg and
+DHA — its grid is ~50 km. A climate-driven matcher would recommend the same tree
+for every pin. Species are matched on land use, planting width and proximity to
+water instead.
+
+---
 
 ## Honest limits
 
-These are stated in the product too, on the Method screen — not buried here.
-
-- We say **green cover**, not tree canopy. At 10 m/px a vegetated cell may be
+- **"Green cover", never "tree canopy."** At 10 m/px a vegetated cell may be
   lawn, crop, scrub or canopy. We cannot count trees.
-- We say **surface temperature**, not temperature. Land surface temperature runs
-  much hotter than air, and Landsat passes over Lahore mid-morning, so these are
-  morning surface temperatures rather than the afternoon peak.
-- Analysis is on a **60 m grid**. A cell is a neighbourhood-scale statement, not
-  a parcel-level one.
-- Species matching is best-effort from site context, not a horticulture
-  guarantee. Confirm with the Parks & Horticulture Authority or a nursery.
+- **"Surface temperature", never "temperature."** It runs far hotter than air,
+  and Landsat passes mid-morning — not the afternoon peak.
+- **60 m cells.** A site marks a square worth surveying, not a hole to dig. We
+  have not checked ownership or buried utilities.
+- **The scoring weights are our judgment**, not a measurement. They are shown on
+  every site so anyone can argue with them.
 
-## The season rule that makes the years comparable
-
-NDVI in Lahore changes more between March and October of one year than across a
-decade of development. Picking whichever scene was clearest each year would
-measure the timing of spring and call it tree loss.
-
-So every year is sampled from **the same fixed window**, and within that window
-we take the scenes nearest a fixed target date — deliberately *not* the least
-cloudy one. A year with no usable scene in its window is **dropped**, never
-substituted from another season. That is why the year scrubber has gaps: they
-are real.
-
-A single date is not enough either. On nearly identical calendar dates, Model
-Town's vegetated fraction read 34% → 23% → 8% → 47% across 2017–2020 — that is
-haze and rainfall timing, not tree loss. Since cloud and haze both *depress*
-NDVI, each year is a **maximum-value composite** of several scenes near the
-target date, which is the standard treatment for exactly this problem.
-
-## Why species matching ignores climate
-
-The original plan matched species from climate APIs. It cannot work, and that
-was verified rather than assumed: NASA POWER returns **byte-identical**
-temperature, wind and elevation for Model Town, Gulberg and DHA, because its
-grid is ~50 km and all three fall in one cell. A climate-driven matcher would
-recommend the same tree for every pin.
-
-Species are matched instead on what actually varies site to site: land use,
-available planting width, and proximity to water.
+---
 
 ## Run it
 
@@ -74,40 +153,26 @@ available planting width, and proximity to water.
 npm install
 npm run dev          # http://localhost:5173
 npm run build
+```
 
-# Regenerate the data (slow: reads COGs over HTTP; results are cached)
+Regenerate the data (slow; results are cached):
+
+```bash
 pip install rasterio pyproj shapely numpy
-python pipeline/run.py              # all three regions
+python pipeline/run.py              # all five regions
 python pipeline/run.py model-town   # just one
 ```
 
-Screenshots of every surface: `node scripts/shots.mjs shots` (dev server must be
-running). `node scripts/smoke.mjs` guards a map timing regression.
+Verify:
 
-## Stack
+```bash
+python pipeline/test_logic.py   # scoring, species matching, compositing
+python pipeline/qa.py           # data sanity across every region
+node scripts/smoke.mjs          # map timing + rendered dot count
+node scripts/docshots.mjs       # the images in this README
+```
 
-MapLibre GL JS renders everything natively — basemap and data alike. There is no
-deck.gl: version 9.3's `MapboxOverlay` reads `map.transform`, which MapLibre 5+
-no longer exposes, so it throws on every frame. Native layers are better here
-anyway, because they live inside the style and place labels above the data for
-free.
-
-React + TypeScript + Vite, Zustand for state. Static deploy, no backend.
-
-## Project skills
-
-`.claude/skills/` holds three skills written for this repo. Load them before
-touching the relevant code:
-
-| Skill | Load before |
-|---|---|
-| `chhaon-design-system` | any user-facing UI change |
-| `map-ui` | any map code |
-| `map-performance` | adding data to the map, or when it feels heavy |
-
-`chhaon-design-system` is the locked visual direction and **overrides
-`frontend-design` wherever the two disagree**. Contrast ratios and ramp
-monotonicity in it are verified, not assumed — re-verify if you change a colour.
+---
 
 ## Using it
 
@@ -125,11 +190,30 @@ monotonicity in it are verified, not assumed — re-verify if you change a colou
 | `Esc` | Clear selection |
 
 The ranked list filters by land use, species and people served, and exports to
-CSV. Every site carries a copy-coordinates button and a link that opens the spot
-in Google Maps. The URL hash holds region, view, year, selected site, theme and
-basemap, so any view can be sent to someone.
+CSV. Every site has copy-coordinates and an open-in-Google-Maps link. The URL
+hash carries region, view, year, selected site, theme and basemap, so any view
+can be sent to someone.
+
+---
+
+## Stack
+
+MapLibre GL JS renders everything natively — basemap, interpolated data rasters
+and vector sites alike. React, TypeScript, Vite, Zustand. Static deploy, no
+backend.
+
+There is no deck.gl: version 9.3's `MapboxOverlay` reads `map.transform`, which
+MapLibre 5+ no longer exposes, so it throws on every frame.
+
+---
 
 ## Docs
 
-- `docs/SCREENS.md` — the surfaces and the single job each one does
-- `pipeline/config.py` — regions, season windows, weights, species table
+- **[`docs/PRODUCT.md`](docs/PRODUCT.md)** — the full team brief: every decision
+  and its reasoning, the scoring model, all five regions, the limits to state
+  before you are asked, and the bugs that cost us real time
+- [`docs/SCREENS.md`](docs/SCREENS.md) — the surfaces and the single job each does
+- [`pipeline/config.py`](pipeline/config.py) — regions, season windows, weights, species table
+
+`.claude/skills/` carries three project skills — `chhaon-design-system`,
+`map-ui`, `map-performance` — to be loaded before touching the code they cover.

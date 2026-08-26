@@ -73,6 +73,12 @@ NDVI_MAX_CLOUD = 35
 # them. This is the standard treatment, and it is why the cloud threshold above
 # can be relaxed: the compositing does the rejecting.
 NDVI_COMPOSITE_SCENES = 3
+# Regions near a Sentinel-2 tile edge can have a year whose nearest scenes only
+# partly cover them. Compositing is done adaptively: keep adding the next
+# nearest scene until coverage clears the bar, because a hole in the raster
+# reads as "no trees here" when it means "no data here".
+NDVI_MAX_COMPOSITE_SCENES = 8
+NDVI_MIN_COVERAGE = 0.92
 
 # Pre-monsoon peak heat, consistently clear skies. Same window every year.
 # Landsat overpasses Lahore mid-morning (~05:30 UTC / 10:30 local), so this is
