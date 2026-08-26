@@ -4,6 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 
 import { buildBasemapStyle, LIGHT_TOKENS, DARK_TOKENS, FIRST_LABEL_LAYER } from './basemapStyle'
 import { LAHORE_BOUNDS, REGIONS } from '../data/regions'
+import { domainFor, rampBreaks } from '../data/load'
 import { useRegionData } from '../data/useRegionData'
 import { useApp } from '../state/store'
 
@@ -28,14 +29,14 @@ const CANOPY_DARK = ['#14251C', '#1C3A2A', '#26523A', '#32704C', '#3FB871', '#7F
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 /** Discrete buckets, matching the six stops the legend shows. */
-function stepColor(prop: unknown, breaks: number[], ramp: string[]) {
-  const expr: unknown[] = ['step', prop, ramp[0]]
-  breaks.forEach((b, i) => expr.push(b, ramp[i + 1]))
+function stepValue<T>(prop: unknown, breaks: number[], stops: T[]) {
+  const expr: unknown[] = ['step', prop, stops[0]]
+  breaks.forEach((b, i) => expr.push(b, stops[i + 1]))
   return expr
 }
 
-const evenBreaks = (lo: number, hi: number) =>
-  [1, 2, 3, 4, 5].map((i) => lo + ((hi - lo) * i) / 6)
+const stepColor = (prop: unknown, breaks: number[], ramp: string[]) =>
+  stepValue(prop, breaks, ramp)
 
 export function MapCanvas() {
   const container = useRef<HTMLDivElement>(null)
@@ -138,6 +139,7 @@ export function MapCanvas() {
 
     if (view === 'canopy') {
       const ramp = dark ? CANOPY_DARK : CANOPY_LIGHT
+      const [clo, chi] = domainFor(grid, 'canopy', year)
       const veg = ['>=', ndviProp, 0.30] as never
 
       // The signature: shade cast beside the canopy, offset in screen pixels.
@@ -164,7 +166,7 @@ export function MapCanvas() {
         filter: ['has', `n${yearKey}`] as never,
         paint: {
           'fill-antialias': false,
-          'fill-color': stepColor(ndviProp, [0.10, 0.20, 0.30, 0.42, 0.55], ramp) as never,
+          'fill-color': stepColor(ndviProp, rampBreaks(clo, chi), ramp) as never,
           'fill-opacity': satellite ? 0.88 : 0.78,
           'fill-opacity-transition': { duration: dur, delay: 0 },
         },
@@ -178,7 +180,8 @@ export function MapCanvas() {
           'circle-radius': ['interpolate', ['linear'], ['zoom'],
             11, 4, 14, 9, 16, 16] as never,
           'circle-color': stepColor(['get', 'score'],
-            evenBreaks(0.25, 0.95), dark ? HEAT_DARK : HEAT_LIGHT) as never,
+            rampBreaks(...domainFor(grid, 'priority', year)),
+            dark ? HEAT_DARK : HEAT_LIGHT) as never,
           'circle-opacity': satellite ? 0.95 : 0.88,
           // Selection is a ring plus a lift, never a fill change.
           'circle-stroke-color': dark ? '#3FB871' : '#0F7A48',
@@ -188,8 +191,9 @@ export function MapCanvas() {
     } else {
       const heat = view === 'heat'
       const prop = ['get', heat ? 'lst' : 'pop']
-      const lo = heat ? grid.baselineC - 1 : 0
-      const hi = heat ? grid.baselineC + 12 : 400
+      // Domain comes from the data, never from a guess — and from the same
+      // function the legend uses, so the two cannot drift apart.
+      const [lo, hi] = domainFor(grid, view, year)
 
       m.addLayer({
         id: 'cells-fill',
@@ -199,13 +203,17 @@ export function MapCanvas() {
         paint: {
           'fill-antialias': false,
           'fill-color': heat
-            ? (stepColor(prop, evenBreaks(lo, hi), dark ? HEAT_DARK : HEAT_LIGHT) as never)
+            ? (stepColor(prop, rampBreaks(lo, hi), dark ? HEAT_DARK : HEAT_LIGHT) as never)
             : (dark ? '#FAFAFA' : '#0A0A0A'),
           // Population uses ink at varying opacity, never its own hue — a third
-          // colour scale would turn the map to mud.
+          // colour scale would turn the map to mud. Six discrete steps, not a
+          // continuous ramp: continuous opacity over noisy 100 m census cells
+          // reads as television static, and the legend shows six stops anyway.
           'fill-opacity': heat
             ? ((satellite ? 0.88 : 0.78) as never)
-            : (['interpolate', ['linear'], prop, 0, 0.05, hi, 0.85] as never),
+            : (stepValue(prop, rampBreaks(lo, hi), satellite
+                ? [0.10, 0.24, 0.38, 0.54, 0.72, 0.92]
+                : [0.07, 0.18, 0.32, 0.48, 0.66, 0.86]) as never),
           'fill-opacity-transition': { duration: dur, delay: 0 },
         },
       }, FIRST_LABEL_LAYER)

@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { LANDUSE_NAME, REGIONS, SOURCE_RES, UNIT, VIEWS } from '../data/regions'
-import { percentile } from '../data/load'
+import { domainFor } from '../data/load'
 import { useRegionData } from '../data/useRegionData'
 import { useApp } from '../state/store'
 
@@ -128,20 +128,15 @@ export function BasemapToggle() {
 export function ThermalScale() {
   const view = useApp((s) => s.view)
   const region = useApp((s) => s.region)
+  const year = useApp((s) => s.year)
   const { grid } = useRegionData(region)
 
-  // Legend ends come from the data, not from guesses.
+  // Exactly the domain the map is drawing with — same function, same numbers.
   let ends: [string, string] = ['—', '—']
   if (grid) {
-    if (view === 'heat') {
-      ends = [`${(grid.baselineC - 1).toFixed(0)}`, `${(grid.baselineC + 12).toFixed(0)}`]
-    } else if (view === 'people') {
-      ends = ['0', `${Math.round(percentile(grid.pop, 0.98, 10))}`]
-    } else if (view === 'canopy') {
-      ends = ['0.0', '0.7']
-    } else {
-      ends = ['0.25', '0.95']
-    }
+    const [lo, hi] = domainFor(grid, view, year)
+    const dp = view === 'canopy' || view === 'priority' ? 2 : 0
+    ends = [lo.toFixed(dp), hi.toFixed(dp)]
   }
 
   const ramp = view === 'canopy' ? CANOPY_RAMP : HEAT_RAMP

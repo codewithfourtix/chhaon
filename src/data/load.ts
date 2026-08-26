@@ -1,5 +1,5 @@
 import type { Feature, FeatureCollection, Point, Polygon } from 'geojson'
-import type { Meta, RegionGrid, RegionId, SiteProps } from './types'
+import type { Meta, RegionGrid, RegionId, SiteProps, ViewId } from './types'
 
 /**
  * Loads the pipeline's output. Everything is a static file committed to the
@@ -116,9 +116,52 @@ export function gridToCells(g: RegionGrid): FeatureCollection<Polygon> {
   return { type: 'FeatureCollection', features }
 }
 
-/** Percentile of the finite values in a quantised grid, for legend ends. */
+/** Percentile of the finite values in a quantised grid. */
 export function percentile(grid: (number | null)[], p: number, scale: number): number {
   const vals = grid.filter((v): v is number => v !== null).sort((a, b) => a - b)
   if (!vals.length) return 0
   return vals[Math.min(vals.length - 1, Math.floor((vals.length - 1) * p))] / scale
 }
+
+const domainMemo = new Map<string, [number, number]>()
+
+/**
+ * The value range a view's colour ramp should span, taken from the data itself.
+ *
+ * Hard-coded domains are how a real layer ends up looking like a flat wash:
+ * population here runs 101–162 people/ha, so a 0–400 domain put every cell
+ * within 8% of every other one. Clipping to p2–p98 spends the whole ramp on the
+ * range the data actually occupies, and the legend reads from this same
+ * function so the two can never disagree.
+ */
+export function domainFor(g: RegionGrid, view: ViewId, year: number | null): [number, number] {
+  const key = `${g.region}:${view}:${view === 'canopy' ? year : ''}`
+  const hit = domainMemo.get(key)
+  if (hit) return hit
+
+  let lo: number
+  let hi: number
+  if (view === 'heat') {
+    lo = percentile(g.lst, 0.02, 10)
+    hi = percentile(g.lst, 0.98, 10)
+  } else if (view === 'people') {
+    lo = percentile(g.pop, 0.02, 10)
+    hi = percentile(g.pop, 0.98, 10)
+  } else if (view === 'canopy') {
+    const y = year !== null && g.years.includes(year) ? year : g.years[g.years.length - 1]
+    lo = 0
+    hi = Math.max(0.35, percentile(g.ndvi[String(y)] ?? [], 0.98, 100))
+  } else {
+    lo = 0.25
+    hi = 0.95
+  }
+  // Never hand back a zero-width domain — a flat ramp is worse than a wrong one.
+  if (!(hi > lo)) hi = lo + 1
+  const out: [number, number] = [lo, hi]
+  domainMemo.set(key, out)
+  return out
+}
+
+/** Five interior breakpoints for a six-stop ramp across [lo, hi]. */
+export const rampBreaks = (lo: number, hi: number) =>
+  [1, 2, 3, 4, 5].map((i) => lo + ((hi - lo) * i) / 6)
