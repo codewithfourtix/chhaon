@@ -79,7 +79,9 @@ export function MapCanvas() {
 
     const m = new MapLibreMap({
       container: container.current,
-      style: buildBasemapStyle(LIGHT_TOKENS, 'map'),
+      // Mount-time values: this effect runs once, so the map is built with the
+      // theme and basemap the app actually starts in rather than restyling.
+      style: buildBasemapStyle(dark ? DARK_TOKENS : LIGHT_TOKENS, basemap),
       center: REGIONS[0].centre,
       zoom: REGIONS[0].zoom,
       maxBounds: LAHORE_BOUNDS,

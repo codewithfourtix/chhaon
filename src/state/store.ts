@@ -47,6 +47,9 @@ interface AppState {
 
 /** Dark is the default: this is a thermal instrument, and it reads better dark. */
 const INITIAL_THEME: Theme = 'dark'
+/** Satellite by default — the measured fields land on real ground, which is
+ *  what makes them believable at first glance. */
+const INITIAL_BASEMAP: BasemapMode = 'satellite'
 
 export const useApp = create<AppState>((set) => ({
   stage: 'overture',
@@ -55,7 +58,7 @@ export const useApp = create<AppState>((set) => ({
   year: null,
   selectedSiteId: null,
   theme: INITIAL_THEME,
-  basemap: 'map',
+  basemap: INITIAL_BASEMAP,
   listOpen: true,
   filters: NO_FILTERS,
   dataLoading: true,
