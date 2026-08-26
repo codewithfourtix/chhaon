@@ -25,12 +25,24 @@ it is lying about Lahore and it is wrong.
 
 ## The world we are borrowing from
 
-Survey of Pakistan map sheets. Forest department planting registers. Thermal
-camera plates. Manila folders, printed rules, stamped ink, marginalia.
+Survey sheets and planting registers, read through a modern instrument: precise
+neutral ground, hairline rules, monospaced measurements, thermal plates.
 
-Chhaon is an **instrument**, not a dashboard. It reads as something a city
-department printed and has been annotating for years — not as a SaaS product and
-not as a hackathon demo.
+Chhaon is an **instrument**, not a dashboard. It reads as a tool a city
+department would actually open — not as a SaaS landing page and not as a
+hackathon demo.
+
+### Why the ground is achromatic, and why it changed
+
+This system was first built on warm manila paper. It was rejected as reading
+immature, and the neutral ground below replaced it. That was the right call: a
+warm cast makes a measurement tool look nostalgic rather than precise, and it
+muddied the thermal ramp by putting warm data on warm ground.
+
+**What survived the change is the part that was doing the work** — hairlines
+instead of boxes, every number in mono, the live readout in the rail, the
+discrete legend that states its own resolution. Those, not the paper colour,
+are why it reads as an instrument. Do not reintroduce a warm ground.
 
 ## Three looks that are forbidden
 
@@ -38,8 +50,12 @@ These are the current AI-design clichés. We land on none of them:
 
 1. **Cream + high-contrast serif display + terracotta.** We are paper-based, but
    there is no serif anywhere in this product and no terracotta accent.
-2. **Near-black + one bright acid-green accent.** Our green is a deep forestry
-   ink green, never neon, and light is our primary theme.
+2. **Near-black + one bright acid-green accent.** We deliberately sit close to
+   this one, on client instruction, so the guard rails matter: light is the
+   primary theme and dark is the alternate; the green is a deep forestry green
+   (`#0F7A48`), never neon; and green is *scarce* rather than being the brand
+   colour — the heat ramp carries almost all the colour on screen. A future
+   session reading this line should not "fix" the palette back to brown.
 3. **Broadsheet hairlines + zero radius + dense newspaper columns.** We have
    rules, but we are map-first and spatial, not column-based. Radius is 2px —
    the edge of a pasted label, not a sharp cut.
@@ -54,38 +70,38 @@ stock sparkle icons, everything-centred, purple-to-blue founder gradients.
 **Light is the primary theme.** Dark is a real, fully-designed second theme —
 not a skin. Every token below is defined in both.
 
-### Light — manila register
+### Light — precise neutral
 
 ```
---plate-0        #EDE7DA   page ground, the register paper
---plate-1        #F6F2E9   raised: rail, site plate, scrubber
---plate-2        #E2DACA   inset, hover, pressed
---hairline       #C9BFA9   rules, borders, ticks
---hairline-firm  #A8997C   emphasised rules, active borders
+--plate-0        #FFFFFF   page ground
+--plate-1        #FAFAFA   raised: rail, site plate, scrubber
+--plate-2        #F2F2F2   inset, hover, pressed
+--hairline       #E5E5E5   rules, borders, ticks
+--hairline-firm  #D1D1D1   emphasised rules, active borders
 
---ink-0          #1F1B14   primary text — printing ink, never pure black
---ink-1          #5A5142   secondary text, labels
---ink-2          #6F6552   captions, units, disabled
+--ink-0          #0A0A0A   primary text — never pure black
+--ink-1          #525252   secondary text, labels
+--ink-2          #6B6B6B   captions, units, disabled
 
---canopy         #1D5C3A   THE accent. Forestry stamp green.
---canopy-fill    #2E8B57   map fills only, where small marks must read
+--canopy         #0F7A48   THE accent. Deep forestry green, never neon.
+--canopy-fill    #128A52   map fills only, where small marks must read
 ```
 
-### Dark — dusk haze
+### Dark — true neutral
 
 ```
---plate-0        #16110E   warm near-black. Never #000.
---plate-1        #1E1815
---plate-2        #292120
---hairline       #3A2F2B
---hairline-firm  #574943
+--plate-0        #0A0A0A
+--plate-1        #131313
+--plate-2        #1C1C1C
+--hairline       #262626
+--hairline-firm  #383838
 
---ink-0          #F5EFE8   warm bone
---ink-1          #B8AAA0
---ink-2          #8E8079
+--ink-0          #FAFAFA
+--ink-1          #A3A3A3
+--ink-2          #8A8A8A
 
---canopy         #4FA96E
---canopy-fill    #5FBF7E
+--canopy         #3FB871
+--canopy-fill    #4ECB80
 ```
 
 ### The thermal ramp
@@ -97,11 +113,19 @@ On paper, **more ink means more heat**. This is the print convention and it is
 why the heat layer reads as a thermal plate rather than a web chart.
 
 ```
-Light  --heat-1 #CFD9D7  --heat-2 #DCC79A  --heat-3 #D69A5C
-       --heat-4 #C26A38  --heat-5 #9E3626  --heat-6 #5F1218
+Light  --heat-1 #E4E9ED  --heat-2 #E9C88E  --heat-3 #DC9A5A
+       --heat-4 #C56836  --heat-5 #9C3324  --heat-6 #5C1015
 
-Dark   --heat-1 #35404A  --heat-2 #6B4A46  --heat-3 #9E4A32
-       --heat-4 #C86A2A  --heat-5 #E89A3C  --heat-6 #FFD166
+Dark   --heat-1 #2C3540  --heat-2 #5E4340  --heat-3 #96452F
+       --heat-4 #C46628  --heat-5 #E8983A  --heat-6 #FFD166
+```
+
+The canopy view has its own ramp with identical geometry, so switching views
+never shifts the legend:
+
+```
+Light  --canopy-1 #E6EBE7 ... --canopy-6 #0F7A48
+Dark   --canopy-1 #14251C ... --canopy-6 #7FE0A5
 ```
 
 In dark, the ramp inverts to light-is-hot — the thermal-camera convention.
@@ -277,3 +301,20 @@ the map where canopy green appears.
 - Every number carries its unit; every data layer states its native resolution.
 - Both themes ship complete. `prefers-color-scheme` is honoured, and an explicit
   toggle overrides it in both directions.
+
+
+## Satellite mode
+
+Satellite imagery inverts this system's founding rule. Photography is loud,
+saturated and high-contrast, so "the basemap is a substrate and the data carries
+the colour" stops holding by itself.
+
+Three things keep it true:
+
+- A **scrim** — a neutral fill at ~42% over the imagery, beneath the data.
+- **Desaturated imagery** (`raster-saturation: -0.25`).
+- **Harder data**: circle opacity rises to 0.95, and label halos widen.
+
+Satellite is an alternate reading mode, never the default. The survey-sheet map
+is what the product is; imagery is what you switch to when you want to see the
+actual ground.

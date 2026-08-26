@@ -36,13 +36,21 @@ REGIONS = {
 CANDIDATE_YEARS = list(range(2016, 2026))
 
 # Leaf-on, pre-monsoon, consistently low cloud. Same window every year.
-NDVI_WINDOW = ("03-01", "04-30")
+#
+# Within the window we take the scene closest to NDVI_TARGET, NOT the least
+# cloudy one. Picking by cloud alone let 2020 land on 2 April and 2021 on
+# 3 March, and a month of phenological drift in spring changes NDVI more than
+# a decade of tree loss does. Anchoring the day-of-year is what makes the
+# year-to-year comparison mean anything.
+NDVI_WINDOW = ("03-05", "04-25")
+NDVI_TARGET = "04-01"
 NDVI_MAX_CLOUD = 20
 
 # Pre-monsoon peak heat, consistently clear skies. Same window every year.
 # Landsat overpasses Lahore mid-morning (~05:30 UTC / 10:30 local), so this is
 # morning surface temperature, not peak afternoon heat. Stated in the UI.
 LST_WINDOW = ("05-01", "06-30")
+LST_TARGET = "06-01"
 LST_MAX_CLOUD = 20
 
 # NDVI at or above this is treated as vegetated. 0.3 is the conventional

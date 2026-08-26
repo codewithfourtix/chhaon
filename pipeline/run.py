@@ -33,7 +33,8 @@ import pyproj
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import (  # noqa: E402
     CACHE, CANDIDATE_YEARS, LST_MAX_CLOUD, LST_WINDOW, MPC_SAS, NDVI_MAX_CLOUD,
-    NDVI_VEG_THRESHOLD, NDVI_WINDOW, OUT, OVERPASS_MIRRORS, REGIONS, SPECIES, STAC_MPC,
+    LST_TARGET, NDVI_TARGET, NDVI_VEG_THRESHOLD, NDVI_WINDOW, OUT, OVERPASS_MIRRORS,
+    REGIONS, SPECIES, STAC_MPC,
     STAC_S2, WEIGHTS,
 )
 from cogs import lst_celsius_from, ndvi_from  # noqa: E402
@@ -86,8 +87,14 @@ def cached(name, produce):
 # Scene search
 # --------------------------------------------------------------------------
 
-def find_scene(collection, stac, bbox, year, window, max_cloud, extra_query=None):
-    """Lowest-cloud scene inside this year's fixed season window, or None."""
+def find_scene(collection, stac, bbox, year, window, max_cloud, extra_query=None, target=None):
+    """
+    The scene closest to `target` day-of-year inside this year's fixed window.
+
+    Deliberately NOT the least-cloudy scene: cloud cover is already bounded by
+    max_cloud, and holding the day-of-year steady is what makes one year
+    comparable to the next.
+    """
     start, end = window
     query = {"eo:cloud_cover": {"lt": max_cloud}}
     if extra_query:
@@ -106,7 +113,19 @@ def find_scene(collection, stac, bbox, year, window, max_cloud, extra_query=None
     items = res.get("features", [])
     if not items:
         return None
-    items.sort(key=lambda i: i["properties"].get("eo:cloud_cover", 100))
+    if target:
+        from datetime import date
+        tm, td = (int(x) for x in target.split("-"))
+        anchor = date(year, tm, td)
+
+        def distance(i):
+            d = i["properties"]["datetime"][:10]
+            got = date(*(int(x) for x in d.split("-")))
+            return abs((got - anchor).days)
+
+        items.sort(key=distance)
+    else:
+        items.sort(key=lambda i: i["properties"].get("eo:cloud_cover", 100))
     return items[0]
 
 
@@ -311,17 +330,22 @@ def run_region(region_id):
     # --- NDVI per year, fixed season window ---
     ndvi_by_year, ndvi_scenes = {}, {}
     for year in CANDIDATE_YEARS:
-        item = find_scene("sentinel-2-l2a", STAC_S2, bbox, year, NDVI_WINDOW, NDVI_MAX_CLOUD)
+        item = find_scene("sentinel-2-l2a", STAC_S2, bbox, year, NDVI_WINDOW,
+                          NDVI_MAX_CLOUD, target=NDVI_TARGET)
         if not item:
             log(f"  {year} NDVI: no usable scene in window — dropped")
             continue
-        try:
+        def read_ndvi_cells(item=item):
             a = item["assets"]
             arr, tr, crs = ndvi_from(a["red"]["href"], a["nir"]["href"], a["scl"]["href"], bbox)
+            return resample_to_grid(arr, tr, crs, grid)
+
+        try:
+            # Cached: COG reads are the slow part and must never be repeated.
+            cells = cached_grid(f"ndvi_{region_id}_{year}_{item['id']}", read_ndvi_cells)
         except Exception as e:
             log(f"  {year} NDVI: read failed ({e}) — dropped")
             continue
-        cells = resample_to_grid(arr, tr, crs, grid)
         good = np.isfinite(cells).mean()
         if good < 0.6:
             log(f"  {year} NDVI: only {good:.0%} of cells usable — dropped")
@@ -344,15 +368,18 @@ def run_region(region_id):
     lst_cells, lst_scene = None, None
     for year in reversed(CANDIDATE_YEARS):
         item = find_scene("landsat-c2-l2", STAC_MPC, bbox, year, LST_WINDOW, LST_MAX_CLOUD,
-                          {"platform": {"in": ["landsat-8", "landsat-9"]}})
+                          {"platform": {"in": ["landsat-8", "landsat-9"]}}, target=LST_TARGET)
         if not item:
             continue
-        try:
+        def read_lst_cells(item=item):
             arr, tr, crs = lst_celsius_from(mpc_sign(item["assets"]["lwir11"]["href"]), bbox)
+            return resample_to_grid(arr, tr, crs, grid)
+
+        try:
+            cells = cached_grid(f"lst_{region_id}_{year}_{item['id']}", read_lst_cells)
         except Exception as e:
             log(f"  {year} LST: read failed ({e})")
             continue
-        cells = resample_to_grid(arr, tr, crs, grid)
         if np.isfinite(cells).mean() < 0.6:
             continue
         lst_cells = cells
@@ -447,9 +474,19 @@ def run_region(region_id):
     q = lambda a, k: [None if not np.isfinite(v) else int(round(v * k))  # noqa: E731
                       for v in np.asarray(a).ravel()]
 
+    # The analysis grid is metric (UTM). Rather than ship a projection library to
+    # the browser, emit the grid's four corners in WGS84 and let the client
+    # bilinearly interpolate cell corners. Over a few kilometres near the UTM
+    # zone's central meridian the error is well under a metre.
+    gl, gb, gr, gt = grid["bounds_utm"]
+    corner = lambda x, y: [round(v, 6) for v in to_wgs(x, y)]  # noqa: E731
     grid_out = {
         "region": region_id, "name": cfg["name"],
         "bbox": [w, s, e, n],
+        "cornersWgs84": {
+            "tl": corner(gl, gt), "tr": corner(gr, gt),
+            "bl": corner(gl, gb), "br": corner(gr, gb),
+        },
         "boundsUtm": list(grid["bounds_utm"]), "utmEpsg": 32643,
         "cellM": CELL_M, "cols": grid["cols"], "rows": grid["rows"],
         "years": years,
