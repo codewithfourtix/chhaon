@@ -54,6 +54,22 @@ export function Methodology() {
             spring and call it tree loss.
           </p>
           <p className="t-body">
+            A single date cannot carry the claim either. Lahore's spring haze and
+            its rainfall-driven green-up moved Model Town's vegetated fraction
+            from <span className="t-data">34%</span> to{' '}
+            <span className="t-data">23%</span> to{' '}
+            <span className="t-data">8%</span> to{' '}
+            <span className="t-data">47%</span> across 2017&ndash;2020 on nearly
+            identical calendar dates. That is measurement noise, not tree loss.
+          </p>
+          <p className="t-body">
+            Cloud and haze both <em>depress</em> NDVI, so each year is a
+            <strong> maximum-value composite</strong> of the several scenes
+            nearest the target date &mdash; the standard treatment, and the reason
+            the cloud threshold can be relaxed: the compositing does the
+            rejecting.
+          </p>
+          <p className="t-body">
             So each year is sampled from a fixed window
             {meta && <> (<span className="t-data">{meta.ndviWindow[0]}</span> to{' '}
               <span className="t-data">{meta.ndviWindow[1]}</span>)</>}, and within
@@ -159,7 +175,7 @@ export function Methodology() {
                   Green cover:{' '}
                   {rm.years.map((y) => {
                     const sc = rm.ndviScenes[String(y)]
-                    return sc ? `${y} (${sc.date}, ${sc.cloud}% cloud)` : null
+                    return sc ? `${y} (${sc.composited ?? 1} scenes)` : null
                   }).filter(Boolean).join(' · ')}
                 </p>
               </div>

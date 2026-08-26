@@ -46,10 +46,16 @@ decade of development. Picking whichever scene was clearest each year would
 measure the timing of spring and call it tree loss.
 
 So every year is sampled from **the same fixed window**, and within that window
-we take the scene nearest a fixed target date — deliberately *not* the least
+we take the scenes nearest a fixed target date — deliberately *not* the least
 cloudy one. A year with no usable scene in its window is **dropped**, never
 substituted from another season. That is why the year scrubber has gaps: they
 are real.
+
+A single date is not enough either. On nearly identical calendar dates, Model
+Town's vegetated fraction read 34% → 23% → 8% → 47% across 2017–2020 — that is
+haze and rainfall timing, not tree loss. Since cloud and haze both *depress*
+NDVI, each year is a **maximum-value composite** of several scenes near the
+target date, which is the standard treatment for exactly this problem.
 
 ## Why species matching ignores climate
 

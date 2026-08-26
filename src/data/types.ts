@@ -48,7 +48,10 @@ export interface RegionMeta {
   centre: [number, number]
   zoom: number
   years: number[]
-  ndviScenes: Record<string, { id: string; date: string; cloud: number }>
+  ndviScenes: Record<string, {
+    id: string; date: string; cloud: number
+    composited?: number; dates?: string[]
+  }>
   lstScene: { id: string; datetime: string; cloud: number }
   baselineC: number
   siteCount: number
