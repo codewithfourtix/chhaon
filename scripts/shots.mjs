@@ -56,12 +56,26 @@ const run = async () => {
   // 7. Site plate open
   await view(page, 'Priority')
   await settle(page)
+  // Click an actual ranked site rather than guessing at the map centre —
+  // sites cluster where the ground is hot, which is rarely the middle.
   const box = await page.locator('.map-canvas').boundingBox()
-  // Walk a few points until one lands on a ranked site.
-  for (const [dx, dy] of [[0.5, 0.5], [0.45, 0.4], [0.55, 0.6], [0.4, 0.55], [0.6, 0.45]]) {
-    await page.mouse.click(box.x + box.width * dx, box.y + box.height * dy)
-    await page.waitForTimeout(700)
-    if (await page.locator('.plate').count()) break
+  const pt = await page.evaluate(() => {
+    const m = window.__map
+    const f = m.querySourceFeatures('sites')[0]
+    if (!f) return null
+    const p = m.project(f.geometry.coordinates)
+    return { x: p.x, y: p.y }
+  })
+  if (pt) {
+    await page.mouse.click(box.x + pt.x, box.y + pt.y)
+    await page.waitForTimeout(900)
+  }
+  if (!(await page.locator('.plate').count())) {
+    for (const [dx, dy] of [[0.5, 0.75], [0.45, 0.7], [0.6, 0.72]]) {
+      await page.mouse.click(box.x + box.width * dx, box.y + box.height * dy)
+      await page.waitForTimeout(700)
+      if (await page.locator('.plate').count()) break
+    }
   }
   await settle(page, 1200)
   await page.screenshot({ path: `${OUT}/07-site-plate.png` })
