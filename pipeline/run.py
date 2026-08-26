@@ -254,8 +254,10 @@ def osm_layers(osm_pair, grid):
                 if len(pts) >= 4:
                     buildings.append(shp_transform(to_utm, Polygon(pts)).buffer(0))
             elif "highway" in tags:
-                # A plantable verge is roughly the first few metres beside the kerb.
-                roads.append(shp_transform(to_utm, LineString(pts)).buffer(9))
+                # A plantable verge is the strip beside the kerb, not the road.
+                # 9 m was too generous: it made four cells in five "plantable"
+                # and drowned parks and canal banks in the ranking.
+                roads.append(shp_transform(to_utm, LineString(pts)).buffer(5))
             elif "waterway" in tags:
                 canal.append(shp_transform(to_utm, LineString(pts)).buffer(25))
             elif len(pts) >= 4:
@@ -293,12 +295,24 @@ def osm_layers(osm_pair, grid):
            ((roads, "roadside"), (green, "park"), (canal, "canal"))}
     built_cov = coverage(buildings)
 
+    # Open ground beats a road verge wherever there is a meaningful amount of
+    # it. Ranking by raw coverage alone always picked "roadside", because
+    # streets touch nearly every cell while parks touch few — which collapsed
+    # the species recommendation to one tree.
+    OPEN_MIN = 0.08
     landuse = np.zeros(shape_out, dtype="uint8")
     best = np.zeros(shape_out, dtype="float32")
-    for cls, c in cov.items():
-        take = c > best
+
+    for cls in ("park", "canal"):
+        c = cov[cls]
+        take = (c >= OPEN_MIN) & (c > best)
         landuse = np.where(take, CLASS_ID[cls], landuse).astype("uint8")
-        best = np.maximum(best, c)
+        best = np.maximum(best, np.where(take, c, 0))
+
+    road = cov["roadside"]
+    take = (landuse == 0) & (road > best)
+    landuse = np.where(take, CLASS_ID["roadside"], landuse).astype("uint8")
+    best = np.maximum(best, np.where(take, road, 0))
 
     # A cell counts as plantable only if enough of it is actually open ground.
     # Contact with a road is not the same as room for a tree.
