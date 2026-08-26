@@ -332,22 +332,36 @@ def run_region(region_id):
     # --- NDVI per year, fixed season window ---
     ndvi_by_year, ndvi_scenes = {}, {}
     for year in CANDIDATE_YEARS:
-        item = find_scene("sentinel-2-l2a", STAC_S2, bbox, year, NDVI_WINDOW,
-                          NDVI_MAX_CLOUD, target=NDVI_TARGET)
-        if not item:
+        picks = find_scene("sentinel-2-l2a", STAC_S2, bbox, year, NDVI_WINDOW,
+                           NDVI_MAX_CLOUD, target=NDVI_TARGET,
+                           limit=NDVI_COMPOSITE_SCENES)
+        if not picks:
             log(f"  {year} NDVI: no usable scene in window — dropped")
             continue
-        def read_ndvi_cells(item=item):
-            a = item["assets"]
-            arr, tr, crs = ndvi_from(a["red"]["href"], a["nir"]["href"], a["scl"]["href"], bbox)
-            return resample_to_grid(arr, tr, crs, grid)
 
-        try:
-            # Cached: COG reads are the slow part and must never be repeated.
-            cells = cached_grid(f"ndvi_{region_id}_{year}_{item['id']}", read_ndvi_cells)
-        except Exception as e:
-            log(f"  {year} NDVI: read failed ({e}) — dropped")
+        layers = []
+        for it in picks:
+            def read_one(it=it):
+                a = it["assets"]
+                arr, tr, crs = ndvi_from(
+                    a["red"]["href"], a["nir"]["href"], a["scl"]["href"], bbox)
+                return resample_to_grid(arr, tr, crs, grid)
+            try:
+                # Cached: COG reads are the slow part and must never be repeated.
+                layers.append(cached_grid(f"ndvi_{region_id}_{year}_{it['id']}", read_one))
+            except Exception as e:
+                log(f"    {it['id'][:28]}: read failed ({e})")
+        if not layers:
+            log(f"  {year} NDVI: every scene failed to read — dropped")
             continue
+
+        # Maximum-value composite. Cloud and haze both depress NDVI, so the
+        # per-cell maximum across the window's scenes rejects both. All-NaN
+        # cells stay NaN, which is what we want: a gap must read as a gap.
+        with np.errstate(all="ignore"):
+            cells = np.nanmax(np.stack(layers), axis=0)
+        item = picks[0]
+
         good = np.isfinite(cells).mean()
         if good < 0.6:
             log(f"  {year} NDVI: only {good:.0%} of cells usable — dropped")
