@@ -10,6 +10,7 @@ export function Methodology() {
   const back = useApp((s) => s.enterWorkspace)
   const region = useApp((s) => s.region)
   const { meta } = useRegionData(region)
+  const rm = meta?.regions?.[region]
 
   return (
     <div className="method">
@@ -23,6 +24,37 @@ export function Methodology() {
             Back to the map
           </button>
         </header>
+
+        <section className="method__sec">
+          <h2 className="t-heading">What we found, and what we did not</h2>
+          <p className="t-body">
+            <strong>We do not find a monotonic decline in green cover.</strong>{' '}
+            Across 2017&ndash;2025 the vegetated share of Model Town moves up and
+            down without trend
+            {rm?.vegPctByYear && (
+              <> &mdash;{' '}
+                {Object.entries(rm.vegPctByYear)
+                  .map(([y, v]) => `${y}: ${v}%`).join(' · ')}</>
+            )}. Spring vegetation in Punjab tracks winter rainfall far more
+            strongly than it tracks development, so this series cannot carry a
+            "the city is losing its trees" claim, and we do not make one.
+          </p>
+          <p className="t-body">
+            What does hold up is a <strong>within-scene</strong> comparison. On a
+            single satellite pass &mdash; same day, same sensor, same atmosphere
+            &mdash; bare ground runs{' '}
+            {rm?.heatGapC != null
+              ? <span className="t-data">{rm.heatGapC}&deg;C</span>
+              : 'measurably'}{' '}
+            hotter at the surface than well-vegetated ground
+            {rm?.ndviLstCorr != null && (
+              <>, with a correlation of{' '}
+                <span className="t-data">{rm.ndviLstCorr}</span> between
+                vegetation index and surface temperature across every cell</>
+            )}. That is the finding the priority map is built on: it needs no
+            trend, only today's measurement.
+          </p>
+        </section>
 
         <section className="method__sec">
           <h2 className="t-heading">What we can and cannot claim</h2>
@@ -46,7 +78,11 @@ export function Methodology() {
         </section>
 
         <section className="method__sec">
-          <h2 className="t-heading">Why every year uses the same weeks</h2>
+          <h2 className="t-heading">Why the year scrubber exists at all</h2>
+          <p className="t-body">
+            It shows the observed green cover for each year we have usable
+            imagery. It is an observation, not a trend line.
+          </p>
           <p className="t-body">
             NDVI in Lahore changes more between March and October of one year
             than it does across a decade of development. Comparing whichever

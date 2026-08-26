@@ -263,42 +263,89 @@ def osm_layers(osm_pair, grid):
         except Exception:
             continue
 
-    def burn(geoms, value):
+    # Rasterise at a sub-cell resolution so we can measure coverage rather than
+    # mere contact. FINE_M must divide CELL_M.
+    FINE_M = 10
+    k = CELL_M // FINE_M
+    fine_shape = (grid["rows"] * k, grid["cols"] * k)
+    fine_transform = grid["transform"] * rasterio.Affine.scale(1 / k, 1 / k)
+
+    def burn_fine(geoms, value=1):
         if not geoms:
-            return np.zeros(shape_out, dtype="uint8")
+            return np.zeros(fine_shape, dtype="uint8")
         return rasterize(
             ((g, value) for g in geoms if not g.is_empty),
-            out_shape=shape_out, transform=grid["transform"],
-            fill=0, dtype="uint8", all_touched=True,
+            out_shape=fine_shape, transform=fine_transform,
+            fill=0, dtype="uint8", all_touched=False,
         )
 
-    landuse = np.zeros(shape_out, dtype="uint8")
-    for geoms, cls in (
-        (roads, "roadside"), (green, "park"), (canal, "canal"),
-    ):
-        burned = burn(geoms, CLASS_ID[cls])
-        landuse = np.maximum(landuse, burned)
+    def coverage(geoms):
+        """Fraction of each coarse cell covered by these geometries, 0..1."""
+        fine = burn_fine(geoms).astype("float32")
+        return fine.reshape(grid["rows"], k, grid["cols"], k).mean(axis=(1, 3))
 
-    built = burn(buildings, 1).astype(bool)
-    return landuse, built
+    def burn(geoms, value):
+        """Coarse presence mask, kept for the building exclusion."""
+        return (coverage(geoms) > 0.5).astype("uint8") * value
+
+    # Coverage per class, then the class with the most ground in each cell wins.
+    cov = {cls: coverage(geoms) for geoms, cls in
+           ((roads, "roadside"), (green, "park"), (canal, "canal"))}
+    built_cov = coverage(buildings)
+
+    landuse = np.zeros(shape_out, dtype="uint8")
+    best = np.zeros(shape_out, dtype="float32")
+    for cls, c in cov.items():
+        take = c > best
+        landuse = np.where(take, CLASS_ID[cls], landuse).astype("uint8")
+        best = np.maximum(best, c)
+
+    # A cell counts as plantable only if enough of it is actually open ground.
+    # Contact with a road is not the same as room for a tree.
+    PLANTABLE_MIN = 0.12
+    plantable_frac = np.clip(best - built_cov, 0, 1)
+    landuse = np.where(plantable_frac >= PLANTABLE_MIN, landuse, 0).astype("uint8")
+
+    built = built_cov > 0.5
+    return landuse, built, plantable_frac
 
 
 # --------------------------------------------------------------------------
 # Population
 # --------------------------------------------------------------------------
 
-def read_population(bbox, grid):
+def read_population(bbox, grid, key):
     """WorldPop 2020 constrained, 100 m, people per pixel -> people per hectare."""
     from config import WORLDPOP_PAK
     from cogs import read_window
+    # WorldPop's national GeoTIFF is not cloud-optimised and their server runs
+    # at roughly 90 KB/s, so /vsicurl/ range reads crawl. The file is only ~34 MB
+    # — fetch it once to the cache and read it locally from then on.
+    local = os.path.join(CACHE, "pak_pop.tif")
+    if not os.path.exists(local) or os.path.getsize(local) < 33_000_000:
+        os.makedirs(CACHE, exist_ok=True)
+        log("  downloading WorldPop Pakistan (~34 MB, slow server)...")
+        req = urllib.request.Request(WORLDPOP_PAK, headers={"User-Agent": UA})
+        with urllib.request.urlopen(req, timeout=1800) as r, open(local, "wb") as f:
+            while True:
+                chunk = r.read(1 << 20)
+                if not chunk:
+                    break
+                f.write(chunk)
+        log(f"  downloaded {os.path.getsize(local)/1e6:.1f} MB")
+
+    def go():
+        pop, tr, crs, nodata = read_window(local, bbox)
+        pop = np.where((pop < 0) | (pop == nodata), np.nan, pop)
+        # WorldPop pixels are ~100 m = 1 ha, so people-per-pixel is already
+        # people per hectare.
+        return resample_to_grid(pop, tr, crs, grid)
+
     try:
-        pop, tr, crs, nodata = read_window(WORLDPOP_PAK, bbox)
+        return cached_grid(f"pop_{key}", go)
     except Exception as e:
         log(f"  ! population read failed: {e}")
         return None
-    pop = np.where((pop < 0) | (pop == nodata), np.nan, pop)
-    # WorldPop pixels are ~100 m = 1 ha, so people-per-pixel is already per hectare.
-    return resample_to_grid(pop, tr, crs, grid)
 
 
 # --------------------------------------------------------------------------
@@ -414,26 +461,42 @@ def run_region(region_id):
     # --- Land use and buildings ---
     log("  fetching OpenStreetMap...")
     osm_pair = fetch_osm(region_id, bbox)
-    landuse, built = osm_layers(osm_pair, grid)
-    log(f"  plantable classes on {100*(landuse>0).mean():.1f}% of cells, "
+    landuse, built, plantable_frac = osm_layers(osm_pair, grid)
+    log(f"  plantable on {100*(landuse>0).mean():.1f}% of cells "
+        f"(median open fraction {np.median(plantable_frac[landuse>0]):.2f}), "
         f"buildings on {100*built.mean():.1f}%")
 
     # --- Population ---
     log("  reading WorldPop...")
-    pop = read_population(bbox, grid)
+    pop = read_population(bbox, grid, region_id)
     if pop is None:
         pop = np.zeros_like(lst_cells)
 
     # --- Score ---
-    latest, earliest = years[-1], years[0]
+    latest = years[-1]
     ndvi_now = ndvi_by_year[latest]
-    ndvi_then = ndvi_by_year[earliest]
 
     finite = np.isfinite(lst_cells)
     # Shaded baseline: the temperature of well-vegetated cells in this region.
     veg_mask = finite & (ndvi_now >= 0.45)
     baseline = float(np.nanmedian(lst_cells[veg_mask])) if veg_mask.sum() > 20 \
         else float(np.nanpercentile(lst_cells[finite], 10))
+
+    # The finding that actually holds up. Comparing vegetated against bare
+    # ground *within one scene* sidesteps every year-to-year problem: same day,
+    # same sensor, same atmosphere. This is what the product should lead with,
+    # because the multi-year series does NOT show a monotonic decline — spring
+    # NDVI here is dominated by rainfall, not development.
+    veg_c = finite & (ndvi_now >= 0.45)
+    bare_c = finite & (ndvi_now < 0.15)
+    heat_gap = None
+    if veg_c.sum() > 30 and bare_c.sum() > 30:
+        heat_gap = float(np.median(lst_cells[bare_c]) - np.median(lst_cells[veg_c]))
+    ok = finite & np.isfinite(ndvi_now)
+    corr = float(np.corrcoef(ndvi_now[ok], lst_cells[ok])[0, 1]) if ok.sum() > 100 else None
+    log(f"  shade is worth {heat_gap:.1f} C here "
+        f"(NDVI vs LST r={corr:.2f}, n={int(ok.sum())})"
+        if heat_gap is not None else "  heat gap: not enough contrast to measure")
 
     heat_need = np.clip((lst_cells - baseline) / 8.0, 0, 1)
     canopy_absence = np.clip((NDVI_VEG_THRESHOLD + 0.15 - ndvi_now) / 0.45, 0, 1)
@@ -528,10 +591,17 @@ def run_region(region_id):
     sz = os.path.getsize(f"{OUT}/{region_id}.json") / 1e6
     log(f"  wrote {region_id}.json ({sz:.1f} MB) and {region_id}-sites.json")
 
+    veg_by_year = {
+        str(y): round(float(np.nanmean(ndvi_by_year[y] >= NDVI_VEG_THRESHOLD)) * 100, 1)
+        for y in years
+    }
     return {
         "name": cfg["name"], "centre": list(cfg["centre"]), "zoom": cfg["zoom"],
         "years": years, "ndviScenes": ndvi_scenes, "lstScene": lst_scene,
         "baselineC": round(baseline, 1), "siteCount": len(sites),
+        "heatGapC": None if heat_gap is None else round(heat_gap, 1),
+        "ndviLstCorr": None if corr is None else round(corr, 3),
+        "vegPctByYear": veg_by_year,
     }
 
 

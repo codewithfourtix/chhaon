@@ -55,6 +55,12 @@ export interface RegionMeta {
   lstScene: { id: string; datetime: string; cloud: number }
   baselineC: number
   siteCount: number
+  /** Median surface-temperature gap between bare and well-vegetated ground. */
+  heatGapC: number | null
+  /** Correlation of NDVI against surface temperature across all cells. */
+  ndviLstCorr: number | null
+  /** Vegetated share of ground, per year. */
+  vegPctByYear: Record<string, number>
 }
 
 export interface Meta {

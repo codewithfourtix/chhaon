@@ -31,7 +31,11 @@ def read_window(href: str, bbox_wgs84, out_shape=None):
     left as-is — masking is the caller's job, because what counts as invalid
     differs per product.
     """
-    url = href if href.startswith("/vsi") else f"/vsicurl/{href}"
+    # A local path must not be wrapped in /vsicurl/.
+    if href.startswith("/vsi") or os.path.exists(href):
+        url = href
+    else:
+        url = f"/vsicurl/{href}"
     with rasterio.open(url) as src:
         left, bottom, right, top = transform_bounds(
             "EPSG:4326", src.crs, *bbox_wgs84, densify_pts=21
