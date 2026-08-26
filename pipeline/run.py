@@ -148,8 +148,12 @@ def build_grid(bbox):
     cols = int(np.ceil((right - left) / CELL_M))
     rows = int(np.ceil((top - bottom) / CELL_M))
     transform = from_origin(left, top, CELL_M, CELL_M)
+    # (west, south, east, north) of the *snapped* grid — the grid is anchored at
+    # the top-left and extends down and right by whole cells, so south and east
+    # move, never north and west. Getting this order wrong collapses every cell
+    # polygon in the browser into a single band.
     return {"crs": utm, "transform": transform, "cols": cols, "rows": rows,
-            "bounds_utm": (left, bottom, left + cols * CELL_M, top - rows * CELL_M)}
+            "bounds_utm": (left, top - rows * CELL_M, left + cols * CELL_M, top)}
 
 
 def resample_to_grid(arr, src_transform, src_crs, grid):

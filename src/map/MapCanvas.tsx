@@ -145,6 +145,7 @@ export function MapCanvas() {
         source: CELLS,
         filter: veg,
         paint: {
+          'fill-antialias': false,
           'fill-color': dark ? '#000000' : '#0A0A0A',
           'fill-opacity': dark ? 0.55 : 0.22,
           'fill-translate': [6, 5],
@@ -158,6 +159,7 @@ export function MapCanvas() {
         source: CELLS,
         filter: ['has', `n${yearKey}`] as never,
         paint: {
+          'fill-antialias': false,
           'fill-color': stepColor(ndviProp, [0.10, 0.20, 0.30, 0.42, 0.55], ramp) as never,
           'fill-opacity': satellite ? 0.88 : 0.78,
           'fill-opacity-transition': { duration: dur, delay: 0 },
@@ -191,6 +193,7 @@ export function MapCanvas() {
         source: CELLS,
         filter: ['has', heat ? 'lst' : 'pop'] as never,
         paint: {
+          'fill-antialias': false,
           'fill-color': heat
             ? (stepColor(prop, evenBreaks(lo, hi), dark ? HEAT_DARK : HEAT_LIGHT) as never)
             : (dark ? '#FAFAFA' : '#0A0A0A'),
