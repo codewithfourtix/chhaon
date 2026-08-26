@@ -1,5 +1,5 @@
 export type ViewId = 'canopy' | 'heat' | 'people' | 'priority'
-export type RegionId = 'model-town' | 'gulberg' | 'dha'
+export type RegionId = 'model-town' | 'gulberg' | 'dha' | 'johar-town' | 'iqbal-town'
 
 /** Quantised grids: null means no usable observation for that cell. */
 export type QGrid = (number | null)[]

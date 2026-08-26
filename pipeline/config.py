@@ -31,7 +31,27 @@ REGIONS = {
         "centre": (74.4150, 31.4725),
         "zoom": 12.9,
     },
+    "johar-town": {
+        "name": "Johar Town",
+        "bbox": (74.2500, 31.4500, 74.3050, 31.4980),
+        "centre": (74.2775, 31.4740),
+        "zoom": 13.2,
+    },
+    "iqbal-town": {
+        "name": "Iqbal Town",
+        "bbox": (74.2650, 31.4980, 74.3200, 31.5400),
+        "centre": (74.2925, 31.5190),
+        "zoom": 13.2,
+    },
 }
+
+# How many ranked sites to publish per region, and how far apart they must sit.
+# 40 read as thin over a whole neighbourhood; the ranking is a shortlist to
+# survey, and a shortlist of forty for four square kilometres is too coarse to
+# plan from. Separation stays wide enough that the list never returns the same
+# block twice.
+MAX_SITES = 120
+MIN_SEPARATION_CELLS = 4  # 4 x 60 m = ~240 m
 
 CANDIDATE_YEARS = list(range(2016, 2026))
 

@@ -28,7 +28,9 @@ const run = async () => {
   await page.goto('http://localhost:5173/', { waitUntil: 'networkidle', timeout: 90_000 })
   await page.waitForTimeout(4000)
   await page.getByRole('button', { name: 'Open the workspace' }).click()
-  await page.waitForTimeout(2500)
+  // Satellite tiles plus 120 sites take longer to settle than the old
+  // vector-only default did.
+  await page.waitForTimeout(6000)
 
   // Without pipeline output there are no data layers to strand, so the timing
   // assertion would be vacuous. Say so rather than reporting a false pass.
@@ -43,7 +45,7 @@ const run = async () => {
   await page.getByRole('button', { name: /theme$/i }).click()
   await page.waitForTimeout(120)
   await page.getByRole('button', { name: /^Canopy/ }).click()
-  await page.waitForTimeout(4000)
+  await page.waitForTimeout(5000)
 
   const after = await layerIds(page)
   const ok = after.includes('field-raster')

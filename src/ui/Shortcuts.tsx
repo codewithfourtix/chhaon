@@ -3,9 +3,10 @@ import { IconKeyboard } from './icons'
 
 const KEYS: [string, string][] = [
   ['1 – 4', 'Canopy, Heat, People, Priority'],
-  ['Q W E', 'Model Town, Gulberg, DHA'],
+  ['Q W E R T', 'Jump between the five regions'],
   ['← →', 'Step through years'],
   ['↑ ↓', 'Walk the ranked sites'],
+  ['Enter', 'Zoom to the selected site'],
   ['L', 'Show or hide the ranked list'],
   ['B', 'Map or satellite'],
   ['D', 'Light or dark'],

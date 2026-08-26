@@ -920,3 +920,45 @@ kbd {
   .overture__line--second { display: none; }
   .overture__meter { margin-bottom: calc(var(--u) * 1.5); }
 }
+
+/* ---------- Site plate: rank, copy, open ---------- */
+
+.plate__id { min-width: 0; }
+.plate__title { display: flex; align-items: center; gap: calc(var(--u) * 2); }
+
+.plate__rank {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: var(--radius-sm);
+  background: var(--canopy);
+  color: var(--plate-0);
+  font-size: 0.6875rem;
+}
+
+.plate__loc {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 1.5);
+  margin-top: calc(var(--u) * 1);
+}
+.plate__loc .plate__coords { margin: 0; }
+
+.miniBtn {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  background: transparent;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: background var(--dur-tick) var(--ease-instrument),
+              color var(--dur-tick) var(--ease-instrument);
+}
+.miniBtn:hover { background: var(--plate-2); color: var(--ink-0); }

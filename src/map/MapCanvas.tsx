@@ -64,6 +64,7 @@ export function MapCanvas() {
   const selectedSiteId = useApp((s) => s.selectedSiteId)
   const selectSite = useApp((s) => s.selectSite)
   const filters = useApp((s) => s.filters)
+  const focusTick = useApp((s) => s.focusTick)
   const setLoading = useApp((s) => s.setDataLoading)
 
   const dark = theme === 'dark'
@@ -282,24 +283,36 @@ export function MapCanvas() {
     ])
   }, [selectedSiteId, styleEpoch, view])
 
-  // Selecting from the ranked list must bring the site into view — but never
-  // move the ground when the site is already visible, which is disorienting.
+  // Selecting a site flies to it and zooms to where you could actually see the
+  // ground. The site plate opens on the left half, so the camera is offset to
+  // keep the pin in the visible part of the map rather than under the panel.
+  const SITE_ZOOM = 16
   useEffect(() => {
     const m = map.current
     if (!m || !selectedSiteId || !sites) return
     const f = sites.features.find((x) => x.properties.id === selectedSiteId)
     if (!f) return
     const [lon, lat] = f.geometry.coordinates
-    const pt = m.project([lon, lat])
-    const c = m.getContainer().getBoundingClientRect()
-    const margin = 80
-    const visible =
-      pt.x > margin && pt.y > margin &&
-      pt.x < c.width - margin && pt.y < c.height - margin
-    if (visible) return
-    if (reducedMotion()) m.jumpTo({ center: [lon, lat] })
-    else m.easeTo({ center: [lon, lat], duration: 600 })
-  }, [selectedSiteId, sites])
+
+    const w = m.getContainer().clientWidth
+    // Roughly the width the plate and the list take out of the map.
+    const covered = Math.min(w * 0.55, 740)
+    const offset: [number, number] = w > 900 ? [-covered / 2 + 40, 0] : [0, 0]
+
+    if (reducedMotion()) {
+      // jumpTo takes no offset, so pre-apply it to the centre.
+      const c = m.unproject(m.project([lon, lat]).sub({ x: offset[0], y: offset[1] } as never))
+      m.jumpTo({ center: c, zoom: Math.max(m.getZoom(), SITE_ZOOM) })
+    } else {
+      m.flyTo({
+        center: [lon, lat],
+        zoom: Math.max(m.getZoom(), SITE_ZOOM),
+        offset,
+        curve: 1.3,
+        speed: 1.1,
+      })
+    }
+  }, [selectedSiteId, sites, focusTick])
 
   // Click picking, with a forgiving box so small marks stay hittable.
   useEffect(() => {

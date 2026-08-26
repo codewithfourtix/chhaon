@@ -33,7 +33,8 @@ import pyproj
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import (  # noqa: E402
     CACHE, CANDIDATE_YEARS, LST_MAX_CLOUD, LST_WINDOW, MPC_SAS, NDVI_MAX_CLOUD,
-    LST_TARGET, NDVI_COMPOSITE_SCENES, NDVI_TARGET, NDVI_VEG_THRESHOLD, NDVI_WINDOW,
+    LST_TARGET, MAX_SITES, MIN_SEPARATION_CELLS, NDVI_COMPOSITE_SCENES, NDVI_TARGET,
+    NDVI_VEG_THRESHOLD, NDVI_WINDOW,
     OUT, OVERPASS_MIRRORS,
     REGIONS, SPECIES, STAC_MPC,
     STAC_S2, WEIGHTS,
@@ -131,10 +132,23 @@ def find_scene(collection, stac, bbox, year, window, max_cloud, extra_query=None
     return items[:limit] if limit > 1 else items[0]
 
 
+# Planetary Computer SAS tokens last under an hour. Caching one without
+# honouring its expiry is why a long run started returning 403 on every Landsat
+# read partway through: the NDVI stage outlasted the token.
+_MPC_TOKEN = {"token": None, "expiry": ""}
+
+
 def mpc_sign(href):
-    token = cached("mpc_token.json", lambda: json.load(urllib.request.urlopen(
-        urllib.request.Request(MPC_SAS, headers={"User-Agent": UA}), timeout=60)))["token"]
-    return href + ("&" if "?" in href else "?") + token
+    # Refresh a minute early rather than racing the boundary: a read that starts
+    # just before expiry can still be in flight when the token dies.
+    soon = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() + 60))
+    if not _MPC_TOKEN["token"] or _MPC_TOKEN["expiry"] <= soon:
+        res = json.load(urllib.request.urlopen(
+            urllib.request.Request(MPC_SAS, headers={"User-Agent": UA}), timeout=60))
+        _MPC_TOKEN["token"] = res["token"]
+        _MPC_TOKEN["expiry"] = res.get("msft:expiry", "")
+        log(f"  MPC token refreshed (valid to {_MPC_TOKEN['expiry']})")
+    return href + ("&" if "?" in href else "?") + _MPC_TOKEN["token"]
 
 
 # --------------------------------------------------------------------------
@@ -461,8 +475,16 @@ def run_region(region_id):
         try:
             cells = cached_grid(f"lst_{region_id}_{year}_{item['id']}", read_lst_cells)
         except Exception as e:
-            log(f"  {year} LST: read failed ({e})")
-            continue
+            if "403" in str(e):
+                _MPC_TOKEN["token"] = None  # force a refresh, then try once more
+                try:
+                    cells = cached_grid(f"lst_{region_id}_{year}_{item['id']}", read_lst_cells)
+                except Exception as e2:
+                    log(f"  {year} LST: read failed after token refresh ({e2})")
+                    continue
+            else:
+                log(f"  {year} LST: read failed ({e})")
+                continue
         if np.isfinite(cells).mean() < 0.6:
             continue
         lst_cells = cells
@@ -533,14 +555,14 @@ def run_region(region_id):
     taken = np.zeros_like(score, dtype=bool)
     to_wgs = pyproj.Transformer.from_crs(grid["crs"], "EPSG:4326", always_xy=True).transform
     for flat in order:
-        if len(sites) >= 40:
+        if len(sites) >= MAX_SITES:
             break
         r, c = divmod(int(flat), grid["cols"])
         if not plantable[r, c] or np.isnan(score[r, c]):
             continue
-        # ~300 m minimum separation. Closer than this and the ranking returns
-        # the same block repeatedly, which is true but useless to plan from.
-        if taken[max(0, r-5):r+6, max(0, c-5):c+6].any():
+        # Minimum separation, so the ranking never returns the same block twice.
+        k = MIN_SEPARATION_CELLS
+        if taken[max(0, r-k):r+k+1, max(0, c-k):c+k+1].any():
             continue
         taken[r, c] = True
         x, y = rasterio.transform.xy(grid["transform"], r, c)
@@ -551,18 +573,21 @@ def run_region(region_id):
         sites.append({
             "id": f"{region_id}-{r}-{c}",
             "lon": round(lon, 5), "lat": round(lat, 5),
-            "score": round(float(score[r, c]), 3),
-            "lstC": round(float(lst_cells[r, c]), 1),
+            "score": round(float(np.nan_to_num(score[r, c])), 3),
+            "lstC": round(float(np.nan_to_num(lst_cells[r, c])), 1),
             "baselineC": round(baseline, 1),
-            "ndvi": round(float(ndvi_now[r, c]), 3),
-            "peopleServed": int(round(float(np.nansum(
-                pop[max(0, r-3):r+4, max(0, c-3):c+4])))),
+            "ndvi": round(float(np.nan_to_num(ndvi_now[r, c])), 3),
+            "peopleServed": int(round(float(np.nan_to_num(np.nansum(
+                pop[max(0, r-3):r+4, max(0, c-3):c+4]))))),
             "areaM2": CELL_M * CELL_M,
             "landuse": cls,
             "terms": {
-                "heat": round(float(heat_need[r, c]), 3),
-                "canopy": round(float(canopy_absence[r, c]), 3),
-                "people": round(float(pop_norm[r, c]), 3),
+                # nan_to_num because a cell can sit outside the population
+                # raster's coverage. NaN here is not valid JSON and made the
+                # whole sites file unparseable in the browser.
+                "heat": round(float(np.nan_to_num(heat_need[r, c])), 3),
+                "canopy": round(float(np.nan_to_num(canopy_absence[r, c])), 3),
+                "people": round(float(np.nan_to_num(pop_norm[r, c])), 3),
             },
             "species": {"common": sp["common"], "botanical": sp["botanical"],
                         "because": sp["because"]},
@@ -602,14 +627,14 @@ def run_region(region_id):
         "baselineC": round(baseline, 1),
     }
     with open(f"{OUT}/{region_id}.json", "w", encoding="utf-8") as f:
-        json.dump(grid_out, f, separators=(",", ":"))
+        json.dump(grid_out, f, separators=(",", ":"), allow_nan=False)
 
     with open(f"{OUT}/{region_id}-sites.json", "w", encoding="utf-8") as f:
         json.dump({"type": "FeatureCollection", "features": [
             {"type": "Feature",
              "geometry": {"type": "Point", "coordinates": [s_["lon"], s_["lat"]]},
              "properties": {k: v for k, v in s_.items() if k not in ("lon", "lat")}}
-            for s_ in sites]}, f, separators=(",", ":"))
+            for s_ in sites]}, f, separators=(",", ":"), allow_nan=False)
 
     sz = os.path.getsize(f"{OUT}/{region_id}.json") / 1e6
     log(f"  wrote {region_id}.json ({sz:.1f} MB) and {region_id}-sites.json")

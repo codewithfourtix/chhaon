@@ -101,3 +101,23 @@ export const IconKeyboard = () => (
     <path d="M4.4 6.6h.01M7 6.6h.01M9.6 6.6h.01M12 6.6h.01M5.4 9.4h5.2" strokeWidth="1.6" />
   </svg>
 )
+
+export const IconCopy = () => (
+  <svg {...base}>
+    <rect x="5.6" y="5.6" width="7.8" height="7.8" rx="1.4" />
+    <path d="M10.4 3.4a1.4 1.4 0 0 0-1.4-1.4H4a1.4 1.4 0 0 0-1.4 1.4v5a1.4 1.4 0 0 0 1.4 1.4" />
+  </svg>
+)
+
+export const IconCheck = () => (
+  <svg {...base}>
+    <path d="M3.2 8.4 6.4 11.6l6.4-7.2" />
+  </svg>
+)
+
+export const IconExternal = () => (
+  <svg {...base}>
+    <path d="M7 3.4H3.9a1.3 1.3 0 0 0-1.3 1.3v7.4a1.3 1.3 0 0 0 1.3 1.3h7.4a1.3 1.3 0 0 0 1.3-1.3V9" />
+    <path d="M9.6 2.6h3.8v3.8M13.4 2.6 7.4 8.6" />
+  </svg>
+)

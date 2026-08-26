@@ -11,12 +11,14 @@ export const REGIONS: { id: RegionId; name: string; centre: [number, number]; zo
   { id: 'model-town', name: 'Model Town', centre: [74.3239, 31.4805], zoom: 13.4 },
   { id: 'gulberg', name: 'Gulberg', centre: [74.3520, 31.5150], zoom: 13.4 },
   { id: 'dha', name: 'DHA', centre: [74.4150, 31.4725], zoom: 12.9 },
+  { id: 'johar-town', name: 'Johar Town', centre: [74.2775, 31.4740], zoom: 13.2 },
+  { id: 'iqbal-town', name: 'Iqbal Town', centre: [74.2925, 31.5190], zoom: 13.2 },
 ]
 
 /** Lahore plus a margin — the user can never scroll off into empty grey. */
 export const LAHORE_BOUNDS: [[number, number], [number, number]] = [
-  [74.15, 31.34],
-  [74.60, 31.66],
+  [74.14, 31.34],
+  [74.62, 31.66],
 ]
 
 export const VIEWS: { id: ViewId; name: string; blurb: string }[] = [

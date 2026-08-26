@@ -32,8 +32,8 @@ export function useAppShortcuts() {
         return
       }
 
-      // Q / W / E select a region.
-      const ri = ['q', 'w', 'e'].indexOf(k.toLowerCase())
+      // Q W E R T select a region, in rail order.
+      const ri = ['q', 'w', 'e', 'r', 't'].indexOf(k.toLowerCase())
       if (ri >= 0 && ri < REGIONS.length) {
         s.setRegion(REGIONS[ri].id as RegionId)
         e.preventDefault()
@@ -63,6 +63,12 @@ export function useAppShortcuts() {
           e.preventDefault()
           break
         }
+        case 'Enter':
+          if (s.selectedSiteId) {
+            s.focusSelected()
+            e.preventDefault()
+          }
+          break
         case 'l':
         case 'L':
           s.toggleList()

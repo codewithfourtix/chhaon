@@ -120,10 +120,14 @@ keeps identical geometry, so nothing in the frame jumps.
 - Region changes use `flyTo` with `curve: 1.42`, `speed: 0.9`, and
   `easing` matched to `--ease-instrument`. Never `jumpTo` for a user-initiated
   move — the flight is what tells the eye where it went.
-- Selecting a site does **not** recentre the map. Nothing is more disorienting
-  than the ground moving when you click a thing. Instead, offset the camera only
-  if the site plate would cover the selected site, and only by the minimum
-  needed.
+- Selecting a site **flies to it and zooms in** (z16), because the question
+  right after "where?" is "what is actually there?" — and at region zoom you
+  cannot tell. This reverses an earlier rule in this file that said selection
+  must never recentre; the client asked to land on the ground, and being able
+  to see the verge you are being told to plant is worth the camera move.
+- The camera is **offset** by roughly half the width the plate and list cover,
+  so the selected site lands in the visible part of the map rather than
+  underneath a panel.
 - `maxBounds` is set to Lahore plus a margin. The user can never scroll into
   empty grey ocean and lose the product.
 - `minZoom` / `maxZoom` are set to the range where our data is actually

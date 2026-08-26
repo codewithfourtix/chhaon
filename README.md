@@ -5,7 +5,7 @@ loss in degrees of surface heat, and ranks where planting would do the most good
 — and what species to plant at each site.
 
 Built for **Smart City Hackathon Lahore 2026**, Theme Two: City Intelligence.
-Three regions: Model Town, Gulberg, DHA.
+Five regions: Model Town, Gulberg, DHA, Johar Town and Iqbal Town.
 
 ---
 
@@ -108,6 +108,26 @@ touching the relevant code:
 `chhaon-design-system` is the locked visual direction and **overrides
 `frontend-design` wherever the two disagree**. Contrast ratios and ramp
 monotonicity in it are verified, not assumed — re-verify if you change a colour.
+
+## Using it
+
+| | |
+|---|---|
+| `1` – `4` | Canopy, Heat, People, Priority |
+| `Q W E R T` | Jump between the five regions |
+| `←` `→` | Step through years |
+| `↑` `↓` | Walk the ranked sites |
+| `Enter` | Zoom to the selected site |
+| `L` | Show or hide the ranked list |
+| `B` | Map or satellite |
+| `D` | Light or dark |
+| `M` | Method |
+| `Esc` | Clear selection |
+
+The ranked list filters by land use, species and people served, and exports to
+CSV. Every site carries a copy-coordinates button and a link that opens the spot
+in Google Maps. The URL hash holds region, view, year, selected site, theme and
+basemap, so any view can be sent to someone.
 
 ## Docs
 

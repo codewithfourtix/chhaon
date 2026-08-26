@@ -29,6 +29,8 @@ interface AppState {
   filters: Filters
   dataLoading: boolean
   dataError: string | null
+  /** Bumped to re-focus the camera on the selected site. */
+  focusTick: number
 
   enterWorkspace: () => void
   showMethodology: () => void
@@ -42,6 +44,7 @@ interface AppState {
   setFilters: (f: Partial<Filters>) => void
   clearFilters: () => void
   setDataLoading: (loading: boolean, error: string | null) => void
+  focusSelected: () => void
   hydrate: (s: Partial<AppState>) => void
 }
 
@@ -63,6 +66,7 @@ export const useApp = create<AppState>((set) => ({
   filters: NO_FILTERS,
   dataLoading: true,
   dataError: null,
+  focusTick: 0,
 
   enterWorkspace: () => set({ stage: 'workspace' }),
   showMethodology: () => set({ stage: 'methodology' }),
@@ -75,6 +79,7 @@ export const useApp = create<AppState>((set) => ({
   setFilters: (f) => set((s) => ({ filters: { ...s.filters, ...f }, selectedSiteId: null })),
   clearFilters: () => set({ filters: NO_FILTERS, selectedSiteId: null }),
   setDataLoading: (dataLoading, dataError) => set({ dataLoading, dataError }),
+  focusSelected: () => set((s) => ({ focusTick: s.focusTick + 1 })),
   hydrate: (patch) => set(patch as AppState),
   toggleTheme: () =>
     set((s) => {

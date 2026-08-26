@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRegionData } from '../data/useRegionData'
 import { useApp } from '../state/store'
+import { IconCheck, IconCopy, IconExternal } from './icons'
 
 const TERM_LABEL: Record<string, string> = {
   heat: 'Heat need',
@@ -9,6 +10,7 @@ const TERM_LABEL: Record<string, string> = {
 }
 
 export function SitePlate() {
+  const [copied, setCopied] = useState(false)
   const id = useApp((s) => s.selectedSiteId)
   const region = useApp((s) => s.region)
   const selectSite = useApp((s) => s.selectSite)
@@ -31,9 +33,44 @@ export function SitePlate() {
   return (
     <section className="plate" role="dialog" aria-label="Planting site detail">
       <header className="plate__head">
-        <div>
-          <h2 className="t-subhead plate__title">Planting site</h2>
-          <p className="t-data plate__coords">{lat.toFixed(5)}, {lon.toFixed(5)}</p>
+        <div className="plate__id">
+          <h2 className="t-subhead plate__title">
+            {p.rank ? <span className="plate__rank t-data">{p.rank}</span> : null}
+            Planting site
+          </h2>
+          <div className="plate__loc">
+            <p className="t-data plate__coords">{lat.toFixed(5)}, {lon.toFixed(5)}</p>
+            <button
+              type="button"
+              className="miniBtn"
+              title={copied ? 'Copied' : 'Copy coordinates'}
+              aria-label="Copy coordinates"
+              onClick={async () => {
+                const text = `${lat.toFixed(5)}, ${lon.toFixed(5)}`
+                try {
+                  await navigator.clipboard.writeText(text)
+                } catch {
+                  // Clipboard is blocked in some contexts; fall back to a
+                  // selectable prompt rather than failing silently.
+                  window.prompt('Copy these coordinates', text)
+                }
+                setCopied(true)
+                setTimeout(() => setCopied(false), 1600)
+              }}
+            >
+              {copied ? <IconCheck /> : <IconCopy />}
+            </button>
+            <a
+              className="miniBtn"
+              href={`https://www.google.com/maps/search/?api=1&query=${lat.toFixed(6)},${lon.toFixed(6)}`}
+              target="_blank"
+              rel="noreferrer noopener"
+              title="Open in Google Maps"
+              aria-label="Open this site in Google Maps"
+            >
+              <IconExternal />
+            </a>
+          </div>
         </div>
         <button type="button" className="plate__close" onClick={() => selectSite(null)} aria-label="Close">
           &times;
