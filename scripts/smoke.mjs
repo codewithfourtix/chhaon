@@ -40,7 +40,7 @@ const run = async () => {
     return
   }
 
-  await page.getByRole('button', { name: /^(Dark|Light)/ }).click()
+  await page.getByRole('button', { name: /theme$/i }).click()
   await page.waitForTimeout(120)
   await page.getByRole('button', { name: /^Canopy/ }).click()
   await page.waitForTimeout(4000)

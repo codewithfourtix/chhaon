@@ -1,5 +1,5 @@
 import { MapCanvas } from './map/MapCanvas'
-import { BasemapToggle, InstrumentRail, LoadingBar, ThermalScale, YearScrubber } from './ui/Chrome'
+import { BasemapToggle, BottomBar, InstrumentRail, LoadingBar, ThermalScale } from './ui/Chrome'
 import { SitePlate } from './ui/SitePlate'
 import { Overture } from './ui/Overture'
 import { Methodology } from './ui/Methodology'
@@ -24,7 +24,7 @@ export default function App() {
           <InstrumentRail />
           <BasemapToggle />
           <ThermalScale />
-          <YearScrubber />
+          <BottomBar />
           <SitePlate />
           <LoadingBar />
         </>

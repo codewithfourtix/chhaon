@@ -88,14 +88,14 @@ const run = async () => {
   await settle(page, 2000)
 
   // 9. Dark theme
-  await page.getByRole('button', { name: /theme$/ }).click()
+  await page.getByRole('button', { name: /theme$/i }).click()
   await settle(page, 3500)
   await page.screenshot({ path: `${OUT}/09-dark.png` })
-  await page.getByRole('button', { name: /theme$/ }).click()
+  await page.getByRole('button', { name: /theme$/i }).click()
   await settle(page, 3000)
 
   // 10. Methodology
-  await page.getByRole('button', { name: /^Method/ }).click()
+  await page.getByRole('button', { name: /^Method/i }).click()
   await settle(page, 1200)
   await page.screenshot({ path: `${OUT}/10-method.png`, fullPage: true })
   await page.getByRole('button', { name: 'Back to the map' }).click()

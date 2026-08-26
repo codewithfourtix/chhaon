@@ -1,12 +1,31 @@
 import { useEffect } from 'react'
-import { LANDUSE_NAME, REGIONS, SOURCE_RES, UNIT, VIEWS } from '../data/regions'
+import { REGIONS, SOURCE_RES, UNIT, VIEWS } from '../data/regions'
 import { domainFor } from '../data/load'
 import { useRegionData } from '../data/useRegionData'
 import { useApp } from '../state/store'
+import type { ViewId } from '../data/types'
+import {
+  IconCanopy, IconHeat, IconMethod, IconPeople, IconPriority, IconRegion, IconTheme,
+} from './icons'
 
 const HEAT_RAMP = ['--heat-1', '--heat-2', '--heat-3', '--heat-4', '--heat-5', '--heat-6']
 const CANOPY_RAMP = ['--canopy-1', '--canopy-2', '--canopy-3', '--canopy-4', '--canopy-5', '--canopy-6']
 
+const VIEW_ICON: Record<ViewId, () => React.ReactElement> = {
+  canopy: IconCanopy,
+  heat: IconHeat,
+  people: IconPeople,
+  priority: IconPriority,
+}
+
+/**
+ * The rail is nav only.
+ *
+ * It used to also carry a four-row statistics block pinned to the bottom. On a
+ * normal laptop window that block overlapped the Region section and clipped the
+ * buttons under it — the sidebar simply could not hold everything. The readout
+ * now lives in the bottom bar, where there was already empty space.
+ */
 export function InstrumentRail() {
   const view = useApp((s) => s.view)
   const region = useApp((s) => s.region)
@@ -16,9 +35,6 @@ export function InstrumentRail() {
   const toggleTheme = useApp((s) => s.toggleTheme)
   const showMethodology = useApp((s) => s.showMethodology)
 
-  const { grid, sites, meta, loading } = useRegionData(region)
-  const rmeta = meta?.regions?.[region]
-
   return (
     <nav className="rail" aria-label="Map controls">
       <header className="rail__head">
@@ -26,73 +42,55 @@ export function InstrumentRail() {
         <span className="rail__name">Chhaon</span>
       </header>
 
-      <div className="rail__group">
-        <h2 className="t-label rail__legend">View</h2>
-        {VIEWS.map((v) => (
-          <button
-            key={v.id}
-            type="button"
-            className={`switch ${view === v.id ? 'is-active' : ''}`}
-            aria-current={view === v.id}
-            onClick={() => setView(v.id)}
-          >
-            <span className="switch__name">{v.name}</span>
-            <span className="switch__blurb">{v.blurb}</span>
-          </button>
-        ))}
-      </div>
+      <div className="rail__nav">
+        <h2 className="rail__legend">View</h2>
+        {VIEWS.map((v) => {
+          const Icon = VIEW_ICON[v.id]
+          return (
+            <button
+              key={v.id}
+              type="button"
+              className={`nav ${view === v.id ? 'is-active' : ''}`}
+              aria-current={view === v.id}
+              onClick={() => setView(v.id)}
+            >
+              <span className="nav__icon"><Icon /></span>
+              <span className="nav__text">
+                <span className="nav__name">{v.name}</span>
+                <span className="nav__blurb">{v.blurb}</span>
+              </span>
+            </button>
+          )
+        })}
 
-      <div className="rail__group">
-        <h2 className="t-label rail__legend">Region</h2>
+        <h2 className="rail__legend rail__legend--spaced">Region</h2>
         {REGIONS.map((r) => (
           <button
             key={r.id}
             type="button"
-            className={`switch switch--tight ${region === r.id ? 'is-active' : ''}`}
+            className={`nav nav--tight ${region === r.id ? 'is-active' : ''}`}
             aria-current={region === r.id}
             onClick={() => setRegion(r.id)}
           >
-            <span className="switch__name">{r.name}</span>
+            <span className="nav__icon"><IconRegion /></span>
+            <span className="nav__text"><span className="nav__name">{r.name}</span></span>
           </button>
         ))}
       </div>
 
-      {/* The readout is what makes this an instrument. It is never hidden, and
-          every figure in it comes from the scene that was actually used. */}
-      <footer className="readout">
-        <div className="readout__row">
-          <span className="t-label">Sites</span>
-          <span className="t-data">{loading ? '—' : (sites?.features.length ?? 0)}</span>
-        </div>
-        <div className="readout__row">
-          <span className="t-label">Years</span>
-          <span className="t-data">
-            {grid ? `${grid.years[0]}–${grid.years[grid.years.length - 1]}` : '—'}
-          </span>
-        </div>
-        <div className="readout__row">
-          <span className="t-label">Source</span>
-          <span className="t-data">{SOURCE_RES[view]}</span>
-        </div>
-        <div className="readout__row">
-          <span className="t-label">Baseline</span>
-          <span className="t-data">
-            {grid ? `${grid.baselineC.toFixed(1)}°C` : '—'}
-          </span>
-        </div>
-        {rmeta && (
-          <p className="t-unit readout__scene">
-            Heat from {rmeta.lstScene.id.split('_').slice(0, 4).join(' ')},{' '}
-            {rmeta.lstScene.datetime}
-          </p>
-        )}
-
-        <button type="button" className="readout__theme t-label" onClick={showMethodology}>
-          Method<span className="readout__themeword">ology</span>
+      <footer className="rail__foot">
+        <button type="button" className="footBtn" onClick={showMethodology}>
+          <IconMethod />
+          <span>Method</span>
         </button>
-        <button type="button" className="readout__theme t-label" onClick={toggleTheme}>
-          {theme === 'light' ? 'Dark' : 'Light'}
-          <span className="readout__themeword"> theme</span>
+        <button
+          type="button"
+          className="footBtn"
+          onClick={toggleTheme}
+          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+        >
+          <IconTheme />
+          <span>{theme === 'light' ? 'Dark' : 'Light'}</span>
         </button>
       </footer>
     </nav>
@@ -100,21 +98,20 @@ export function InstrumentRail() {
 }
 
 /**
- * Sits on the map rather than in the rail. In the rail it fell below the fold
- * on a 1000px-tall window and was covered by the pinned readout, so satellite
- * view was effectively invisible.
+ * Sits on the map rather than in the rail — in the rail it fell below the fold
+ * and was covered by the pinned footer.
  */
 export function BasemapToggle() {
   const basemap = useApp((s) => s.basemap)
   const setBasemap = useApp((s) => s.setBasemap)
 
   return (
-    <div className="basemapToggle" role="group" aria-label="Basemap">
+    <div className="segmented" role="group" aria-label="Basemap">
       {([{ id: 'map', name: 'Map' }, { id: 'satellite', name: 'Satellite' }] as const).map((b) => (
         <button
           key={b.id}
           type="button"
-          className={`basemapToggle__btn t-label ${basemap === b.id ? 'is-active' : ''}`}
+          className={`segmented__btn ${basemap === b.id ? 'is-active' : ''}`}
           aria-pressed={basemap === b.id}
           onClick={() => setBasemap(b.id)}
         >
@@ -143,7 +140,7 @@ export function ThermalScale() {
 
   return (
     <aside className="scale" aria-label={`Legend, ${UNIT[view]}`}>
-      <span className="t-label scale__unit">{UNIT[view]}</span>
+      <span className="scale__unit">{UNIT[view]}</span>
       <div className="scale__bar">
         {ramp.map((token, i) => (
           <span
@@ -151,7 +148,7 @@ export function ThermalScale() {
             className="scale__stop"
             style={{
               background: `var(${view === 'people' ? '--ink-0' : token})`,
-              opacity: view === 'people' ? 0.08 + i * 0.16 : 1,
+              opacity: view === 'people' ? 0.07 + i * 0.158 : 1,
             }}
           />
         ))}
@@ -163,12 +160,13 @@ export function ThermalScale() {
   )
 }
 
-export function YearScrubber() {
+/** Year scrubber plus the live readout, in the space the bottom bar already had. */
+export function BottomBar() {
   const year = useApp((s) => s.year)
   const setYear = useApp((s) => s.setYear)
   const region = useApp((s) => s.region)
   const view = useApp((s) => s.view)
-  const { grid, meta } = useRegionData(region)
+  const { grid, sites, meta, loading } = useRegionData(region)
 
   const years = grid?.years ?? []
 
@@ -179,52 +177,69 @@ export function YearScrubber() {
     }
   }, [years, year, setYear])
 
-  if (!years.length) {
-    return (
-      <div className="scrubber">
-        <span className="t-label">Loading imagery&hellip;</span>
-      </div>
-    )
-  }
-
   const first = years[0]
   const last = years[years.length - 1]
-  const span = Math.max(1, last - first)
-  const scene = meta?.regions?.[region]?.ndviScenes?.[String(year)]
+  const span = Math.max(1, (last ?? 1) - (first ?? 0))
+  const rm = meta?.regions?.[region]
 
   return (
-    <div className="scrubber">
-      <div className="scrubber__label">
-        <span className="t-label">Year</span>
-        <span className="t-figure scrubber__year">{year ?? last}</span>
+    <div className="bottombar">
+      <div className="bottombar__scrub">
+        {years.length ? (
+          <>
+            <div className="scrubber__label">
+              <span className="t-label">Year</span>
+              <span className="t-figure scrubber__year">{year ?? last}</span>
+            </div>
+
+            <div className="scrubber__track">
+              <span className="scrubber__rule" aria-hidden="true" />
+              {/* Ticks sit at true temporal positions, so a year with no usable
+                  imagery reads as a real gap rather than being quietly skipped. */}
+              {years.map((y) => (
+                <button
+                  key={y}
+                  type="button"
+                  className={`scrubber__tick ${y === year ? 'is-active' : ''}`}
+                  style={{ left: `${((y - first) / span) * 100}%` }}
+                  aria-label={`Show ${y}`}
+                  aria-current={y === year}
+                  onClick={() => setYear(y)}
+                >
+                  <span className="t-unit scrubber__tickyear">{y}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <span className="t-label">Loading imagery&hellip;</span>
+        )}
       </div>
 
-      <div className="scrubber__track">
-        <span className="scrubber__rule" aria-hidden="true" />
-        {/* Ticks sit at true temporal positions, so a year with no usable
-            imagery shows up as a real gap rather than being quietly skipped. */}
-        {years.map((y) => (
-          <button
-            key={y}
-            type="button"
-            className={`scrubber__tick ${y === year ? 'is-active' : ''}`}
-            style={{ left: `${((y - first) / span) * 100}%` }}
-            aria-label={`Show ${y}`}
-            aria-current={y === year}
-            onClick={() => setYear(y)}
-          >
-            <span className="t-unit scrubber__tickyear">{y}</span>
-          </button>
-        ))}
-      </div>
-
-      <p className="t-unit scrubber__note">
-        {view === 'canopy' && scene
-          ? <>Sentinel-2 {scene.date}, {scene.cloud}% cloud. Years without a usable
-              scene in the March&ndash;April window are absent.</>
-          : <>Ticks mark years with usable imagery in the fixed
-              March&ndash;April window.</>}
-      </p>
+      <dl className="stats" aria-label="Current readout">
+        <div className="stats__item">
+          <dt className="t-label">Sites</dt>
+          <dd className="t-data">{loading ? '—' : (sites?.features.length ?? 0)}</dd>
+        </div>
+        <div className="stats__item">
+          <dt className="t-label">Years</dt>
+          <dd className="t-data">{years.length ? `${first}–${last}` : '—'}</dd>
+        </div>
+        <div className="stats__item">
+          <dt className="t-label">Source</dt>
+          <dd className="t-data">{SOURCE_RES[view]}</dd>
+        </div>
+        <div className="stats__item">
+          <dt className="t-label">Baseline</dt>
+          <dd className="t-data">{grid ? `${grid.baselineC.toFixed(1)}°C` : '—'}</dd>
+        </div>
+        {rm?.heatGapC != null && (
+          <div className="stats__item stats__item--accent">
+            <dt className="t-label">Shade worth</dt>
+            <dd className="t-data">{rm.heatGapC.toFixed(1)}°C</dd>
+          </div>
+        )}
+      </dl>
     </div>
   )
 }
@@ -242,5 +257,3 @@ export function LoadingBar() {
   }
   return loading ? <div className="databar" aria-hidden="true" /> : null
 }
-
-export { LANDUSE_NAME }

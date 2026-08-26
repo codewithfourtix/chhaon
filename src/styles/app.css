@@ -109,50 +109,67 @@
   flex-direction: column;
   background: var(--plate-1);
   border-right: 1px solid var(--hairline);
-  overflow-y: auto;
+  /* The rail itself never scrolls; only its nav does. That is what stopped the
+     footer overlapping the Region section on a short window. */
+  overflow: hidden;
 }
 
-/* The rail scrolls when the viewport is short, but the wordmark and the live
-   readout must never scroll away — they are what identify the instrument. */
 .rail__head {
-  position: sticky;
-  top: 0;
-  z-index: 2;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: calc(var(--u) * 2.5);
-  padding: calc(var(--u) * 5) calc(var(--u) * 5) calc(var(--u) * 4);
-  background: var(--plate-1);
+  height: 64px;
+  padding: 0 calc(var(--u) * 5);
 }
 
-.rail__mark { font-size: 1.5rem; color: var(--canopy); }
+.rail__mark { font-size: 1.25rem; line-height: 1; color: var(--canopy); }
 
 .rail__name {
   font-family: var(--font-display);
   font-weight: 700;
-  font-stretch: 125%;
-  font-size: 1rem;
+  font-stretch: 112%;
+  font-size: 1.0625rem;
   letter-spacing: -0.01em;
 }
 
-.rail__group { padding: calc(var(--u) * 2) calc(var(--u) * 3) calc(var(--u) * 4); }
-.rail__legend {
-  display: block;
-  padding: 0 calc(var(--u) * 2) calc(var(--u) * 2);
-  font-size: 0.6875rem;
-  color: var(--ink-2);
+/* The only scrolling region. */
+.rail__nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: calc(var(--u) * 1) calc(var(--u) * 3) calc(var(--u) * 4);
+  scrollbar-width: thin;
+}
+.rail__nav::-webkit-scrollbar { width: 6px; }
+.rail__nav::-webkit-scrollbar-thumb {
+  background: var(--hairline);
+  border-radius: 999px;
 }
 
-.switch {
+.rail__legend {
+  margin: 0;
+  padding: calc(var(--u) * 2) calc(var(--u) * 2) calc(var(--u) * 1.5);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.rail__legend--spaced { padding-top: calc(var(--u) * 5); }
+
+.nav {
   position: relative;
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  gap: calc(var(--u) * 2.5);
   width: 100%;
   min-height: 44px;
   text-align: left;
   background: transparent;
   border: 0;
   border-radius: var(--radius);
-  padding: calc(var(--u) * 2.5) calc(var(--u) * 3);
+  padding: calc(var(--u) * 2.5) calc(var(--u) * 2.5);
   margin-bottom: 2px;
   cursor: pointer;
   color: var(--ink-1);
@@ -160,101 +177,97 @@
   transition: background var(--dur-tick) var(--ease-instrument),
               color var(--dur-tick) var(--ease-instrument);
 }
-.switch:hover { background: var(--plate-2); color: var(--ink-0); }
-.switch.is-active { background: var(--plate-2); color: var(--ink-0); }
-/* The accent marks the active row without needing a second background. */
-.switch.is-active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 18px;
-  border-radius: 2px;
-  background: var(--canopy);
+.nav:hover { background: var(--plate-2); color: var(--ink-0); }
+.nav.is-active { background: var(--plate-2); color: var(--ink-0); }
+.nav.is-active .nav__icon { color: var(--canopy); }
+
+.nav__icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 20px;
+  color: var(--ink-2);
 }
+.nav:hover .nav__icon { color: var(--ink-1); }
 
-.switch__name { display: block; font-size: 0.9375rem; font-weight: 600; }
-.switch__blurb { display: block; font-size: 0.75rem; color: var(--ink-2); margin-top: 1px; line-height: 1.4; }
-.switch--tight { min-height: 40px; }
-.switch--tight .switch__name { font-weight: 500; }
+.nav__text { display: block; min-width: 0; }
+.nav__name { display: block; font-size: 0.9375rem; font-weight: 500; line-height: 1.35; }
+.nav__blurb {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--ink-2);
+  line-height: 1.4;
+  margin-top: 1px;
+}
+.nav--tight { min-height: 38px; }
 
-.readout {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
-  margin-top: auto;
-  padding: calc(var(--u) * 3) calc(var(--u) * 5) calc(var(--u) * 4);
-  background: var(--plate-1);
+/* Compact footer — two actions, never a statistics panel. */
+.rail__foot {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: calc(var(--u) * 2);
+  padding: calc(var(--u) * 3) calc(var(--u) * 3);
   border-top: 1px solid var(--hairline);
 }
-.readout__theme + .readout__theme { margin-top: calc(var(--u) * 2); }
-.readout__row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding: calc(var(--u) * 1.75) 0;
-}
-.readout__row + .readout__row { border-top: 1px solid var(--hairline); }
-.readout__row .t-data { color: var(--ink-0); }
 
-.readout__theme {
-  margin-top: calc(var(--u) * 3);
-  background: var(--plate-2);
-  border: 1px solid transparent;
+.footBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--u) * 2);
+  min-height: 40px;
+  padding: 0 calc(var(--u) * 2);
+  background: transparent;
+  border: 1px solid var(--hairline);
   border-radius: var(--radius);
-  padding: calc(var(--u) * 2.5) calc(var(--u) * 3);
-  width: 100%;
-  min-height: 42px;
   cursor: pointer;
   color: var(--ink-1);
   font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 500;
   transition: background var(--dur-tick) var(--ease-instrument),
               color var(--dur-tick) var(--ease-instrument);
 }
-.readout__theme:hover { background: var(--hairline); color: var(--ink-0); }
+.footBtn:hover { background: var(--plate-2); color: var(--ink-0); }
 
-/* ---------- Basemap toggle (sits on the map) ---------- */
+/* ---------- Segmented control (basemap) ---------- */
 
-.basemapToggle {
+.segmented {
   position: absolute;
   top: calc(var(--u) * 4);
   left: calc(var(--rail-w) + var(--u) * 4);
   z-index: 4;
   display: flex;
-  background: var(--plate-1);
+  gap: 2px;
+  padding: 3px;
+  background: color-mix(in srgb, var(--plate-1) 92%, transparent);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--hairline);
   border-radius: 999px;
   box-shadow: var(--shadow-plate);
-  padding: 3px;
-  gap: 2px;
 }
 
-.basemapToggle__btn {
-  background: transparent;
+.segmented__btn {
+  position: relative;
   border: 0;
   border-radius: 999px;
   padding: 0 calc(var(--u) * 4);
-  min-height: 36px;
+  min-height: 34px;
+  background: transparent;
   cursor: pointer;
   color: var(--ink-1);
   font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   transition: background var(--dur-tick) var(--ease-instrument),
               color var(--dur-tick) var(--ease-instrument);
 }
-.basemapToggle__btn:hover { background: var(--plate-2); color: var(--ink-0); }
-.basemapToggle__btn.is-active { background: var(--plate-2); color: var(--ink-0); }
-.basemapToggle__btn.is-active { background: var(--plate-2); color: var(--ink-0); }
-
-@media (max-width: 1100px) {
-  .basemapToggle { left: calc(var(--rail-w-collapsed) + var(--u) * 3); }
-}
-
-@media (max-width: 700px) {
-  .basemapToggle { top: calc(var(--u) * 2); }
-  .basemapToggle__btn { padding: 0 calc(var(--u) * 3); }
-}
+.segmented__btn:hover { color: var(--ink-0); }
+.segmented__btn.is-active { background: var(--plate-2); color: var(--ink-0); }
 
 /* ---------- Thermal scale ---------- */
 
@@ -273,17 +286,24 @@
   border-left: 1px solid var(--hairline);
 }
 
-.scale__unit { writing-mode: vertical-rl; text-orientation: mixed; }
+.scale__unit {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
 
 .scale__bar {
   position: relative;
   flex: 1;
-  width: 14px;
-  /* Shifted right so the tick values have room to run leftward without clipping. */
+  width: 12px;
   margin-left: 34px;
   display: flex;
   flex-direction: column-reverse;
-  max-height: 320px;
+  max-height: 300px;
 }
 
 .scale__stop { flex: 1; }
@@ -291,15 +311,15 @@
 .scale__stop:first-child { border-radius: 0 0 999px 999px; }
 .scale__stop:last-child { border-radius: 999px 999px 0 0; }
 
-.scale__tick { position: absolute; right: 22px; color: var(--ink-1); white-space: nowrap; }
+.scale__tick { position: absolute; right: 20px; color: var(--ink-1); white-space: nowrap; }
 .scale__tick--hi { top: -2px; }
 .scale__tick--lo { bottom: -2px; }
 
 .scale__res { writing-mode: vertical-rl; text-orientation: mixed; }
 
-/* ---------- Year scrubber ---------- */
+/* ---------- Bottom bar: scrubber + readout ---------- */
 
-.scrubber {
+.bottombar {
   position: absolute;
   left: var(--rail-w);
   right: var(--scale-w);
@@ -308,15 +328,23 @@
   display: flex;
   align-items: center;
   gap: calc(var(--u) * 8);
-  padding: 0 calc(var(--u) * 8);
+  padding: 0 calc(var(--u) * 7);
   background: var(--plate-1);
   border-top: 1px solid var(--hairline);
 }
 
-.scrubber__label { display: flex; align-items: baseline; gap: calc(var(--u) * 3); }
-.scrubber__year { font-size: 1.75rem; }
+.bottombar__scrub {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 7);
+}
 
-.scrubber__track { position: relative; flex: 1; height: 44px; }
+.scrubber__label { display: flex; align-items: baseline; gap: calc(var(--u) * 2.5); }
+.scrubber__year { font-size: 1.625rem; }
+
+.scrubber__track { position: relative; flex: 1; height: 44px; min-width: 120px; }
 
 .scrubber__rule {
   position: absolute;
@@ -324,7 +352,7 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: var(--hairline-firm);
+  background: var(--hairline);
 }
 
 .scrubber__tick {
@@ -332,7 +360,7 @@
   top: 0;
   transform: translateX(-50%);
   height: 44px;
-  width: 44px;
+  width: 40px;
   background: transparent;
   border: 0;
   cursor: pointer;
@@ -344,15 +372,16 @@
   content: '';
   position: absolute;
   top: 50%;
-  width: 1px;
+  width: 2px;
   height: 10px;
   margin-top: -5px;
+  border-radius: 999px;
   background: var(--hairline-firm);
   transition: height var(--dur-tick) var(--ease-instrument),
               background var(--dur-tick) var(--ease-instrument);
 }
-.scrubber__tick:hover::before { height: 16px; margin-top: -8px; }
-.scrubber__tick.is-active::before { height: 20px; margin-top: -10px; background: var(--canopy); width: 2px; }
+.scrubber__tick:hover::before { height: 16px; margin-top: -8px; background: var(--ink-2); }
+.scrubber__tick.is-active::before { height: 20px; margin-top: -10px; background: var(--canopy); }
 
 .scrubber__tickyear {
   position: absolute;
@@ -365,14 +394,26 @@
 .scrubber__tick.is-active .scrubber__tickyear { opacity: 1; }
 .scrubber__tick.is-active .scrubber__tickyear { color: var(--ink-0); }
 
-.scrubber__note { max-width: 14rem; margin: 0; }
+/* The readout that used to crush the rail. */
+.stats {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 6);
+  margin: 0;
+}
+
+.stats__item { display: flex; flex-direction: column; gap: 1px; }
+.stats__item dt { font-size: 0.625rem; }
+.stats__item dd { margin: 0; color: var(--ink-0); }
+.stats__item--accent dd { color: var(--canopy); }
 
 /* ---------- Site plate ---------- */
 
 .plate {
   position: absolute;
   top: calc(var(--u) * 6);
-  right: calc(var(--scale-w) + var(--u) * 6);
+  right: calc(var(--scale-w) + var(--u) * 4);
   width: 380px;
   max-height: calc(100% - var(--scrubber-h) - var(--u) * 12);
   overflow-y: auto;
@@ -449,38 +490,30 @@
 
 /* ---------- Responsive ---------- */
 
-@media (max-width: 1100px) {
-  .rail { width: var(--rail-w-collapsed); }
-  .rail__name, .switch__blurb, .readout__row, .rail__legend,
-  .readout__themeword { display: none; }
-
-  /* The Urdu mark must never be clipped — centre it and let it shrink. */
-  .rail__head { justify-content: center; padding: calc(var(--u) * 4) calc(var(--u) * 2); }
-  .rail__mark { font-size: 1.125rem; }
-
-  .switch {
-    padding: calc(var(--u) * 3) calc(var(--u) * 1.5);
-    text-align: center;
-  }
-  .switch__name { font-size: 0.8125rem; }
-
-  .readout { padding: calc(var(--u) * 3) calc(var(--u) * 2); }
-  .readout__theme { padding: calc(var(--u) * 2) calc(var(--u) * 1); letter-spacing: 0.04em; }
-
-  .scrubber { left: var(--rail-w-collapsed); }
-  .scrubber__note { display: none; }
-
-  /* Below this width the plate would swallow the map, so it docks to the side
-     and gives the map the rest. */
-  .plate {
-    width: min(340px, 42vw);
-    max-height: calc(100% - var(--scrubber-h) - var(--u) * 12);
-  }
+@media (max-width: 1240px) {
+  .stats__item:nth-child(n + 4) { display: none; }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 1100px) {
+  .rail { width: var(--rail-w-collapsed); }
+  .rail__name, .nav__blurb, .rail__legend { display: none; }
+  .rail__head { justify-content: center; padding: 0 calc(var(--u) * 2); }
+  .nav { justify-content: center; padding: calc(var(--u) * 3) 0; }
+  .nav__text { display: none; }
+  .nav__icon { width: 18px; height: 18px; }
+  .rail__foot { grid-template-columns: 1fr; gap: calc(var(--u) * 1.5); padding: calc(var(--u) * 2); }
+  .footBtn span { display: none; }
+  .bottombar { left: var(--rail-w-collapsed); gap: calc(var(--u) * 5); padding: 0 calc(var(--u) * 5); }
+  .segmented { left: calc(var(--rail-w-collapsed) + var(--u) * 3); }
+  .stats__item:nth-child(n + 3) { display: none; }
+  .plate { width: min(340px, 42vw); }
+}
+
+@media (max-width: 760px) {
+  .stats { display: none; }
   .plate { left: calc(var(--u) * 3); right: calc(var(--u) * 3); width: auto; }
   .overture { padding: calc(var(--u) * 6); }
+  .segmented { top: calc(var(--u) * 2); }
 }
 
 /* ---------- Data loading + failure ---------- */
@@ -491,6 +524,7 @@
   left: var(--rail-w);
   right: var(--scale-w);
   height: 2px;
+  z-index: 5;
   background: linear-gradient(90deg, transparent, var(--canopy), transparent);
   background-size: 40% 100%;
   background-repeat: no-repeat;
