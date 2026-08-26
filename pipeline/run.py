@@ -33,7 +33,8 @@ import pyproj
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import (  # noqa: E402
     CACHE, CANDIDATE_YEARS, LST_MAX_CLOUD, LST_WINDOW, MPC_SAS, NDVI_MAX_CLOUD,
-    LST_TARGET, NDVI_TARGET, NDVI_VEG_THRESHOLD, NDVI_WINDOW, OUT, OVERPASS_MIRRORS,
+    LST_TARGET, NDVI_COMPOSITE_SCENES, NDVI_TARGET, NDVI_VEG_THRESHOLD, NDVI_WINDOW,
+    OUT, OVERPASS_MIRRORS,
     REGIONS, SPECIES, STAC_MPC,
     STAC_S2, WEIGHTS,
 )
@@ -87,7 +88,8 @@ def cached(name, produce):
 # Scene search
 # --------------------------------------------------------------------------
 
-def find_scene(collection, stac, bbox, year, window, max_cloud, extra_query=None, target=None):
+def find_scene(collection, stac, bbox, year, window, max_cloud, extra_query=None,
+               target=None, limit=1):
     """
     The scene closest to `target` day-of-year inside this year's fixed window.
 
@@ -109,10 +111,10 @@ def find_scene(collection, stac, bbox, year, window, max_cloud, extra_query=None
         })
     except (urllib.error.URLError, TimeoutError) as e:
         log(f"  ! STAC search failed for {year}: {e}")
-        return None
+        return [] if limit > 1 else None
     items = res.get("features", [])
     if not items:
-        return None
+        return [] if limit > 1 else None
     if target:
         from datetime import date
         tm, td = (int(x) for x in target.split("-"))
@@ -126,7 +128,7 @@ def find_scene(collection, stac, bbox, year, window, max_cloud, extra_query=None
         items.sort(key=distance)
     else:
         items.sort(key=lambda i: i["properties"].get("eo:cloud_cover", 100))
-    return items[0]
+    return items[:limit] if limit > 1 else items[0]
 
 
 def mpc_sign(href):
@@ -355,9 +357,11 @@ def run_region(region_id):
             "id": item["id"],
             "date": item["properties"]["datetime"][:10],
             "cloud": round(item["properties"].get("eo:cloud_cover", 0), 2),
+            "composited": len(layers),
+            "dates": [i["properties"]["datetime"][:10] for i in picks[:len(layers)]],
         }
-        log(f"  {year} NDVI: {item['properties']['datetime'][:10]} "
-            f"cloud {ndvi_scenes[year]['cloud']}% "
+        log(f"  {year} NDVI: composite of {len(layers)} "
+            f"({', '.join(ndvi_scenes[year]['dates'])}) "
             f"veg {100*np.nanmean(cells >= NDVI_VEG_THRESHOLD):.1f}%")
 
     if not ndvi_by_year:

@@ -44,7 +44,15 @@ CANDIDATE_YEARS = list(range(2016, 2026))
 # year-to-year comparison mean anything.
 NDVI_WINDOW = ("03-05", "04-25")
 NDVI_TARGET = "04-01"
-NDVI_MAX_CLOUD = 20
+NDVI_MAX_CLOUD = 35
+# How many scenes to composite per year. A single date cannot carry a
+# multi-year claim here: Lahore's spring haze and its rainfall-driven green-up
+# swung Model Town's vegetated fraction 34% -> 23% -> 8% -> 47% across
+# 2017-2020 on nearly identical calendar dates. Haze and cloud both *depress*
+# NDVI, so a per-pixel maximum-value composite over several scenes suppresses
+# them. This is the standard treatment, and it is why the cloud threshold above
+# can be relaxed: the compositing does the rejecting.
+NDVI_COMPOSITE_SCENES = 3
 
 # Pre-monsoon peak heat, consistently clear skies. Same window every year.
 # Landsat overpasses Lahore mid-morning (~05:30 UTC / 10:30 local), so this is
