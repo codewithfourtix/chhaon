@@ -15,7 +15,14 @@ function once<T>(key: string, make: () => Promise<T>): Promise<T> {
 
 async function getJSON<T>(path: string): Promise<T> {
   const res = await fetch(path)
-  if (!res.ok) throw new Error(`${path} failed: ${res.status} ${res.statusText}`)
+  if (!res.ok) throw new Error(`${path} — ${res.status} ${res.statusText}`)
+  // A dev server answers missing files with index.html, which then fails to
+  // parse with a message that says nothing useful. Check the type first so the
+  // real problem ("the pipeline has not been run") reaches the screen.
+  const type = res.headers.get('content-type') ?? ''
+  if (!type.includes('json')) {
+    throw new Error(`${path} is missing — run \`python pipeline/run.py\` to generate it`)
+  }
   return res.json() as Promise<T>
 }
 
