@@ -57,8 +57,8 @@ These are the current AI-design clichés. We land on none of them:
    colour — the heat ramp carries almost all the colour on screen. A future
    session reading this line should not "fix" the palette back to brown.
 3. **Broadsheet hairlines + zero radius + dense newspaper columns.** We have
-   rules, but we are map-first and spatial, not column-based. Radius is 2px —
-   the edge of a pasted label, not a sharp cut.
+   rules, but we are map-first and spatial, not column-based, and the radius
+   scale below is deliberately soft.
 
 Also banned outright: gradient blobs, glowing orbs, glassmorphism, fake 3D,
 stock sparkle icons, everything-centred, purple-to-blue founder gradients.
@@ -198,8 +198,16 @@ number is the message; the unit is the footnote.
 ## Space, rule, radius
 
 - Base unit **4px**. Every dimension is a multiple.
-- Radius **2px** on plates and controls. **0** on rules and map chrome. Never
-  more than 2px anywhere in this product.
+- Radius: **8px** on controls and rail rows, **12px** on the site plate, **6px**
+  on small targets, **999px** on toggles, pills and meters.
+
+  This started at 2px. Hard corners plus hairlines on every edge read as cramped
+  rather than exact, and the client asked for the roominess of a modern product
+  UI. A measurement tool still reads as precise at 8px — precision comes from
+  the mono numerals, the stated resolutions and the live readout, not from sharp
+  corners.
+- Rail rows are **inset and rounded**, with the accent as a 3px bar on the
+  leading edge of the active row — one background change, not two.
 - Rules are **1px** `--hairline`, or `--hairline-firm` when they separate two
   interactive regions.
 - Shadow is used **once**: to lift the site plate off the map. Everywhere else,
@@ -318,3 +326,26 @@ Three things keep it true:
 Satellite is an alternate reading mode, never the default. The survey-sheet map
 is what the product is; imagery is what you switch to when you want to see the
 actual ground.
+
+
+## Showing data honestly is part of the design
+
+A colour ramp with a hard-coded domain is a design bug, not a data bug, and it
+is the one that has bitten this product hardest.
+
+Population in these neighbourhoods runs 101–162 people/ha. Mapped onto a 0–400
+domain, every cell landed between 0.28 and 0.36 opacity and the whole layer read
+as one flat grey rectangle — real data, presented as if it said nothing. Surface
+temperature had the same fault more quietly: a 38–52 °C domain over data that
+occupies 37.8–43.8 °C left half the ramp unused.
+
+The rules that follow from that:
+
+- **Every domain comes from the data**, clipped to p2–p98, computed once in
+  `domainFor()` and read by both the map and the legend so the two cannot drift
+  apart.
+- **Discrete steps, not continuous ramps**, for anything noisy. Continuous
+  opacity over 100 m census cells reads as television static; six steps that
+  match the six the legend shows reads as a measurement.
+- **Never smooth to look better.** The blockiness of the population layer is
+  WorldPop's true resolution. Smoothing it would invent data.

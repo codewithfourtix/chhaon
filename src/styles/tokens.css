@@ -43,7 +43,12 @@
 
   /* Space — 4px base */
   --u: 4px;
-  --radius: 2px;
+  /* Softer than the original 2px. A measurement tool still reads as precise at
+     this radius, and hard corners plus hairlines everywhere made the interface
+     feel cramped rather than exact. */
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-lg: 12px;
 
   /* Layout */
   --rail-w: 264px;
