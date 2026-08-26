@@ -538,7 +538,9 @@ def run_region(region_id):
         r, c = divmod(int(flat), grid["cols"])
         if not plantable[r, c] or np.isnan(score[r, c]):
             continue
-        if taken[max(0, r-2):r+3, max(0, c-2):c+3].any():
+        # ~300 m minimum separation. Closer than this and the ranking returns
+        # the same block repeatedly, which is true but useless to plan from.
+        if taken[max(0, r-5):r+6, max(0, c-5):c+6].any():
             continue
         taken[r, c] = True
         x, y = rasterio.transform.xy(grid["transform"], r, c)
@@ -565,7 +567,10 @@ def run_region(region_id):
             "species": {"common": sp["common"], "botanical": sp["botanical"],
                         "because": sp["because"]},
         })
-    log(f"  {len(sites)} sites ranked")
+    for i, s_ in enumerate(sites):
+        s_["rank"] = i + 1
+    log(f"  {len(sites)} sites ranked "
+        f"(scores {sites[-1]['score']:.2f}–{sites[0]['score']:.2f})" if sites else "  no sites")
 
     # --- Write ---
     os.makedirs(OUT, exist_ok=True)

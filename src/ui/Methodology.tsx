@@ -195,6 +195,49 @@ export function Methodology() {
         </section>
 
         <section className="method__sec">
+          <h2 className="t-heading">The three regions compared</h2>
+          <p className="t-body">
+            The heat gap is not uniform, and the differences are worth stating
+            rather than averaging away.
+          </p>
+          <div className="cmp">
+            <div className="cmp__row cmp__row--head">
+              <span className="t-label">Region</span>
+              <span className="t-label">Shade worth</span>
+              <span className="t-label">NDVI/LST r</span>
+              <span className="t-label">Baseline</span>
+              <span className="t-label">Sites</span>
+            </div>
+            {REGIONS.map((r) => {
+              const m = meta?.regions?.[r.id]
+              if (!m) return null
+              const weak = (m.ndviLstCorr ?? 0) > -0.3
+              return (
+                <div key={r.id} className="cmp__row">
+                  <span className="t-body">{r.name}</span>
+                  <span className={`t-data ${weak ? 'cmp__weak' : 'cmp__strong'}`}>
+                    {m.heatGapC?.toFixed(1) ?? '—'}&deg;C
+                  </span>
+                  <span className={`t-data ${weak ? 'cmp__weak' : ''}`}>
+                    {m.ndviLstCorr?.toFixed(2) ?? '—'}
+                  </span>
+                  <span className="t-data">{m.baselineC}&deg;C</span>
+                  <span className="t-data">{m.siteCount}</span>
+                </div>
+              )
+            })}
+          </div>
+          <p className="t-body">
+            <strong>DHA is the weak one</strong> and we are not hiding it. Its
+            bounds reach into farmland at the southern edge, which blurs the
+            built-versus-vegetated contrast the whole measurement depends on. Its
+            ranking still stands on measured heat and measured vegetation, but
+            the headline relationship is thinner there than in Model Town or
+            Gulberg.
+          </p>
+        </section>
+
+        <section className="method__sec">
           <h2 className="t-heading">Scenes actually used</h2>
           {REGIONS.map((r) => {
             const rm = meta?.regions?.[r.id]

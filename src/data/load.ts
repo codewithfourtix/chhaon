@@ -72,6 +72,8 @@ export function domainFor(g: RegionGrid, view: ViewId, year: number | null): [nu
     lo = 0
     hi = Math.max(0.35, percentile(g.ndvi[String(y)] ?? [], 0.98, 100))
   } else {
+    // Priority is filled in by domainForScores() once the site list is loaded;
+    // these are only a placeholder for the moment before that happens.
     lo = 0.25
     hi = 0.95
   }
@@ -80,6 +82,21 @@ export function domainFor(g: RegionGrid, view: ViewId, year: number | null): [nu
   const out: [number, number] = [lo, hi]
   domainMemo.set(key, out)
   return out
+}
+
+/**
+ * Priority's domain comes from the ranked sites themselves.
+ *
+ * Their scores occupy a narrow band (0.66–0.80 in Model Town), so a fixed
+ * 0.25–0.95 ramp put all forty into two of six buckets and every pin came out
+ * the same colour — you could not tell the top site from the fortieth.
+ */
+export function domainForScores(scores: number[]): [number, number] {
+  if (!scores.length) return [0.25, 0.95]
+  const v = [...scores].sort((a, b) => a - b)
+  const lo = v[0]
+  const hi = v[v.length - 1]
+  return hi > lo ? [lo, hi] : [lo, lo + 1]
 }
 
 /** Five interior breakpoints for a six-stop ramp across [lo, hi]. */

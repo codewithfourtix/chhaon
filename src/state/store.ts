@@ -3,6 +3,18 @@ import type { RegionId, ViewId } from '../data/types'
 
 type Theme = 'light' | 'dark'
 export type BasemapMode = 'map' | 'satellite'
+export type LandUse = 'roadside' | 'park' | 'canal' | 'vacant'
+
+export interface Filters {
+  landuse: LandUse[]
+  minPeople: number
+  species: string | null
+}
+
+export const NO_FILTERS: Filters = { landuse: [], minPeople: 0, species: null }
+
+export const hasFilters = (f: Filters) =>
+  f.landuse.length > 0 || f.minPeople > 0 || f.species !== null
 
 interface AppState {
   stage: 'overture' | 'workspace' | 'methodology'
@@ -13,6 +25,8 @@ interface AppState {
   selectedSiteId: string | null
   theme: Theme
   basemap: BasemapMode
+  listOpen: boolean
+  filters: Filters
   dataLoading: boolean
   dataError: string | null
 
@@ -24,8 +38,15 @@ interface AppState {
   selectSite: (id: string | null) => void
   toggleTheme: () => void
   setBasemap: (b: BasemapMode) => void
+  toggleList: () => void
+  setFilters: (f: Partial<Filters>) => void
+  clearFilters: () => void
   setDataLoading: (loading: boolean, error: string | null) => void
+  hydrate: (s: Partial<AppState>) => void
 }
+
+/** Dark is the default: this is a thermal instrument, and it reads better dark. */
+const INITIAL_THEME: Theme = 'dark'
 
 export const useApp = create<AppState>((set) => ({
   stage: 'overture',
@@ -33,19 +54,25 @@ export const useApp = create<AppState>((set) => ({
   region: 'model-town',
   year: null,
   selectedSiteId: null,
-  theme: 'light',
+  theme: INITIAL_THEME,
   basemap: 'map',
+  listOpen: true,
+  filters: NO_FILTERS,
   dataLoading: true,
   dataError: null,
 
   enterWorkspace: () => set({ stage: 'workspace' }),
   showMethodology: () => set({ stage: 'methodology' }),
   setView: (view) => set({ view, selectedSiteId: null }),
-  setRegion: (region) => set({ region, selectedSiteId: null }),
+  setRegion: (region) => set({ region, selectedSiteId: null, filters: NO_FILTERS }),
   setYear: (year) => set({ year }),
   selectSite: (selectedSiteId) => set({ selectedSiteId }),
   setBasemap: (basemap) => set({ basemap }),
+  toggleList: () => set((s) => ({ listOpen: !s.listOpen })),
+  setFilters: (f) => set((s) => ({ filters: { ...s.filters, ...f }, selectedSiteId: null })),
+  clearFilters: () => set({ filters: NO_FILTERS, selectedSiteId: null }),
   setDataLoading: (dataLoading, dataError) => set({ dataLoading, dataError }),
+  hydrate: (patch) => set(patch as AppState),
   toggleTheme: () =>
     set((s) => {
       const theme: Theme = s.theme === 'light' ? 'dark' : 'light'
@@ -53,3 +80,8 @@ export const useApp = create<AppState>((set) => ({
       return { theme }
     }),
 }))
+
+// Applied before first paint so the app never flashes light.
+if (typeof document !== 'undefined') {
+  document.documentElement.dataset.theme = INITIAL_THEME
+}

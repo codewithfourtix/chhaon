@@ -103,13 +103,31 @@ def check_region(rid, meta):
     if max(scores) - min(scores) < 0.05:
         bad(f"{rid}: ranking has almost no spread — every site scores the same")
 
-    # Sites must sit inside the region they belong to.
-    w, s, e, nn = g["bbox"]
+    # Sites must sit inside the analysed grid — which is the metric grid snapped
+    # outward to whole cells, NOT the requested lat/lon box. Comparing against
+    # the box flags edge cells that are a metre or two outside it purely because
+    # UTM is not axis-aligned with lon/lat.
+    c = g["cornersWgs84"]
+    lons = [c["tl"][0], c["tr"][0], c["bl"][0], c["br"][0]]
+    lats = [c["tl"][1], c["tr"][1], c["bl"][1], c["br"][1]]
+    w, e = min(lons), max(lons)
+    so, no = min(lats), max(lats)
     for f in sites:
         lon, lat = f["geometry"]["coordinates"]
-        if not (w <= lon <= e and s <= lat <= nn):
-            bad(f"{rid}: site {f['properties']['id']} falls outside the region")
+        if not (w <= lon <= e and so <= lat <= no):
+            bad(f"{rid}: site {f['properties']['id']} falls outside the analysed grid")
             break
+
+    # Ranks must be a clean 1..N with no gaps or repeats.
+    ranks = sorted(p["rank"] for p in props if p.get("rank") is not None)
+    if ranks != list(range(1, len(sites) + 1)):
+        bad(f"{rid}: ranks are not a contiguous 1..{len(sites)}")
+
+    # And rank order must actually follow score order.
+    by_rank = sorted(props, key=lambda p: p.get("rank", 0))
+    if any(by_rank[i]["score"] < by_rank[i + 1]["score"] - 1e-9
+           for i in range(len(by_rank) - 1)):
+        bad(f"{rid}: rank order does not follow score order")
 
     rm = meta.get("regions", {}).get(rid, {})
     if rm.get("heatGapC") is not None:

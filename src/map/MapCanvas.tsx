@@ -4,7 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 
 import { buildBasemapStyle, LIGHT_TOKENS, DARK_TOKENS, FIRST_LABEL_LAYER } from './basemapStyle'
 import { LAHORE_BOUNDS, REGIONS } from '../data/regions'
-import { domainFor, rampBreaks } from '../data/load'
+import { domainFor, domainForScores, rampBreaks } from '../data/load'
 import { rasterizeGrid } from './rasterize'
 import { useRegionData } from '../data/useRegionData'
 import { useApp } from '../state/store'
@@ -21,7 +21,7 @@ import { useApp } from '../state/store'
 const FIELD = 'field'
 const EDGE = 'field-edge-src'
 const SITES = 'sites'
-const DATA_LAYERS = ['field-raster', 'field-edge', 'sites-circles'] as const
+const DATA_LAYERS = ['field-raster', 'field-edge', 'sites-halo', 'sites-circles', 'sites-rank'] as const
 
 const HEAT_LIGHT = ['#E4E9ED', '#E9C88E', '#DC9A5A', '#C56836', '#9C3324', '#5C1015']
 const HEAT_DARK = ['#2C3540', '#5E4340', '#96452F', '#C46628', '#E8983A', '#FFD166']
@@ -63,6 +63,7 @@ export function MapCanvas() {
   const basemap = useApp((s) => s.basemap)
   const selectedSiteId = useApp((s) => s.selectedSiteId)
   const selectSite = useApp((s) => s.selectSite)
+  const filters = useApp((s) => s.filters)
   const setLoading = useApp((s) => s.setDataLoading)
 
   const dark = theme === 'dark'
@@ -158,22 +159,72 @@ export function MapCanvas() {
     }, FIRST_LABEL_LAYER)
 
     if (view === 'priority') {
-      m.addSource(SITES, { type: 'geojson', data: sites })
+      const shown = {
+        ...sites,
+        features: sites.features.filter((f) => {
+          const p = f.properties
+          if (filters.landuse.length && !filters.landuse.includes(p.landuse as never)) return false
+          if (filters.minPeople && p.peopleServed < filters.minPeople) return false
+          if (filters.species && p.species.common !== filters.species) return false
+          return true
+        }),
+      }
+      m.addSource(SITES, { type: 'geojson', data: shown })
+
+      // The ramp spans the scores that exist. A fixed 0.25-0.95 domain over
+      // scores that run 0.66-0.80 put every site in two of six buckets, so the
+      // top site and the fortieth came out the same colour.
+      const [slo, shi] = domainForScores(sites.features.map((f) => f.properties.score))
+      const bySize = ['interpolate', ['linear'], ['get', 'score'], slo, 0.62, shi, 1.35]
+
+      // A soft halo so a dark pin still reads against dark imagery.
+      m.addLayer({
+        id: 'sites-halo',
+        type: 'circle',
+        source: SITES,
+        paint: {
+          'circle-radius': ['*', ['interpolate', ['linear'], ['zoom'],
+            11, 7, 14, 15, 16, 24], bySize] as never,
+          'circle-color': dark ? '#000000' : '#FFFFFF',
+          'circle-opacity': satellite ? 0.34 : 0.22,
+          'circle-blur': 0.6,
+        },
+      }, FIRST_LABEL_LAYER)
+
       m.addLayer({
         id: 'sites-circles',
         type: 'circle',
         source: SITES,
         paint: {
-          'circle-radius': ['interpolate', ['linear'], ['zoom'],
-            11, 4, 14, 9, 16, 16] as never,
-          'circle-color': stepColor(['get', 'score'],
-            rampBreaks(...domainFor(grid, 'priority', year)),
+          // Rank is encoded twice — colour and size — so the order is readable
+          // at a glance and still readable to anyone who cannot separate hues.
+          'circle-radius': ['*', ['interpolate', ['linear'], ['zoom'],
+            11, 5, 14, 11, 16, 18], bySize] as never,
+          'circle-color': stepColor(['get', 'score'], rampBreaks(slo, shi),
             dark ? HEAT_DARK : HEAT_LIGHT) as never,
-          'circle-opacity': satellite ? 0.95 : 0.9,
-          'circle-blur': 0.05,
-          // Selection is a ring plus a lift, never a fill change.
+          'circle-opacity': satellite ? 0.96 : 0.92,
           'circle-stroke-color': dark ? '#3FB871' : '#0F7A48',
           'circle-stroke-width': 0,
+        },
+      }, FIRST_LABEL_LAYER)
+
+      // Numbered ranks on the strongest sites: the map should say which one to
+      // do first, not merely which ones qualify.
+      m.addLayer({
+        id: 'sites-rank',
+        type: 'symbol',
+        source: SITES,
+        filter: ['<=', ['get', 'rank'], 12] as never,
+        layout: {
+          'text-field': ['to-string', ['get', 'rank']] as never,
+          'text-font': ['Noto Sans Regular'],
+          'text-size': ['interpolate', ['linear'], ['zoom'], 11, 9, 14, 12] as never,
+          'text-allow-overlap': true,
+        },
+        paint: {
+          'text-color': dark ? '#0A0A0A' : '#FFFFFF',
+          'text-halo-color': dark ? '#FFD166' : '#5C1015',
+          'text-halo-width': 0.6,
         },
       }, FIRST_LABEL_LAYER)
       return
@@ -218,7 +269,7 @@ export function MapCanvas() {
         'raster-contrast': satellite ? 0.06 : 0,
       },
     }, FIRST_LABEL_LAYER)
-  }, [view, grid, sites, dark, year, styleEpoch, basemap])
+  }, [view, grid, sites, dark, year, styleEpoch, basemap, filters])
 
   // Selection ring — a paint update, never a layer rebuild.
   useEffect(() => {
@@ -228,6 +279,25 @@ export function MapCanvas() {
       'case', ['==', ['get', 'id'], selectedSiteId ?? ' '], 2.5, 0,
     ])
   }, [selectedSiteId, styleEpoch, view])
+
+  // Selecting from the ranked list must bring the site into view — but never
+  // move the ground when the site is already visible, which is disorienting.
+  useEffect(() => {
+    const m = map.current
+    if (!m || !selectedSiteId || !sites) return
+    const f = sites.features.find((x) => x.properties.id === selectedSiteId)
+    if (!f) return
+    const [lon, lat] = f.geometry.coordinates
+    const pt = m.project([lon, lat])
+    const c = m.getContainer().getBoundingClientRect()
+    const margin = 80
+    const visible =
+      pt.x > margin && pt.y > margin &&
+      pt.x < c.width - margin && pt.y < c.height - margin
+    if (visible) return
+    if (reducedMotion()) m.jumpTo({ center: [lon, lat] })
+    else m.easeTo({ center: [lon, lat], duration: 600 })
+  }, [selectedSiteId, sites])
 
   // Click picking, with a forgiving box so small marks stay hittable.
   useEffect(() => {

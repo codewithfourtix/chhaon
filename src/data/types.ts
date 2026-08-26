@@ -32,6 +32,8 @@ export interface RegionGrid {
 
 export interface SiteProps {
   id: string
+  /** 1 = highest priority in this region. */
+  rank?: number
   score: number
   lstC: number
   baselineC: number

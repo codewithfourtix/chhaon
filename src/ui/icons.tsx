@@ -67,3 +67,37 @@ export const IconTheme = () => (
     <path d="M8 3.4a4.6 4.6 0 0 1 0 9.2Z" fill="currentColor" stroke="none" />
   </svg>
 )
+
+export const IconClose = () => (
+  <svg {...base}>
+    <path d="M4.5 4.5 11.5 11.5M11.5 4.5 4.5 11.5" />
+  </svg>
+)
+
+export const IconDownload = () => (
+  <svg {...base}>
+    <path d="M8 2.5v7.6" />
+    <path d="M5.2 7.6 8 10.4l2.8-2.8" />
+    <path d="M2.8 11.4v1.3a.8.8 0 0 0 .8.8h8.8a.8.8 0 0 0 .8-.8v-1.3" />
+  </svg>
+)
+
+export const IconFilter = () => (
+  <svg {...base}>
+    <path d="M2.5 4h11M4.5 8h7M6.5 12h3" />
+  </svg>
+)
+
+export const IconList = () => (
+  <svg {...base}>
+    <path d="M6 4h7.5M6 8h7.5M6 12h7.5" />
+    <path d="M2.8 4h.01M2.8 8h.01M2.8 12h.01" strokeWidth="2" />
+  </svg>
+)
+
+export const IconKeyboard = () => (
+  <svg {...base}>
+    <rect x="1.8" y="4" width="12.4" height="8" rx="1.4" />
+    <path d="M4.4 6.6h.01M7 6.6h.01M9.6 6.6h.01M12 6.6h.01M5.4 9.4h5.2" strokeWidth="1.6" />
+  </svg>
+)
