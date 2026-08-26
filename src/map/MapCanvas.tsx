@@ -58,6 +58,7 @@ export function MapCanvas() {
   const year = useApp((s) => s.year)
   const theme = useApp((s) => s.theme)
   const selectedSiteId = useApp((s) => s.selectedSiteId)
+  const basemap = useApp((s) => s.basemap)
   const selectSite = useApp((s) => s.selectSite)
 
   const dark = theme === 'dark'
@@ -92,7 +93,7 @@ export function MapCanvas() {
 
     const m = new MapLibreMap({
       container: container.current,
-      style: buildBasemapStyle(LIGHT_TOKENS),
+      style: buildBasemapStyle(LIGHT_TOKENS, 'map'),
       center: REGIONS[0].centre,
       zoom: REGIONS[0].zoom,
       maxBounds: LAHORE_BOUNDS,
@@ -128,8 +129,9 @@ export function MapCanvas() {
     if (!map.current) return
     styleReadyRef.current = false
     setStyleLive(false)
-    map.current.setStyle(buildBasemapStyle(dark ? DARK_TOKENS : LIGHT_TOKENS), { diff: false })
-  }, [dark])
+    map.current.setStyle(
+      buildBasemapStyle(dark ? DARK_TOKENS : LIGHT_TOKENS, basemap), { diff: false })
+  }, [dark, basemap])
 
   // Region change flies. The flight is what tells the eye where it went.
   useEffect(() => {
@@ -149,6 +151,7 @@ export function MapCanvas() {
     m.addSource(SRC, { type: 'geojson', data: geojson })
 
     const dur = reducedMotion() ? 0 : 900
+    const satellite = basemap === 'satellite'
     const radius = (k: number) => ['*', ['sqrt', ['get', 'areaM2']], k]
 
     if (view === 'canopy') {
@@ -197,12 +200,14 @@ export function MapCanvas() {
           paint: {
             'circle-radius': radius(0.42) as never,
             'circle-color': color as never,
+            // Over imagery the data must sit harder, or the scrim plus the
+            // photograph eats the ramp.
             'circle-opacity':
               view === 'people'
                 ? (['interpolate', ['linear'], ['get', 'peopleServed'], 400, 0.18, 5600, 0.82] as never)
-                : 0.85,
+                : satellite ? 0.95 : 0.85,
             // Selection is a ring plus a lift, never a fill change.
-            'circle-stroke-color': dark ? '#4FA96E' : '#1D5C3A',
+            'circle-stroke-color': dark ? '#3FB871' : '#0F7A48',
             'circle-stroke-width': 0,
             'circle-stroke-opacity': 1,
           },
@@ -210,7 +215,7 @@ export function MapCanvas() {
         FIRST_LABEL_LAYER
       )
     }
-  }, [view, geojson, dark, canopyFactor, styleLive])
+  }, [view, geojson, dark, canopyFactor, styleLive, basemap])
 
   // Selection ring — a paint update, never a layer rebuild.
   useEffect(() => {

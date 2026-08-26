@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Pipeline scratch — cached COG grids and Overpass responses
+pipeline/.cache/

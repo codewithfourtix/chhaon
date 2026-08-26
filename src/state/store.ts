@@ -3,6 +3,7 @@ import type { RegionId, ViewId } from '../data/regions'
 import { YEARS } from '../data/regions'
 
 type Theme = 'light' | 'dark'
+export type BasemapMode = 'map' | 'satellite'
 
 interface AppState {
   stage: 'overture' | 'workspace'
@@ -11,6 +12,7 @@ interface AppState {
   year: number
   selectedSiteId: string | null
   theme: Theme
+  basemap: BasemapMode
   railCollapsed: boolean
 
   enterWorkspace: () => void
@@ -19,6 +21,7 @@ interface AppState {
   setYear: (y: number) => void
   selectSite: (id: string | null) => void
   toggleTheme: () => void
+  setBasemap: (b: BasemapMode) => void
   toggleRail: () => void
 }
 
@@ -29,6 +32,7 @@ export const useApp = create<AppState>((set) => ({
   year: YEARS[YEARS.length - 1],
   selectedSiteId: null,
   theme: 'light',
+  basemap: 'map',
   railCollapsed: false,
 
   enterWorkspace: () => set({ stage: 'workspace' }),
@@ -36,6 +40,7 @@ export const useApp = create<AppState>((set) => ({
   setRegion: (region) => set({ region, selectedSiteId: null }),
   setYear: (year) => set({ year }),
   selectSite: (selectedSiteId) => set({ selectedSiteId }),
+  setBasemap: (basemap) => set({ basemap }),
   toggleTheme: () =>
     set((s) => {
       const theme: Theme = s.theme === 'light' ? 'dark' : 'light'

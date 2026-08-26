@@ -13,6 +13,8 @@ export function InstrumentRail() {
   const setRegion = useApp((s) => s.setRegion)
   const theme = useApp((s) => s.theme)
   const toggleTheme = useApp((s) => s.toggleTheme)
+  const basemap = useApp((s) => s.basemap)
+  const setBasemap = useApp((s) => s.setBasemap)
 
   const count = useMemo(
     () => PLACEHOLDER_SITES.filter((s) => s.region === region).length,
@@ -53,6 +55,24 @@ export function InstrumentRail() {
             onClick={() => setRegion(r.id)}
           >
             <span className="switch__name">{r.name}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="rail__group">
+        <h2 className="t-label rail__legend">Basemap</h2>
+        {([
+          { id: 'map', name: 'Map' },
+          { id: 'satellite', name: 'Satellite' },
+        ] as const).map((b) => (
+          <button
+            key={b.id}
+            type="button"
+            className={`switch switch--tight ${basemap === b.id ? 'is-active' : ''}`}
+            aria-current={basemap === b.id}
+            onClick={() => setBasemap(b.id)}
+          >
+            <span className="switch__name">{b.name}</span>
           </button>
         ))}
       </div>
