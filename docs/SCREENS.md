@@ -7,17 +7,24 @@ cannot answer its job in one sentence, it gets cut.
 
 ## 1. Overture
 
-**Job:** In ten seconds, make the loss felt — before any interface appears.
+**Job:** In ten seconds, state the one thing we actually measured.
 
-A cold open on the map, already zoomed to Lahore, already scrubbing backwards
-through the years. Shade retreats across the city while a single line of type
-counts the loss. No hero headline, no feature grid, no "Get Started" button.
-The map is the hero because the map is the product.
+A cold open on the map, already zoomed to Lahore, already scrubbing through the
+years of observed green cover. The headline is the measured heat gap — how much
+hotter bare ground runs than vegetated ground in the same satellite pass. No
+feature grid, no "Get Started" button. The map is the hero because the map is
+the product.
+
+**It does not claim canopy loss.** The multi-year series does not show one:
+spring vegetation in Lahore tracks winter rainfall far more strongly than it
+tracks development. The within-scene heat gap needs no trend and survives
+scrutiny; a loss narrative would not.
 
 One action out: **Open the workspace.** The camera continues from exactly where
 the overture left it — no cut, no reload.
 
-Contains: live map (non-interactive), year counter, the loss figure, wordmark.
+Contains: live map (non-interactive), year counter, the heat-gap figure,
+wordmark.
 
 ---
 
@@ -75,14 +82,17 @@ Dismisses on Escape, on outside click, and on selecting another site.
 
 ## 5. Year Scrubber
 
-**Job:** Make the loss visible as motion, not as a statistic.
+**Job:** Show observed green cover per year — as an observation, not a trend.
 
-A horizontal scale along the bottom of the workspace. Dragging it moves the
-canopy layer through the years, and shade physically retreats and returns across
-the map. Not a before/after toggle — a continuous, scrubbable instrument.
+A horizontal scale along the bottom of the workspace. Moving it re-reads the
+canopy layer for that year, and the cast shade grows and shrinks with the
+measured vegetation. Not a before/after toggle — a continuous instrument.
 
-Marks the years we actually have imagery for. Never interpolates silently
-between them; gaps read as gaps.
+Marks only the years with usable imagery inside the fixed season window. Never
+interpolates between them; gaps read as gaps, because they are real.
+
+The label says what this is: an observation. Interannual variation here is
+dominated by rainfall, and the interface must not imply otherwise.
 
 ---
 
@@ -93,13 +103,16 @@ between them; gaps read as gaps.
 The credibility surface, and the one screen that is typographic rather than
 spatial. Written to be read, not skimmed.
 
-States plainly: every data source and its licence; the native resolution of each
-layer and what that means we can and cannot claim; the exact scoring formula and
+Opens with **what we found and what we did not** — including, in plain words,
+that no monotonic decline in green cover was found and why that series cannot
+carry such a claim. Then: every data source and its licence; the native
+resolution of each layer and what that lets us claim; the scoring formula and
 its weights; why we say green cover rather than tree canopy; why we say surface
-temperature rather than temperature; the species-matching logic and its limits.
+temperature rather than temperature; why species matching cannot use climate;
+and the exact scenes used.
 
-Naming the limits is the point. A tool that states its resolution is a tool that
-has been thought about.
+Naming the limits is the point. Stating the negative result is what makes the
+positive one believable.
 
 ---
 
