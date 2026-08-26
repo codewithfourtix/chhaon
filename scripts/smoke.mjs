@@ -14,7 +14,7 @@ const layerIds = (page) =>
   page.evaluate(() =>
     window.__map
       ? window.__map.getStyle().layers
-          .filter((l) => l.id.startsWith('cells-') || l.id.startsWith('sites-'))
+          .filter((l) => l.id.startsWith('field-') || l.id.startsWith('sites-'))
           .map((l) => l.id)
       : []
   )
@@ -46,7 +46,7 @@ const run = async () => {
   await page.waitForTimeout(4000)
 
   const after = await layerIds(page)
-  const ok = after.includes('cells-shade') && after.includes('cells-fill')
+  const ok = after.includes('field-raster')
   console.log('after fast theme+view switch, layers =', after)
   console.log(ok ? 'PASS' : 'FAIL — stranded on the old view')
   if (errors.length) {

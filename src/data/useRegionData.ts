@@ -1,19 +1,18 @@
-import type { FeatureCollection, Point, Polygon } from 'geojson'
+import type { FeatureCollection, Point } from 'geojson'
 import { useEffect, useState } from 'react'
-import { loadCells, loadGrid, loadMeta, loadSites } from './load'
+import { loadGrid, loadMeta, loadSites } from './load'
 import type { Meta, RegionGrid, RegionId, SiteProps } from './types'
 
 export interface RegionData {
   meta: Meta | null
   grid: RegionGrid | null
-  cells: FeatureCollection<Polygon> | null
   sites: FeatureCollection<Point, SiteProps> | null
   loading: boolean
   error: string | null
 }
 
 const EMPTY: RegionData = {
-  meta: null, grid: null, cells: null, sites: null, loading: true, error: null,
+  meta: null, grid: null, sites: null, loading: true, error: null,
 }
 
 /**
@@ -27,10 +26,10 @@ export function useRegionData(region: RegionId): RegionData {
     let live = true
     setState((s) => ({ ...s, loading: true, error: null }))
 
-    Promise.all([loadMeta(), loadGrid(region), loadCells(region), loadSites(region)])
-      .then(([meta, grid, cells, sites]) => {
+    Promise.all([loadMeta(), loadGrid(region), loadSites(region)])
+      .then(([meta, grid, sites]) => {
         if (!live) return
-        setState({ meta, grid, cells, sites, loading: false, error: null })
+        setState({ meta, grid, sites, loading: false, error: null })
       })
       .catch((e: unknown) => {
         if (!live) return

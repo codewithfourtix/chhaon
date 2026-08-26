@@ -63,6 +63,35 @@ street grid still orients the eye. Satellite is an alternate reading mode, never
 the default. And Esri World Imagery carries its own attribution requirement —
 set it on the source, the same as OpenFreeMap.
 
+## A measured field is a raster, not polygons
+
+Temperature, vegetation index and population density are *continuous fields*.
+Drawing one polygon per analysis cell renders them as a mosaic of hard-edged
+squares that fully occludes the ground — an opaque blanket dropped on the map.
+
+Every serious example of this — NASA Worldview, Google's air quality layer,
+Climate Central's heat maps — does the same three things:
+
+1. **Render as an image**, not vectors. Paint one pixel per cell into a canvas,
+   hand MapLibre an `image` source with the grid's four corners, and set
+   `raster-resampling: 'linear'`. The GPU interpolates for free and the field
+   becomes continuous, which is what it physically is.
+2. **Stay semi-transparent** — around 0.78 over the vector basemap, 0.62 over
+   imagery. The ground must read through: seeing the streets under the heat is
+   what makes it legible as a place rather than a chart.
+3. **Never end in a hard rectangle.** Feather the outer cells and draw a quiet
+   dashed outline of the study area, so it reads as a region that was analysed
+   rather than an image that happens to stop.
+
+Colour along the ramp is **continuous** even though the legend shows six
+discrete stops — the stops name the buckets, the surface is a field. Banding a
+field into six flat plateaus makes a measurement look like a chart.
+
+Cells with no reading stay fully transparent. A gap must read as a gap.
+
+Keep vector layers for things that are genuinely discrete and clickable — the
+ranked sites are circles, because you select those.
+
 ## Layer order (bottom to top, never rearranged)
 
 1. Basemap land, water, roads

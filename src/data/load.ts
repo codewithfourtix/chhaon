@@ -1,4 +1,4 @@
-import type { Feature, FeatureCollection, Point, Polygon } from 'geojson'
+import type { FeatureCollection, Point } from 'geojson'
 import type { Meta, RegionGrid, RegionId, SiteProps, ViewId } from './types'
 
 /**
@@ -31,90 +31,10 @@ export const loadMeta = () => once('meta', () => getJSON<Meta>('data/meta.json')
 export const loadGrid = (region: RegionId) =>
   once(`grid:${region}`, () => getJSON<RegionGrid>(`data/${region}.json`))
 
-/** Cell polygons for a region, built once and shared by every caller. */
-export const loadCells = (region: RegionId) =>
-  once(`cells:${region}`, async () => gridToCells(await loadGrid(region)))
-
 export const loadSites = (region: RegionId) =>
   once(`sites:${region}`, () =>
     getJSON<FeatureCollection<Point, SiteProps>>(`data/${region}-sites.json`)
   )
-
-/**
- * The analysis grid is metric (UTM), so its cells are not axis-aligned in
- * lon/lat. Rather than ship a projection library, the pipeline emits the grid's
- * four WGS84 corners and we interpolate between them. Over a few kilometres
- * near the UTM zone's central meridian the error is well under a metre.
- */
-function cornerInterpolator(g: RegionGrid) {
-  const { tl, tr, bl, br } = g.cornersWgs84
-  return (u: number, v: number): [number, number] => {
-    const a = (1 - u) * (1 - v)
-    const b = u * (1 - v)
-    const c = (1 - u) * v
-    const d = u * v
-    return [
-      tl[0] * a + tr[0] * b + bl[0] * c + br[0] * d,
-      tl[1] * a + tr[1] * b + bl[1] * c + br[1] * d,
-    ]
-  }
-}
-
-/**
- * Turn the compact quantised arrays into map-ready cell polygons.
- *
- * Cells with no usable observation in *any* layer are dropped rather than
- * drawn as zero — a gap in the data must read as a gap, never as a measurement.
- */
-export function gridToCells(g: RegionGrid): FeatureCollection<Polygon> {
-  const at = cornerInterpolator(g)
-  const features: Feature<Polygon>[] = []
-
-  for (let r = 0; r < g.rows; r++) {
-    for (let c = 0; c < g.cols; c++) {
-      const i = r * g.cols + c
-      const lst = g.lst[i]
-      const pop = g.pop[i]
-
-      const props: Record<string, number | string> = {
-        landuse: g.landuse[i],
-        built: g.built[i],
-      }
-      let any = false
-
-      for (const y of g.years) {
-        const v = g.ndvi[String(y)]?.[i]
-        if (v !== null && v !== undefined) {
-          props[`n${y}`] = v / 100
-          any = true
-        }
-      }
-      if (lst !== null && lst !== undefined) {
-        props.lst = lst / 10
-        any = true
-      }
-      if (pop !== null && pop !== undefined) {
-        props.pop = pop / 10
-        any = true
-      }
-      if (!any) continue
-
-      const u0 = c / g.cols
-      const u1 = (c + 1) / g.cols
-      const v0 = r / g.rows
-      const v1 = (r + 1) / g.rows
-      features.push({
-        type: 'Feature',
-        geometry: {
-          type: 'Polygon',
-          coordinates: [[at(u0, v0), at(u1, v0), at(u1, v1), at(u0, v1), at(u0, v0)]],
-        },
-        properties: props,
-      })
-    }
-  }
-  return { type: 'FeatureCollection', features }
-}
 
 /** Percentile of the finite values in a quantised grid. */
 export function percentile(grid: (number | null)[], p: number, scale: number): number {

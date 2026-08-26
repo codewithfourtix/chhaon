@@ -5,6 +5,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { buildBasemapStyle, LIGHT_TOKENS, DARK_TOKENS, FIRST_LABEL_LAYER } from './basemapStyle'
 import { LAHORE_BOUNDS, REGIONS } from '../data/regions'
 import { domainFor, rampBreaks } from '../data/load'
+import { rasterizeGrid } from './rasterize'
 import { useRegionData } from '../data/useRegionData'
 import { useApp } from '../state/store'
 
@@ -17,26 +18,28 @@ import { useApp } from '../state/store'
  * labels above the data for free.
  */
 
-const CELLS = 'cells'
+const FIELD = 'field'
+const EDGE = 'field-edge-src'
 const SITES = 'sites'
-const DATA_LAYERS = ['cells-shade', 'cells-fill', 'sites-circles'] as const
+const DATA_LAYERS = ['field-raster', 'field-edge', 'sites-circles'] as const
 
 const HEAT_LIGHT = ['#E4E9ED', '#E9C88E', '#DC9A5A', '#C56836', '#9C3324', '#5C1015']
 const HEAT_DARK = ['#2C3540', '#5E4340', '#96452F', '#C46628', '#E8983A', '#FFD166']
 const CANOPY_LIGHT = ['#E6EBE7', '#C3D6C4', '#97BC9C', '#6BA077', '#3E8459', '#0F7A48']
 const CANOPY_DARK = ['#14251C', '#1C3A2A', '#26523A', '#32704C', '#3FB871', '#7FE0A5']
+// Population stays achromatic — a third hue would turn the map to mud — but as
+// a raster it needs real colours rather than an opacity trick.
+const PEOPLE_LIGHT = ['#F2F2F2', '#D6D6D6', '#B0B0B0', '#828282', '#4F4F4F', '#1A1A1A']
+const PEOPLE_DARK = ['#141414', '#2E2E2E', '#4E4E4E', '#7A7A7A', '#ADADAD', '#EDEDED']
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-/** Discrete buckets, matching the six stops the legend shows. */
-function stepValue<T>(prop: unknown, breaks: number[], stops: T[]) {
-  const expr: unknown[] = ['step', prop, stops[0]]
-  breaks.forEach((b, i) => expr.push(b, stops[i + 1]))
+/** Discrete buckets for the ranked-site circles, matching the legend's stops. */
+function stepColor(prop: unknown, breaks: number[], ramp: string[]) {
+  const expr: unknown[] = ['step', prop, ramp[0]]
+  breaks.forEach((b, i) => expr.push(b, ramp[i + 1]))
   return expr
 }
-
-const stepColor = (prop: unknown, breaks: number[], ramp: string[]) =>
-  stepValue(prop, breaks, ramp)
 
 export function MapCanvas() {
   const container = useRef<HTMLDivElement>(null)
@@ -63,7 +66,7 @@ export function MapCanvas() {
   const setLoading = useApp((s) => s.setDataLoading)
 
   const dark = theme === 'dark'
-  const { grid, cells, sites, loading, error } = useRegionData(region)
+  const { grid, sites, loading, error } = useRegionData(region)
 
   useEffect(() => {
     setLoading(loading, error)
@@ -124,54 +127,38 @@ export function MapCanvas() {
   // Sources and layers.
   useEffect(() => {
     const m = map.current
-    if (!m || !styleReadyRef.current || !grid || !cells || !sites) return
+    if (!m || !styleReadyRef.current || !grid || !sites) return
 
     for (const id of DATA_LAYERS) if (m.getLayer(id)) m.removeLayer(id)
-    for (const src of [CELLS, SITES]) if (m.getSource(src)) m.removeSource(src)
-    m.addSource(CELLS, { type: 'geojson', data: cells })
-    m.addSource(SITES, { type: 'geojson', data: sites })
+    for (const src of [FIELD, EDGE, SITES]) if (m.getSource(src)) m.removeSource(src)
 
     const satellite = basemap === 'satellite'
-    const dur = reducedMotion() ? 0 : 900
-    const latest = grid.years[grid.years.length - 1]
-    const yearKey = String(year !== null && grid.years.includes(year) ? year : latest)
-    const ndviProp = ['get', `n${yearKey}`]
 
-    if (view === 'canopy') {
-      const ramp = dark ? CANOPY_DARK : CANOPY_LIGHT
-      const [clo, chi] = domainFor(grid, 'canopy', year)
-      const veg = ['>=', ndviProp, 0.30] as never
+    // A quiet outline of the analysed area, so the field reads as a study region
+    // rather than an image that happens to stop.
+    const { tl, tr, bl, br } = grid.cornersWgs84
+    m.addSource(EDGE, {
+      type: 'geojson',
+      data: {
+        type: 'Feature',
+        properties: {},
+        geometry: { type: 'LineString', coordinates: [tl, tr, br, bl, tl] },
+      },
+    })
+    m.addLayer({
+      id: 'field-edge',
+      type: 'line',
+      source: EDGE,
+      paint: {
+        'line-color': dark ? '#FAFAFA' : '#0A0A0A',
+        'line-opacity': satellite ? 0.28 : 0.18,
+        'line-width': 1,
+        'line-dasharray': [4, 3],
+      },
+    }, FIRST_LABEL_LAYER)
 
-      // The signature: shade cast beside the canopy, offset in screen pixels.
-      // Which cells qualify is decided by that year's measured NDVI, so
-      // scrubbing back genuinely retreats the shade — nothing is faked.
-      m.addLayer({
-        id: 'cells-shade',
-        type: 'fill',
-        source: CELLS,
-        filter: veg,
-        paint: {
-          'fill-antialias': false,
-          'fill-color': dark ? '#000000' : '#0A0A0A',
-          'fill-opacity': dark ? 0.55 : 0.22,
-          'fill-translate': [6, 5],
-          'fill-opacity-transition': { duration: dur, delay: 0 },
-        },
-      }, FIRST_LABEL_LAYER)
-
-      m.addLayer({
-        id: 'cells-fill',
-        type: 'fill',
-        source: CELLS,
-        filter: ['has', `n${yearKey}`] as never,
-        paint: {
-          'fill-antialias': false,
-          'fill-color': stepColor(ndviProp, rampBreaks(clo, chi), ramp) as never,
-          'fill-opacity': satellite ? 0.88 : 0.78,
-          'fill-opacity-transition': { duration: dur, delay: 0 },
-        },
-      }, FIRST_LABEL_LAYER)
-    } else if (view === 'priority') {
+    if (view === 'priority') {
+      m.addSource(SITES, { type: 'geojson', data: sites })
       m.addLayer({
         id: 'sites-circles',
         type: 'circle',
@@ -182,43 +169,56 @@ export function MapCanvas() {
           'circle-color': stepColor(['get', 'score'],
             rampBreaks(...domainFor(grid, 'priority', year)),
             dark ? HEAT_DARK : HEAT_LIGHT) as never,
-          'circle-opacity': satellite ? 0.95 : 0.88,
+          'circle-opacity': satellite ? 0.95 : 0.9,
+          'circle-blur': 0.05,
           // Selection is a ring plus a lift, never a fill change.
           'circle-stroke-color': dark ? '#3FB871' : '#0F7A48',
           'circle-stroke-width': 0,
         },
       }, FIRST_LABEL_LAYER)
-    } else {
-      const heat = view === 'heat'
-      const prop = ['get', heat ? 'lst' : 'pop']
-      // Domain comes from the data, never from a guess — and from the same
-      // function the legend uses, so the two cannot drift apart.
-      const [lo, hi] = domainFor(grid, view, year)
-
-      m.addLayer({
-        id: 'cells-fill',
-        type: 'fill',
-        source: CELLS,
-        filter: ['has', heat ? 'lst' : 'pop'] as never,
-        paint: {
-          'fill-antialias': false,
-          'fill-color': heat
-            ? (stepColor(prop, rampBreaks(lo, hi), dark ? HEAT_DARK : HEAT_LIGHT) as never)
-            : (dark ? '#FAFAFA' : '#0A0A0A'),
-          // Population uses ink at varying opacity, never its own hue — a third
-          // colour scale would turn the map to mud. Six discrete steps, not a
-          // continuous ramp: continuous opacity over noisy 100 m census cells
-          // reads as television static, and the legend shows six stops anyway.
-          'fill-opacity': heat
-            ? ((satellite ? 0.88 : 0.78) as never)
-            : (stepValue(prop, rampBreaks(lo, hi), satellite
-                ? [0.10, 0.24, 0.38, 0.54, 0.72, 0.92]
-                : [0.07, 0.18, 0.32, 0.48, 0.66, 0.86]) as never),
-          'fill-opacity-transition': { duration: dur, delay: 0 },
-        },
-      }, FIRST_LABEL_LAYER)
+      return
     }
-  }, [view, grid, cells, sites, dark, year, styleEpoch, basemap])
+
+    // Everything else is a measured field, so it is drawn as an interpolated
+    // raster rather than one polygon per cell. See ./rasterize.ts.
+    const canopy = view === 'canopy'
+    const [lo, hi] = domainFor(grid, view, year)
+    const stops = canopy
+      ? (dark ? CANOPY_DARK : CANOPY_LIGHT)
+      : view === 'people'
+        ? (dark ? PEOPLE_DARK : PEOPLE_LIGHT)
+        : (dark ? HEAT_DARK : HEAT_LIGHT)
+
+    const raster = rasterizeGrid(grid, view, year, { stops, lo, hi },
+      canopy
+        ? {
+            // The signature: canopy casts shade, one cell down and to the right.
+            shadeOffset: [1, 1],
+            shadeRgb: dark ? [0, 0, 0] : [10, 10, 10],
+            vegThreshold: 0.3,
+          }
+        : {})
+    if (!raster) return
+
+    m.addSource(FIELD, {
+      type: 'image',
+      url: raster.url,
+      coordinates: raster.coordinates,
+    })
+    m.addLayer({
+      id: 'field-raster',
+      type: 'raster',
+      source: FIELD,
+      paint: {
+        // Linear resampling is what turns 60 m cells into a continuous field
+        // instead of a mosaic of squares.
+        'raster-resampling': 'linear',
+        'raster-opacity': satellite ? 0.62 : 0.78,
+        'raster-fade-duration': reducedMotion() ? 0 : 300,
+        'raster-contrast': satellite ? 0.06 : 0,
+      },
+    }, FIRST_LABEL_LAYER)
+  }, [view, grid, sites, dark, year, styleEpoch, basemap])
 
   // Selection ring — a paint update, never a layer rebuild.
   useEffect(() => {
