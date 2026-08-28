@@ -129,6 +129,35 @@ export function SitePlate() {
       </div>
 
       <div className="plate__block">
+        <h3 className="t-label">Once mature, estimated</h3>
+        <dl className="plate__facts plate__facts--three">
+          <div>
+            <dt className="t-label">Canopy</dt>
+            <dd className="t-data">
+              {p.species.crownM2.toLocaleString()} <span className="t-unit">m&sup2;</span>
+            </dd>
+          </div>
+          <div>
+            <dt className="t-label">CO&#8322;</dt>
+            <dd className="t-data">
+              {p.species.co2KgPerYear} <span className="t-unit">kg/yr</span>
+            </dd>
+          </div>
+          <div>
+            <dt className="t-label">PM2.5</dt>
+            <dd className="t-data">
+              {p.species.pm25GPerYear} <span className="t-unit">g/yr</span>
+            </dd>
+          </div>
+        </dl>
+        <p className="t-unit plate__caveat">
+          Estimated from one published urban-forestry coefficient applied to this
+          species&apos; mature crown area &mdash; not measured, and not specific to
+          Lahore. The tree has to reach maturity first.
+        </p>
+      </div>
+
+      <div className="plate__block">
         <h3 className="t-label">Plant here</h3>
         <div className="species">
           <p className="t-subhead species__common">{p.species.common}</p>

@@ -67,6 +67,12 @@ export function domainFor(g: RegionGrid, view: ViewId, year: number | null): [nu
   } else if (view === 'people') {
     lo = percentile(g.pop, 0.02, 10)
     hi = percentile(g.pop, 0.98, 10)
+  } else if (view === 'risk') {
+    // Risk is already normalised, and its band edges are fixed — clipping it to
+    // the data would move the bands from region to region and make "High" mean
+    // something different in each one.
+    lo = 0
+    hi = 1
   } else if (view === 'canopy') {
     const y = year !== null && g.years.includes(year) ? year : g.years[g.years.length - 1]
     lo = 0

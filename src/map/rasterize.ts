@@ -1,3 +1,4 @@
+import { riskFor } from '../data/risk'
 import type { RegionGrid, ViewId } from '../data/types'
 
 /**
@@ -16,8 +17,14 @@ import type { RegionGrid, ViewId } from '../data/types'
  */
 
 export interface Ramp {
-  /** Six colours, cool to hot. */
+  /** Colours, cool to hot. Six for a continuous field, four for risk bands. */
   stops: string[]
+  /**
+   * Snap to the nearest stop instead of interpolating. Risk is a classification,
+   * not a field — a planner reads "High", and blending the bands into each other
+   * would erase exactly the distinction that makes it useful.
+   */
+  discrete?: boolean
   /** Value range the ramp spans. */
   lo: number
   hi: number
@@ -35,7 +42,15 @@ const hexToRgb = (h: string): [number, number, number] => [
  * into six flat plateaus is what made it look like a chart rather than a
  * measurement.
  */
-function sample(stops: [number, number, number][], t: number): [number, number, number] {
+function sample(
+  stops: [number, number, number][],
+  t: number,
+  discrete = false
+): [number, number, number] {
+  if (discrete) {
+    const i = Math.min(stops.length - 1, Math.floor(Math.max(0, Math.min(1, t)) * stops.length))
+    return stops[i]
+  }
   const x = Math.max(0, Math.min(1, t)) * (stops.length - 1)
   const i = Math.min(stops.length - 2, Math.floor(x))
   const f = x - i
@@ -50,6 +65,7 @@ function sample(stops: [number, number, number][], t: number): [number, number, 
 
 /** Values for a view, already unquantised, or null where there is no reading. */
 function valuesFor(g: RegionGrid, view: ViewId, year: number | null): (number | null)[] {
+  if (view === 'risk') return riskFor(g).values
   if (view === 'heat') return g.lst.map((v) => (v === null ? null : v / 10))
   if (view === 'people') return g.pop.map((v) => (v === null ? null : v / 10))
   const y = year !== null && g.years.includes(year) ? year : g.years[g.years.length - 1]
@@ -117,7 +133,7 @@ export function rasterizeGrid(
       img.data[o + 3] = 0
       continue
     }
-    const [r, gg, b] = sample(stops, (v - ramp.lo) / span)
+    const [r, gg, b] = sample(stops, (v - ramp.lo) / span, ramp.discrete)
     img.data[o] = r
     img.data[o + 1] = gg
     img.data[o + 2] = b

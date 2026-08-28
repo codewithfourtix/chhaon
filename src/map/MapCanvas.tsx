@@ -6,6 +6,7 @@ import { buildBasemapStyle, LIGHT_TOKENS, DARK_TOKENS, FIRST_LABEL_LAYER } from 
 import { LAHORE_BOUNDS, REGIONS } from '../data/regions'
 import { domainFor, domainForScores, rampBreaks } from '../data/load'
 import { rasterizeGrid } from './rasterize'
+import { RISK_COLOURS } from '../data/risk'
 import { useRegionData } from '../data/useRegionData'
 import { useApp } from '../state/store'
 
@@ -249,13 +250,16 @@ export function MapCanvas() {
     // raster rather than one polygon per cell. See ./rasterize.ts.
     const canopy = view === 'canopy'
     const [lo, hi] = domainFor(grid, view, year)
+    const risk = view === 'risk'
     const stops = canopy
       ? (dark ? CANOPY_DARK : CANOPY_LIGHT)
-      : view === 'people'
-        ? (dark ? PEOPLE_DARK : PEOPLE_LIGHT)
-        : (dark ? HEAT_DARK : HEAT_LIGHT)
+      : risk
+        ? RISK_COLOURS[dark ? 'dark' : 'light']
+        : view === 'people'
+          ? (dark ? PEOPLE_DARK : PEOPLE_LIGHT)
+          : (dark ? HEAT_DARK : HEAT_LIGHT)
 
-    const raster = rasterizeGrid(grid, view, year, { stops, lo, hi },
+    const raster = rasterizeGrid(grid, view, year, { stops, lo, hi, discrete: risk },
       canopy
         ? {
             // The signature: canopy casts shade, one cell down and to the right.

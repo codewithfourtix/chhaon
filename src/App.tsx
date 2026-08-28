@@ -2,6 +2,7 @@ import { MapCanvas } from './map/MapCanvas'
 import { BasemapToggle, BottomBar, InstrumentRail, LoadingBar, ThermalScale } from './ui/Chrome'
 import { SitePlate } from './ui/SitePlate'
 import { SiteList } from './ui/SiteList'
+import { CoverTrend } from './ui/CoverTrend'
 import { Shortcuts } from './ui/Shortcuts'
 import { Overture } from './ui/Overture'
 import { Methodology } from './ui/Methodology'
@@ -31,6 +32,7 @@ export default function App() {
           <ThermalScale />
           <BottomBar />
           <SiteList />
+          <CoverTrend />
           <SitePlate />
           <Shortcuts />
           <LoadingBar />

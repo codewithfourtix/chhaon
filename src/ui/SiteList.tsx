@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useRegionData } from '../data/useRegionData'
 import { useApp, hasFilters, type LandUse } from '../state/store'
-import { downloadSites } from '../data/exportSites'
-import { IconClose, IconDownload, IconFilter } from './icons'
+import { downloadGeoJson, downloadSites } from '../data/exportSites'
+import { IconClose, IconDownload, IconFilter, IconGlobe } from './icons'
 
 const LANDUSES: LandUse[] = ['roadside', 'park', 'canal', 'vacant']
 
@@ -25,7 +25,8 @@ export function SiteList() {
   const setFilters = useApp((s) => s.setFilters)
   const clearFilters = useApp((s) => s.clearFilters)
 
-  const { sites, grid } = useRegionData(region)
+  const { sites, grid, meta } = useRegionData(region)
+  const rm = meta?.regions?.[region]
   const listRef = useRef<HTMLUListElement>(null)
 
   const all = useMemo(() => sites?.features ?? [], [sites])
@@ -79,6 +80,15 @@ export function SiteList() {
           </p>
         </div>
         <div className="sitelist__acts">
+          <button
+            type="button"
+            className="iconBtn"
+            title="Download as GeoJSON"
+            aria-label="Download ranked sites as GeoJSON"
+            onClick={() => downloadGeoJson(shown, region)}
+          >
+            <IconGlobe />
+          </button>
           <button
             type="button"
             className="iconBtn"
@@ -163,6 +173,16 @@ export function SiteList() {
           </button>
         )}
       </div>
+
+      {rm && (
+        <p className="sitelist__roll t-unit">
+          All {all.length} fully grown &rarr; est.{' '}
+          <span className="t-data">{(rm.co2KgPerYear / 1000).toFixed(1)} t</span> CO&#8322;
+          and <span className="t-data">{rm.pm25KgPerYear.toFixed(1)} kg</span> PM2.5
+          per year. {rm.diversity.count} species, {rm.diversity.topSpecies}{' '}
+          {(rm.diversity.topShare * 100).toFixed(0)}% &mdash; estimated, see Method.
+        </p>
+      )}
 
       <ul className="sitelist__rows" ref={listRef}>
         {shown.map((f) => {

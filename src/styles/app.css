@@ -962,3 +962,102 @@ kbd {
               color var(--dur-tick) var(--ease-instrument);
 }
 .miniBtn:hover { background: var(--plate-2); color: var(--ink-0); }
+
+/* ---------- Risk legend ---------- */
+
+.scale--risk { gap: calc(var(--u) * 4); }
+
+.riskKey {
+  flex: 0 0 auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 3);
+  align-items: center;
+}
+.riskKey li { display: flex; flex-direction: column; align-items: center; gap: calc(var(--u) * 1.5); }
+.riskKey__swatch { width: 12px; height: 26px; border-radius: 3px; }
+.riskKey__label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+/* ---------- Green cover trend (canopy view) ---------- */
+
+.cover {
+  position: absolute;
+  top: calc(var(--u) * 4);
+  right: calc(var(--scale-w) + var(--u) * 4);
+  z-index: 5;
+  width: 300px;
+  padding: calc(var(--u) * 4);
+  background: color-mix(in srgb, var(--plate-1) 96%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-plate);
+}
+
+.cover__head { display: flex; align-items: baseline; justify-content: space-between; gap: calc(var(--u) * 2); }
+.cover__title { margin: 0; font-size: 1rem; font-weight: 600; }
+
+.cover__now { display: flex; align-items: baseline; gap: calc(var(--u) * 2); margin: calc(var(--u) * 3) 0 calc(var(--u) * 4); }
+.cover__pct { font-size: 2rem; color: var(--canopy); }
+
+.cover__chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 64px;
+}
+.cover__bar {
+  flex: 1;
+  min-width: 0;
+  background: var(--canopy-3);
+  border: 0;
+  border-radius: 2px 2px 0 0;
+  cursor: pointer;
+  padding: 0;
+  transition: background var(--dur-tick) var(--ease-instrument);
+}
+.cover__bar:hover { background: var(--canopy-5); }
+.cover__bar.is-active { background: var(--canopy); }
+
+.cover__axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: calc(var(--u) * 1.5);
+}
+
+.cover__change { margin: calc(var(--u) * 3) 0 calc(var(--u) * 2); color: var(--ink-0); }
+
+.cover__caveat {
+  margin: 0;
+  padding-top: calc(var(--u) * 3);
+  border-top: 1px solid var(--hairline);
+  line-height: 1.5;
+}
+.cover__caveat strong { color: var(--ink-1); }
+
+/* ---------- Region rollup in the ranked list ---------- */
+
+.sitelist__roll {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: calc(var(--u) * 3) calc(var(--u) * 4);
+  border-bottom: 1px solid var(--hairline);
+  line-height: 1.55;
+}
+
+.plate__facts--three { grid-template-columns: repeat(3, 1fr); }
+
+@media (max-width: 900px) {
+  .cover { display: none; }
+}

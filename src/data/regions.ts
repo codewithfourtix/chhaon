@@ -25,6 +25,7 @@ export const VIEWS: { id: ViewId; name: string; blurb: string }[] = [
   { id: 'canopy', name: 'Canopy', blurb: 'Green cover, and where it went' },
   { id: 'heat', name: 'Heat', blurb: 'Land surface temperature' },
   { id: 'people', name: 'People', blurb: 'Population density' },
+  { id: 'risk', name: 'Risk', blurb: 'Heat and shade deficit' },
   { id: 'priority', name: 'Priority', blurb: 'Ranked planting sites' },
 ]
 
@@ -32,6 +33,7 @@ export const UNIT: Record<ViewId, string> = {
   canopy: 'NDVI',
   heat: '°C surface',
   people: 'people / ha',
+  risk: 'risk band',
   priority: 'score',
 }
 
@@ -40,6 +42,7 @@ export const SOURCE_RES: Record<ViewId, string> = {
   canopy: '10 m / px',
   heat: '100 m / px',
   people: '100 m / px',
+  risk: '60 m / cell',
   priority: '60 m / cell',
 }
 

@@ -1,11 +1,13 @@
 import { useEffect } from 'react'
 import { REGIONS, SOURCE_RES, UNIT, VIEWS } from '../data/regions'
 import { domainFor } from '../data/load'
+import { RISK_BANDS, riskFor } from '../data/risk'
 import { useRegionData } from '../data/useRegionData'
 import { useApp } from '../state/store'
 import type { ViewId } from '../data/types'
 import {
-  IconCanopy, IconHeat, IconMethod, IconPeople, IconPriority, IconRegion, IconTheme,
+  IconCanopy, IconHeat, IconMethod, IconPeople, IconPriority, IconRegion,
+  IconRisk, IconTheme,
 } from './icons'
 
 const HEAT_RAMP = ['--heat-1', '--heat-2', '--heat-3', '--heat-4', '--heat-5', '--heat-6']
@@ -15,6 +17,7 @@ const VIEW_ICON: Record<ViewId, () => React.ReactElement> = {
   canopy: IconCanopy,
   heat: IconHeat,
   people: IconPeople,
+  risk: IconRisk,
   priority: IconPriority,
 }
 
@@ -136,6 +139,28 @@ export function ThermalScale() {
     ends = [lo.toFixed(dp), hi.toFixed(dp)]
   }
 
+  // Risk is a classification, so its legend names the bands rather than
+  // showing a numeric range nobody would quote.
+  if (view === 'risk') {
+    return (
+      <aside className="scale scale--risk" aria-label="Legend, risk band">
+        <span className="scale__unit">Risk</span>
+        <ul className="riskKey">
+          {[...RISK_BANDS].reverse().map((band) => (
+            <li key={band}>
+              <span
+                className="riskKey__swatch"
+                style={{ background: `var(--risk-${RISK_BANDS.indexOf(band) + 1})` }}
+              />
+              <span className="riskKey__label">{band}</span>
+            </li>
+          ))}
+        </ul>
+        <span className="t-unit scale__res">{SOURCE_RES[view]}</span>
+      </aside>
+    )
+  }
+
   const ramp = view === 'canopy' ? CANOPY_RAMP : HEAT_RAMP
 
   return (
@@ -233,6 +258,14 @@ export function BottomBar() {
           <dt className="t-label">Baseline</dt>
           <dd className="t-data">{grid ? `${grid.baselineC.toFixed(1)}°C` : '—'}</dd>
         </div>
+        {grid && (
+          <div className="stats__item">
+            <dt className="t-label">High risk</dt>
+            <dd className="t-data">
+              {(riskFor(grid).summary.elevated * 100).toFixed(0)}%
+            </dd>
+          </div>
+        )}
         {rm?.heatGapC != null && (
           <div className="stats__item stats__item--accent">
             <dt className="t-label">Shade worth</dt>

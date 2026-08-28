@@ -68,6 +68,13 @@ export const IconTheme = () => (
   </svg>
 )
 
+export const IconRisk = () => (
+  <svg {...base}>
+    <path d="M8 2.6 14.2 13H1.8L8 2.6Z" />
+    <path d="M8 6.6v3.1M8 11.4h.01" strokeWidth="1.6" />
+  </svg>
+)
+
 export const IconClose = () => (
   <svg {...base}>
     <path d="M4.5 4.5 11.5 11.5M11.5 4.5 4.5 11.5" />
@@ -119,5 +126,12 @@ export const IconExternal = () => (
   <svg {...base}>
     <path d="M7 3.4H3.9a1.3 1.3 0 0 0-1.3 1.3v7.4a1.3 1.3 0 0 0 1.3 1.3h7.4a1.3 1.3 0 0 0 1.3-1.3V9" />
     <path d="M9.6 2.6h3.8v3.8M13.4 2.6 7.4 8.6" />
+  </svg>
+)
+
+export const IconGlobe = () => (
+  <svg {...base}>
+    <circle cx="8" cy="8" r="5.8" />
+    <path d="M2.4 8h11.2M8 2.2c1.6 1.7 2.4 3.7 2.4 5.8s-.8 4.1-2.4 5.8c-1.6-1.7-2.4-3.7-2.4-5.8s.8-4.1 2.4-5.8Z" />
   </svg>
 )

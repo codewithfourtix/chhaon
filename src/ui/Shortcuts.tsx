@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { IconKeyboard } from './icons'
 
 const KEYS: [string, string][] = [
-  ['1 – 4', 'Canopy, Heat, People, Priority'],
+  ['1 – 5', 'Canopy, Heat, People, Risk, Priority'],
   ['Q W E R T', 'Jump between the five regions'],
   ['← →', 'Step through years'],
   ['↑ ↓', 'Walk the ranked sites'],

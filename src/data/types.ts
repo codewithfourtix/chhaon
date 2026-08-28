@@ -1,4 +1,4 @@
-export type ViewId = 'canopy' | 'heat' | 'people' | 'priority'
+export type ViewId = 'canopy' | 'heat' | 'people' | 'risk' | 'priority'
 export type RegionId = 'model-town' | 'gulberg' | 'dha' | 'johar-town' | 'iqbal-town'
 
 /** Quantised grids: null means no usable observation for that cell. */
@@ -42,7 +42,16 @@ export interface SiteProps {
   areaM2: number
   landuse: string
   terms: { heat: number; canopy: number; people: number }
-  species: { common: string; botanical: string; because: string }
+  widthM?: number
+  species: {
+    common: string
+    botanical: string
+    because: string
+    crownM: number
+    crownM2: number
+    co2KgPerYear: number
+    pm25GPerYear: number
+  }
 }
 
 export interface RegionMeta {
@@ -63,6 +72,16 @@ export interface RegionMeta {
   ndviLstCorr: number | null
   /** Vegetated share of ground, per year. */
   vegPctByYear: Record<string, number>
+  /** Estimated, not measured — see docs/PRODUCT.md. */
+  co2KgPerYear: number
+  pm25KgPerYear: number
+  carsEquivalent: number
+  diversity: {
+    evenness: number
+    topSpecies: string | null
+    topShare: number
+    count: number
+  }
 }
 
 export interface Meta {
