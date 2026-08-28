@@ -21,6 +21,7 @@ import { useApp } from '../state/store'
 
 const FIELD = 'field'
 const EDGE = 'field-edge-src'
+const BOX = 'area-box'
 const SITES = 'sites'
 const DATA_LAYERS = ['field-raster', 'field-edge', 'sites-halo', 'sites-circles', 'sites-rank'] as const
 
@@ -66,6 +67,9 @@ export function MapCanvas() {
   const selectSite = useApp((s) => s.selectSite)
   const filters = useApp((s) => s.filters)
   const focusTick = useApp((s) => s.focusTick)
+  const drawing = useApp((s) => s.drawing)
+  const area = useApp((s) => s.area)
+  const setArea = useApp((s) => s.setArea)
   const setLoading = useApp((s) => s.setDataLoading)
 
   const dark = theme === 'dark'
@@ -330,6 +334,62 @@ export function MapCanvas() {
     }
   }, [selectedSiteId, sites, focusTick])
 
+  // Drawing a sub-area. Dragging the map is disabled while armed, otherwise
+  // the first drag pans instead of drawing and it feels broken.
+  useEffect(() => {
+    const m = map.current
+    if (!m) return
+    if (!drawing) {
+      m.dragPan.enable()
+      m.getCanvas().style.cursor = ''
+      return
+    }
+    m.dragPan.disable()
+    m.getCanvas().style.cursor = 'crosshair'
+
+    let start: { lng: number; lat: number } | null = null
+
+    const down = (e: { lngLat: { lng: number; lat: number } }) => {
+      start = { ...e.lngLat }
+    }
+    const move = (e: { lngLat: { lng: number; lat: number } }) => {
+      if (!start) return
+      draw(start, e.lngLat)
+    }
+    const up = (e: { lngLat: { lng: number; lat: number } }) => {
+      if (!start) return
+      const b = {
+        w: Math.min(start.lng, e.lngLat.lng),
+        e: Math.max(start.lng, e.lngLat.lng),
+        s: Math.min(start.lat, e.lngLat.lat),
+        n: Math.max(start.lat, e.lngLat.lat),
+      }
+      start = null
+      // A stray click is not a selection.
+      if (b.e - b.w < 1e-4 || b.n - b.s < 1e-4) return
+      setArea(b)
+    }
+
+    m.on('mousedown', down)
+    m.on('mousemove', move)
+    m.on('mouseup', up)
+    return () => {
+      m.off('mousedown', down)
+      m.off('mousemove', move)
+      m.off('mouseup', up)
+      m.dragPan.enable()
+      m.getCanvas().style.cursor = ''
+    }
+  }, [drawing, setArea])
+
+  // Render the drawn area, live while dragging and persistent once set.
+  useEffect(() => {
+    const m = map.current
+    if (!m || !styleReadyRef.current) return
+    if (area) draw({ lng: area.w, lat: area.s }, { lng: area.e, lat: area.n })
+    else clearBox()
+  }, [area, styleEpoch])
+
   // Click picking, with a forgiving box so small marks stay hittable.
   useEffect(() => {
     const m = map.current
@@ -356,6 +416,49 @@ export function MapCanvas() {
       m.off('mouseleave', 'sites-circles', leave)
     }
   }, [selectSite])
+
+  function clearBox() {
+    const m = map.current
+    if (!m || !m.getSource(BOX)) return
+    if (m.getLayer('area-fill')) m.removeLayer('area-fill')
+    if (m.getLayer('area-line')) m.removeLayer('area-line')
+    m.removeSource(BOX)
+  }
+
+  function draw(a: { lng: number; lat: number }, b: { lng: number; lat: number }) {
+    const m = map.current
+    if (!m || !styleReadyRef.current) return
+    const ring = [
+      [a.lng, a.lat], [b.lng, a.lat], [b.lng, b.lat], [a.lng, b.lat], [a.lng, a.lat],
+    ]
+    const data = {
+      type: 'Feature' as const,
+      properties: {},
+      geometry: { type: 'Polygon' as const, coordinates: [ring] },
+    }
+    const src = m.getSource(BOX) as { setData?: (d: unknown) => void } | undefined
+    if (src?.setData) {
+      src.setData(data)
+      return
+    }
+    m.addSource(BOX, { type: 'geojson', data })
+    m.addLayer({
+      id: 'area-fill',
+      type: 'fill',
+      source: BOX,
+      paint: { 'fill-color': dark ? '#3FB871' : '#0F7A48', 'fill-opacity': 0.12 },
+    })
+    m.addLayer({
+      id: 'area-line',
+      type: 'line',
+      source: BOX,
+      paint: {
+        'line-color': dark ? '#3FB871' : '#0F7A48',
+        'line-width': 1.5,
+        'line-dasharray': [3, 2],
+      },
+    })
+  }
 
   return (
     <div

@@ -164,7 +164,33 @@ clipping the edges per region would make "High" mean something different in each
 one, which defeats comparing places. Defined once in `src/data/risk.ts` so the
 map, legend and summary statistic cannot drift apart.
 
-### 3.10 Dark and satellite are the defaults
+### 3.10 Sub-area selection, cost, and full-layer export
+
+**Sub-area.** A department rarely asks about "Model Town" — they ask about one
+ward, one corridor, the blocks around a school. Drawing a box recomputes
+vegetated cover, mean surface temperature and population over just those cells.
+It is a bounding query over the raster grid already in memory: no new data, no
+server. Below a quarter coverage the cover figure is withheld rather than shown
+with a caveat nobody reads.
+
+**Cost.** A map without a budget line is a picture, not a proposal. The default
+of PKR 1,200 per tree — a sapling plus roughly three years of establishment care
+— is a **starting figure the planner is expected to overwrite**, and the field is
+editable for exactly that reason. Larger species cost more to establish, so the
+total is weighted by crown size.
+
+**Full-layer export.** Two formats, because they answer different questions.
+*Grid GeoJSON* is one polygon per 60 m cell carrying every measured value —
+loads straight into QGIS, joins and symbolises. *GeoPNG* is the rendered layer
+plus an ESRI world file, written from the same canvas the map draws, so what
+lands in the GIS is exactly what was on screen. GeoTIFF would mean shipping an
+encoder; a world file is two lines and every GIS reads it.
+
+Cells with no reading are dropped from the export rather than written as zero —
+a gap has to stay a gap once it is in someone else's GIS, where our caveats
+are not.
+
+### 3.11 Dark and satellite are the defaults
 
 It is a thermal instrument. It reads better dark, and the measured fields land
 on real ground, which is what makes them believable at a glance.

@@ -207,8 +207,15 @@ once mature; all 600 together come to about 19 t CO2/year, roughly
 4 cars' worth — honest, and modest, because urban planting at this
 scale is a heat intervention rather than a carbon one.
 
-The ranked list filters by land use, species and people served, and exports to
-**CSV or GeoJSON** so a department's GIS team can open it in QGIS or ArcGIS. Every site has copy-coordinates and an open-in-Google-Maps link. The URL
+**Draw a box** on the canopy view to recompute cover, mean surface temperature
+and population for just that area — a ward, a corridor, the blocks around a
+school. The ranked list carries an **editable cost estimate** (default PKR 1,200
+per tree including establishment care, weighted by species size) so a proposal
+has a budget line and not just a map.
+
+Exports: ranked sites as **CSV or GeoJSON**, and the measured layers themselves
+as **grid GeoJSON or a georeferenced PNG + world file**, so a department's GIS
+team can work in QGIS or ArcGIS rather than being locked into ours. Every site has copy-coordinates and an open-in-Google-Maps link. The URL
 hash carries region, view, year, selected site, theme and basemap, so any view
 can be sent to someone.
 

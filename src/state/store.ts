@@ -1,9 +1,11 @@
 import { create } from 'zustand'
 import type { RegionId, ViewId } from '../data/types'
+import { DEFAULT_COST_PKR } from '../data/cost'
 
 type Theme = 'light' | 'dark'
 export type BasemapMode = 'map' | 'satellite'
 export type LandUse = 'roadside' | 'park' | 'canal' | 'vacant'
+export interface Box { w: number; s: number; e: number; n: number }
 
 export interface Filters {
   landuse: LandUse[]
@@ -27,6 +29,10 @@ interface AppState {
   basemap: BasemapMode
   listOpen: boolean
   filters: Filters
+  /** Drawn sub-area, in WGS84. null means the whole region. */
+  area: Box | null
+  drawing: boolean
+  costPkr: number
   dataLoading: boolean
   dataError: string | null
   /** Bumped to re-focus the camera on the selected site. */
@@ -41,6 +47,9 @@ interface AppState {
   toggleTheme: () => void
   setBasemap: (b: BasemapMode) => void
   toggleList: () => void
+  setArea: (b: Box | null) => void
+  setDrawing: (d: boolean) => void
+  setCostPkr: (v: number) => void
   setFilters: (f: Partial<Filters>) => void
   clearFilters: () => void
   setDataLoading: (loading: boolean, error: string | null) => void
@@ -64,6 +73,9 @@ export const useApp = create<AppState>((set) => ({
   basemap: INITIAL_BASEMAP,
   listOpen: true,
   filters: NO_FILTERS,
+  area: null,
+  drawing: false,
+  costPkr: DEFAULT_COST_PKR,
   dataLoading: true,
   dataError: null,
   focusTick: 0,
@@ -71,11 +83,16 @@ export const useApp = create<AppState>((set) => ({
   enterWorkspace: () => set({ stage: 'workspace' }),
   showMethodology: () => set({ stage: 'methodology' }),
   setView: (view) => set({ view, selectedSiteId: null }),
-  setRegion: (region) => set({ region, selectedSiteId: null, filters: NO_FILTERS }),
+  // A drawn area belongs to the region it was drawn over.
+  setRegion: (region) =>
+    set({ region, selectedSiteId: null, filters: NO_FILTERS, area: null, drawing: false }),
   setYear: (year) => set({ year }),
   selectSite: (selectedSiteId) => set({ selectedSiteId }),
   setBasemap: (basemap) => set({ basemap }),
   toggleList: () => set((s) => ({ listOpen: !s.listOpen })),
+  setArea: (area) => set({ area, drawing: false }),
+  setDrawing: (drawing) => set({ drawing }),
+  setCostPkr: (costPkr) => set({ costPkr }),
   setFilters: (f) => set((s) => ({ filters: { ...s.filters, ...f }, selectedSiteId: null })),
   clearFilters: () => set({ filters: NO_FILTERS, selectedSiteId: null }),
   setDataLoading: (dataLoading, dataError) => set({ dataLoading, dataError }),

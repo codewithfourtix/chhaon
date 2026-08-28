@@ -1061,3 +1061,45 @@ kbd {
 @media (max-width: 900px) {
   .cover { display: none; }
 }
+
+/* ---------- Cost estimator ---------- */
+
+.cost {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--u) * 3);
+  margin: calc(var(--u) * 3) 0;
+  padding: calc(var(--u) * 2.5) calc(var(--u) * 3);
+  background: var(--plate-2);
+  border-radius: var(--radius);
+}
+.cost input {
+  width: 5.5em;
+  padding: 2px 6px;
+  background: var(--plate-0);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  color: var(--ink-0);
+  font-family: var(--font-data);
+  font-size: 0.75rem;
+}
+.cost__total { color: var(--canopy); white-space: nowrap; }
+
+.iconBtn.is-on {
+  background: color-mix(in srgb, var(--canopy) 18%, transparent);
+  border-color: var(--canopy);
+  color: var(--ink-0);
+}
+
+.cover__hint { margin: calc(var(--u) * 3) 0 0; }
+.cover__extra { margin: calc(var(--u) * 2) 0 0; }
+
+.cover__exports {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: calc(var(--u) * 2);
+  margin-top: calc(var(--u) * 4);
+  padding-top: calc(var(--u) * 3);
+  border-top: 1px solid var(--hairline);
+}

@@ -135,3 +135,10 @@ export const IconGlobe = () => (
     <path d="M2.4 8h11.2M8 2.2c1.6 1.7 2.4 3.7 2.4 5.8s-.8 4.1-2.4 5.8c-1.6-1.7-2.4-3.7-2.4-5.8s.8-4.1 2.4-5.8Z" />
   </svg>
 )
+
+export const IconSelect = () => (
+  <svg {...base}>
+    <path d="M2.6 5.4V3.6a1 1 0 0 1 1-1h1.8M10.6 2.6h1.8a1 1 0 0 1 1 1v1.8M13.4 10.6v1.8a1 1 0 0 1-1 1h-1.8M5.4 13.4H3.6a1 1 0 0 1-1-1v-1.8" />
+    <path d="M6 6h4v4H6z" strokeDasharray="1.6 1.4" />
+  </svg>
+)
