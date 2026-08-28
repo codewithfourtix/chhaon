@@ -14,7 +14,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import NDVI_VEG_THRESHOLD, SPECIES, WEIGHTS  # noqa: E402
-from run import match_species  # noqa: E402
+from run import diversity_report, match_species, species_benefits  # noqa: E402
 
 BASELINE = 34.0
 
@@ -34,11 +34,54 @@ def test_species_varies_by_context():
     different answers for different sites. If this returns one tree for every
     context, the feature is decorative.
     """
-    cases = [("roadside", 6), ("median", 4), ("canal", 20),
-             ("park", 40), ("vacant", 20), ("roadside", 2)]
-    picked = {match_species(c, w)["common"] for c, w in cases}
+    cases = [("roadside", 6, 0.10), ("median", 4, 0.10), ("canal", 20, 0.30),
+             ("park", 40, 0.50), ("vacant", 20, 0.10), ("roadside", 2, 0.05)]
+    picked = {match_species(c, w, n)["common"] for c, w, n in cases}
     assert len(picked) > 1, f"species matcher collapsed to {picked}"
     print(f"  species across {len(cases)} contexts: {sorted(picked)}")
+
+
+def test_dry_narrow_roadside_gets_neem():
+    """
+    A sanity anchor on the forestry, not just the code. Neem is the workhorse
+    for a dry, narrow, polluted Lahore verge. An earlier scoring bug rewarded
+    whichever species needed the *least* room, which handed every such site to
+    Moringa — a small, short-lived tree — and would have been worse advice than
+    the monoculture it replaced.
+    """
+    assert match_species("roadside", 4, 0.08)["common"] == "Neem"
+    assert match_species("canal", 18, 0.30)["common"] == "Arjun"
+    assert match_species("park", 34, 0.50)["common"] == "Pipal"
+    print("  dry verge -> Neem, canal -> Arjun, large park -> Pipal")
+
+
+def test_diversity_breaks_monoculture():
+    """
+    120 near-identical roadside sites must not all get the same tree. Uniform
+    avenue planting loses the whole street to a single pest or disease.
+    """
+    used = {}
+    for i in range(120):
+        sp = match_species("roadside", 4 + (i % 10), 0.06 + (i % 6) * 0.05, used, i)
+        used[sp["common"]] = used.get(sp["common"], 0) + 1
+    rep = diversity_report(used, 120)
+    assert rep["count"] >= 3, f"only {rep['count']} species across 120 sites"
+    assert rep["topShare"] <= 0.55, f"{rep['topSpecies']} takes {rep['topShare']:.0%}"
+    print(f"  {rep['count']} species, top {rep['topSpecies']} {rep['topShare']:.0%}, "
+          f"evenness {rep['evenness']}")
+
+
+def test_benefits_scale_with_crown():
+    """Benefits are one published coefficient x crown area — never per-species
+    invented constants. So a bigger crown must always mean more of both."""
+    from config import SPECIES as SP
+    ordered = sorted(SP, key=lambda s: s["mature_crown_m"])
+    co2 = [species_benefits(s)["co2KgPerYear"] for s in ordered]
+    pm = [species_benefits(s)["pm25GPerYear"] for s in ordered]
+    assert co2 == sorted(co2), "CO2 does not rise with crown size"
+    assert pm == sorted(pm), "PM2.5 does not rise with crown size"
+    print(f"  crown {ordered[0]['mature_crown_m']}m -> {co2[0]} kg CO2/yr, "
+          f"{ordered[-1]['mature_crown_m']}m -> {co2[-1]} kg CO2/yr")
 
 
 def test_species_table_is_coherent():

@@ -1,5 +1,5 @@
 {
- "generated": "2026-08-26",
+ "generated": "2026-08-28",
  "cellM": 60,
  "weights": {
   "heat": 0.45,
@@ -56,10 +56,11 @@
      "id": "S2A_43RDQ_20180329_0_L2A",
      "date": "2018-03-29",
      "cloud": 0.19,
-     "composited": 2,
+     "composited": 3,
      "dates": [
       "2018-03-29",
-      "2018-04-08"
+      "2018-04-08",
+      "2018-04-13"
      ]
     },
     "2019": {
@@ -148,10 +149,19 @@
    "baselineC": 39.5,
    "siteCount": 120,
    "heatGapC": 3.2,
+   "diversity": {
+    "evenness": 0.751,
+    "topSpecies": "Neem",
+    "topShare": 0.383,
+    "count": 6
+   },
+   "co2KgPerYear": 4654.2,
+   "pm25KgPerYear": 12.69,
+   "carsEquivalent": 1.0,
    "ndviLstCorr": -0.651,
    "vegPctByYear": {
     "2017": 34.5,
-    "2018": 23.1,
+    "2018": 27.1,
     "2019": 30.4,
     "2020": 48.4,
     "2021": 43.7,
@@ -195,10 +205,11 @@
      "id": "S2A_43RDQ_20180329_0_L2A",
      "date": "2018-03-29",
      "cloud": 0.19,
-     "composited": 2,
+     "composited": 3,
      "dates": [
       "2018-03-29",
-      "2018-04-08"
+      "2018-04-08",
+      "2018-04-13"
      ]
     },
     "2019": {
@@ -287,10 +298,19 @@
    "baselineC": 40.2,
    "siteCount": 120,
    "heatGapC": 2.6,
+   "diversity": {
+    "evenness": 0.696,
+    "topSpecies": "Neem",
+    "topShare": 0.392,
+    "count": 6
+   },
+   "co2KgPerYear": 3721.9,
+   "pm25KgPerYear": 10.15,
+   "carsEquivalent": 0.8,
    "ndviLstCorr": -0.511,
    "vegPctByYear": {
     "2017": 43.3,
-    "2018": 21.9,
+    "2018": 29.7,
     "2019": 35.1,
     "2020": 58.0,
     "2021": 52.2,
@@ -334,10 +354,11 @@
      "id": "S2A_43RDQ_20180329_0_L2A",
      "date": "2018-03-29",
      "cloud": 0.19,
-     "composited": 2,
+     "composited": 3,
      "dates": [
       "2018-03-29",
-      "2018-04-08"
+      "2018-04-08",
+      "2018-04-13"
      ]
     },
     "2019": {
@@ -426,10 +447,19 @@
    "baselineC": 41.8,
    "siteCount": 120,
    "heatGapC": 0.9,
+   "diversity": {
+    "evenness": 0.763,
+    "topSpecies": "Neem",
+    "topShare": 0.367,
+    "count": 7
+   },
+   "co2KgPerYear": 4053.7,
+   "pm25KgPerYear": 11.05,
+   "carsEquivalent": 0.9,
    "ndviLstCorr": -0.197,
    "vegPctByYear": {
     "2017": 19.6,
-    "2018": 11.7,
+    "2018": 12.8,
     "2019": 19.4,
     "2020": 47.5,
     "2021": 27.5,
@@ -571,6 +601,15 @@
    "baselineC": 41.2,
    "siteCount": 120,
    "heatGapC": 1.8,
+   "diversity": {
+    "evenness": 0.611,
+    "topSpecies": "Neem",
+    "topShare": 0.433,
+    "count": 6
+   },
+   "co2KgPerYear": 3220.2,
+   "pm25KgPerYear": 8.78,
+   "carsEquivalent": 0.7,
    "ndviLstCorr": -0.368,
    "vegPctByYear": {
     "2017": 26.9,
@@ -712,6 +751,15 @@
    "baselineC": 40.9,
    "siteCount": 120,
    "heatGapC": 2.3,
+   "diversity": {
+    "evenness": 0.582,
+    "topSpecies": "Neem",
+    "topShare": 0.45,
+    "count": 4
+   },
+   "co2KgPerYear": 3128.0,
+   "pm25KgPerYear": 8.53,
+   "carsEquivalent": 0.7,
    "ndviLstCorr": -0.595,
    "vegPctByYear": {
     "2017": 20.5,

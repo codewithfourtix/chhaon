@@ -14,6 +14,7 @@ Output per region, in public/data/:
 """
 
 import json
+import math
 import os
 import sys
 import time
@@ -33,6 +34,8 @@ import pyproj
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import (  # noqa: E402
     CACHE, CANDIDATE_YEARS, LST_MAX_CLOUD, LST_WINDOW, MPC_SAS, NDVI_MAX_CLOUD,
+    CAR_CO2_KG_PER_YEAR, CO2_KG_PER_M2_CROWN_YEAR, MAX_SPECIES_SHARE,
+    PM25_G_PER_M2_CROWN_YEAR,
     LST_TARGET, MAX_SITES, MIN_SEPARATION_CELLS, NDVI_COMPOSITE_SCENES,
     NDVI_MAX_COMPOSITE_SCENES, NDVI_MIN_COVERAGE, NDVI_TARGET,
     NDVI_VEG_THRESHOLD, NDVI_WINDOW,
@@ -385,17 +388,92 @@ def read_population(bbox, grid, key):
 # Species matching — on site context, never on climate
 # --------------------------------------------------------------------------
 
-def match_species(landuse_name, width_m):
+def species_benefits(sp):
+    """Estimated, not measured. One published coefficient x mature crown area."""
+    crown_m2 = math.pi * (sp["mature_crown_m"] / 2) ** 2
+    return {
+        "crownM": sp["mature_crown_m"],
+        "crownM2": round(crown_m2),
+        "co2KgPerYear": round(crown_m2 * CO2_KG_PER_M2_CROWN_YEAR, 1),
+        "pm25GPerYear": round(crown_m2 * PM25_G_PER_M2_CROWN_YEAR, 1),
+    }
+
+
+def match_species(landuse_name, width_m, ndvi=0.2, used=None, placed=0):
     """
-    NASA POWER and Open-Meteo were the original plan here and they cannot work:
-    their grids are ~50 km, so Model Town, Gulberg and DHA return byte-identical
-    values and every site would get the same tree. Site context is what actually
-    varies between one pin and the next.
+    Best-fit, not first-match.
+
+    The previous version returned the first species in list order that cleared
+    the land-use and width bars. Neem is listed first and clears roadside at
+    3 m — the lowest bar of any species — and roadside is 91-100% of plantable
+    public land in these neighbourhoods, so Neem won almost every site and
+    Amaltas was never even reached. 120 identical recommendations is a genuine
+    urban-forestry red flag: a uniform avenue loses the whole street to one
+    pest or disease.
+
+    So eligible species are now scored on how well they actually suit the site,
+    with an explicit diversity term that steers away from any species already
+    over-represented in the ranking.
     """
-    for sp in SPECIES:
-        if landuse_name in sp["landuse"] and width_m >= sp["min_width_m"]:
-            return sp
-    return SPECIES[0]
+    eligible = [sp for sp in SPECIES
+                if landuse_name in sp["landuse"] and width_m >= sp["min_width_m"]]
+    if not eligible:
+        # Nothing clears the bar; fall back to the smallest-footprint species
+        # that will take this land use at all.
+        fallback = [sp for sp in SPECIES if landuse_name in sp["landuse"]]
+        return min(fallback or SPECIES, key=lambda sp: sp["min_width_m"])
+
+    used = used or {}
+    # Dry, sparse ground favours drought-hardy species; greener, moister cells
+    # can carry a thirstier tree.
+    dryness = max(0.0, min(1.0, (0.45 - ndvi) / 0.45))
+    wet_site = landuse_name == "canal"
+
+    widest = max(x["mature_crown_m"] for x in eligible)
+
+    def score(sp):
+        # (a) Canopy delivered. Shade is the product, so among species that fit
+        #     the site, more mature crown is straightforwardly better.
+        #
+        #     This term used to reward *headroom* above the minimum width, which
+        #     is backwards: it favoured whichever species needed the least room,
+        #     so Moringa — a small, short-lived tree — beat Neem on every dry
+        #     roadside. That would have replaced one monoculture with a worse
+        #     one.
+        canopy = sp["mature_crown_m"] / widest
+        # (b) Site fit: drought tolerance against dryness, water affinity
+        #     against whether this is canal-side ground.
+        fit_dry = sp["drought"] * dryness + (1 - sp["drought"]) * (1 - dryness)
+        fit_wet = sp["water"] if wet_site else (1 - sp["water"]) * 0.6 + 0.4
+        # (c) Diversity: a species already over its share gets pushed down,
+        #     hard once it passes MAX_SPECIES_SHARE.
+        share = used.get(sp["common"], 0) / placed if placed else 0.0
+        diversity = 1.0 - min(1.0, share / MAX_SPECIES_SHARE)
+        return 0.28 * canopy + 0.24 * fit_dry + 0.18 * fit_wet + 0.30 * diversity
+
+    # Ties break on list order, so the result is deterministic run to run.
+    return max(eligible, key=lambda sp: (score(sp), -SPECIES.index(sp)))
+
+
+def diversity_report(counts, total):
+    """
+    Shannon evenness plus the dominant species' share.
+
+    Named openly because monoculture risk is a real forestry concern and
+    stating it is stronger than hiding it.
+    """
+    if not total:
+        return {"evenness": 0.0, "topSpecies": None, "topShare": 0.0, "count": 0}
+    shares = [n / total for n in counts.values() if n]
+    entropy = -sum(p * math.log(p) for p in shares)
+    max_entropy = math.log(len(SPECIES))
+    top = max(counts.items(), key=lambda kv: kv[1])
+    return {
+        "evenness": round(entropy / max_entropy, 3) if max_entropy else 0.0,
+        "topSpecies": top[0],
+        "topShare": round(top[1] / total, 3),
+        "count": len([n for n in counts.values() if n]),
+    }
 
 
 # --------------------------------------------------------------------------
@@ -568,6 +646,7 @@ def run_region(region_id):
 
     # --- Sites: the best cells, spaced out so they do not clump ---
     sites = []
+    species_used = {}
     order = np.argsort(np.where(np.isnan(score), -1, score).ravel())[::-1]
     taken = np.zeros_like(score, dtype=bool)
     to_wgs = pyproj.Transformer.from_crs(grid["crs"], "EPSG:4326", always_xy=True).transform
@@ -585,8 +664,14 @@ def run_region(region_id):
         x, y = rasterio.transform.xy(grid["transform"], r, c)
         lon, lat = to_wgs(x, y)
         cls = CLASS_NAME[int(landuse[r, c])]
-        width = {"roadside": 6, "canal": 20, "park": 40, "vacant": 20}.get(cls, 6)
-        sp = match_species(cls, width)
+        # Open ground in the cell stands in for usable planting width until a
+        # better verge-width signal is available from OSM lane tags.
+        open_frac = float(plantable_frac[r, c])
+        width = {"roadside": 5, "canal": 18, "park": 34, "vacant": 18}.get(cls, 5)
+        width = round(width * (0.6 + 0.8 * open_frac), 1)
+        site_ndvi = float(np.nan_to_num(ndvi_now[r, c]))
+        sp = match_species(cls, width, site_ndvi, species_used, len(sites))
+        species_used[sp["common"]] = species_used.get(sp["common"], 0) + 1
         sites.append({
             "id": f"{region_id}-{r}-{c}",
             "lon": round(lon, 5), "lat": round(lat, 5),
@@ -606,8 +691,9 @@ def run_region(region_id):
                 "canopy": round(float(np.nan_to_num(canopy_absence[r, c])), 3),
                 "people": round(float(np.nan_to_num(pop_norm[r, c])), 3),
             },
+            "widthM": width,
             "species": {"common": sp["common"], "botanical": sp["botanical"],
-                        "because": sp["because"]},
+                        "because": sp["because"], **species_benefits(sp)},
         })
     for i, s_ in enumerate(sites):
         s_["rank"] = i + 1
@@ -665,6 +751,12 @@ def run_region(region_id):
         "years": years, "ndviScenes": ndvi_scenes, "lstScene": lst_scene,
         "baselineC": round(baseline, 1), "siteCount": len(sites),
         "heatGapC": None if heat_gap is None else round(heat_gap, 1),
+        "diversity": diversity_report(species_used, len(sites)),
+        "co2KgPerYear": round(sum(s_["species"]["co2KgPerYear"] for s_ in sites), 1),
+        "pm25KgPerYear": round(
+            sum(s_["species"]["pm25GPerYear"] for s_ in sites) / 1000, 2),
+        "carsEquivalent": round(
+            sum(s_["species"]["co2KgPerYear"] for s_ in sites) / CAR_CO2_KG_PER_YEAR, 1),
         "ndviLstCorr": None if corr is None else round(corr, 3),
         "vegPctByYear": veg_by_year,
     }

@@ -119,12 +119,28 @@ WEIGHTS = {"heat": 0.45, "canopy": 0.30, "people": 0.25}
 # Everything a tree needs from us, and what each species tolerates.
 # Grounded in Punjab Forest Department and University of Agriculture Faisalabad
 # guidance for central Punjab urban forestry.
+# --------------------------------------------------------------------------
+# Species
+# --------------------------------------------------------------------------
+#
+# `mature_crown_m` is typical mature crown diameter for an open-grown street or
+# park tree in central Punjab. Everything downstream — CO2, particulate capture,
+# the shade footprint — is derived from that one number rather than from a pile
+# of per-species constants we cannot defend.
+#
+# `drought` is tolerance of dry, compacted, low-irrigation ground (0-1).
+# `water` is affinity for moist or periodically waterlogged ground (0-1).
+# The two are deliberately separate: Moringa is drought-hardy AND dislikes wet
+# feet, whereas Jamun tolerates both reasonably.
 SPECIES = [
     {
         "common": "Neem",
         "botanical": "Azadirachta indica",
         "landuse": ["roadside", "median"],
         "min_width_m": 3,
+        "mature_crown_m": 10,
+        "drought": 0.90,
+        "water": 0.15,
         "because": "Narrow strip, high pollution load, low water once established",
     },
     {
@@ -132,13 +148,19 @@ SPECIES = [
         "botanical": "Cassia fistula",
         "landuse": ["median", "roadside"],
         "min_width_m": 4,
+        "mature_crown_m": 8,
+        "drought": 0.75,
+        "water": 0.30,
         "because": "Compacted soil and restricted root volume; tolerates road dust",
     },
     {
         "common": "Arjun",
         "botanical": "Terminalia arjuna",
-        "landuse": ["canal"],
+        "landuse": ["canal", "roadside"],
         "min_width_m": 5,
+        "mature_crown_m": 15,
+        "drought": 0.35,
+        "water": 0.95,
         "because": "Low-lying and periodically waterlogged ground",
     },
     {
@@ -146,20 +168,29 @@ SPECIES = [
         "botanical": "Ficus religiosa",
         "landuse": ["park"],
         "min_width_m": 20,
+        "mature_crown_m": 22,
+        "drought": 0.60,
+        "water": 0.45,
         "because": "Open ground with clearance from buildings and pipes",
     },
     {
         "common": "Jamun",
         "botanical": "Syzygium cumini",
-        "landuse": ["park", "vacant"],
+        "landuse": ["park", "vacant", "canal"],
         "min_width_m": 8,
+        "mature_crown_m": 14,
+        "drought": 0.45,
+        "water": 0.70,
         "because": "Open plot, dense general-purpose shade, supports birds",
     },
     {
         "common": "Sheesham",
         "botanical": "Dalbergia sissoo",
-        "landuse": ["vacant", "park"],
+        "landuse": ["vacant", "park", "roadside"],
         "min_width_m": 6,
+        "mature_crown_m": 12,
+        "drought": 0.70,
+        "water": 0.40,
         "because": "Native to Punjab's alluvial soils, good height and shade",
     },
     {
@@ -167,6 +198,37 @@ SPECIES = [
         "botanical": "Moringa oleifera",
         "landuse": ["roadside", "vacant"],
         "min_width_m": 2,
+        "mature_crown_m": 6,
+        "drought": 0.95,
+        "water": 0.10,
         "because": "Very drought hardy with a small footprint for tight spots",
     },
 ]
+
+# How much of the ranking any one species may take before the matcher starts
+# actively steering away from it. Uniform avenue planting is a real urban
+# forestry failure mode: one pest or disease sweep takes out the whole street.
+MAX_SPECIES_SHARE = 0.40
+
+# --------------------------------------------------------------------------
+# Estimated benefits
+# --------------------------------------------------------------------------
+#
+# ESTIMATES, NOT MEASUREMENTS. Both are single published coefficients applied
+# to a species' mature crown area, rather than per-species field data we do not
+# have for Lahore. Stating one coefficient openly is more defensible than seven
+# invented ones.
+#
+# CO2: anchored on the widely used urban-forestry figure of roughly 22 kg CO2
+# per year for an average mature urban tree with an ~8 m crown (~50 m2), giving
+# ~0.44 kg per m2 of crown per year.
+CO2_KG_PER_M2_CROWN_YEAR = 0.44
+#
+# PM2.5: urban canopy particulate removal is commonly reported in the range of
+# ~1-2 g per m2 of canopy per year in heavily polluted cities. We take the
+# conservative end.
+PM25_G_PER_M2_CROWN_YEAR = 1.2
+#
+# For the car-equivalent rollup: an average passenger car emits roughly
+# 4.6 tonnes CO2 per year.
+CAR_CO2_KG_PER_YEAR = 4600

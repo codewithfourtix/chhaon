@@ -51,6 +51,7 @@ def _reject(v):
 
 
 def check_region(rid, meta):
+    rm = meta.get("regions", {}).get(rid, {})
     path = f"{OUT}/{rid}.json"
     if not os.path.exists(path):
         bad(f"{rid}: no grid file")
@@ -114,18 +115,23 @@ def check_region(rid, meta):
     landuse = Counter(p["landuse"] for p in props)
     print(f"  land use {dict(landuse)}")
     print(f"  species  {dict(species)}")
-    # A single species is only a fault if the sites themselves vary. Iqbal
-    # Town's top 120 are all roadside because its parks already read NDVI 0.36
-    # and sit cooler than its verges — so they correctly do not need planting.
-    # One land use genuinely means one species. Whether the matcher *can*
-    # discriminate is covered by test_logic.py, which exercises it across every
-    # context.
-    if len(species) == 1 and len(landuse) > 1:
-        bad(f"{rid}: {len(landuse)} land uses but only one species "
-            f"({list(species)[0]}) — the matcher is not discriminating")
-    if len(landuse) == 1:
-        print(f"  note     every ranked site is {list(landuse)[0]}; "
-              "one land use means one species")
+    # Monoculture is a real urban-forestry failure mode: one pest sweep takes
+    # out a whole avenue. The matcher carries an explicit diversity term, so
+    # this is a hard check, not a note.
+    div = rm.get("diversity") or {}
+    top_share = div.get("topShare", 1.0)
+    if len(species) < 3:
+        bad(f"{rid}: only {len(species)} species across {len(sites)} sites")
+    if top_share > 0.55:
+        bad(f"{rid}: {div.get('topSpecies')} takes {top_share:.0%} of the "
+            "ranking — monoculture risk")
+    print(f"  diversity {len(species)} species, top {div.get('topSpecies')} "
+          f"{top_share:.0%}, evenness {div.get('evenness')}")
+
+    # Estimated benefits must be present and positive.
+    for key in ("co2KgPerYear", "pm25KgPerYear", "carsEquivalent"):
+        if not rm.get(key):
+            bad(f"{rid}: missing estimated benefit '{key}'")
 
     served = [p["peopleServed"] for p in props]
     if max(served) == 0:
@@ -162,7 +168,6 @@ def check_region(rid, meta):
            for i in range(len(by_rank) - 1)):
         bad(f"{rid}: rank order does not follow score order")
 
-    rm = meta.get("regions", {}).get(rid, {})
     if rm.get("heatGapC") is not None:
         print(f"  heat gap {rm['heatGapC']} °C, NDVI/LST r = {rm.get('ndviLstCorr')}")
         if rm["heatGapC"] <= 0:
