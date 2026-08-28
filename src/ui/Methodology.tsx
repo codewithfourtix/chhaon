@@ -175,6 +175,72 @@ export function Methodology() {
         </section>
 
         <section className="method__sec">
+          <h2 className="t-heading">Risk bands, and what they are</h2>
+          <p className="t-body">
+            The Risk view is a <strong>relabelling of data already measured</strong>,
+            not a new analysis: surface temperature above this region&apos;s own
+            well-vegetated baseline, weighted 60/40 against how far below the
+            vegetation threshold the cell sits. Four fixed bands, because a
+            report says &ldquo;High risk&rdquo; and a gradient does not.
+          </p>
+          <p className="t-body">
+            The band edges are the same in every region deliberately. Clipping
+            them to each region&apos;s own spread would make &ldquo;High&rdquo;
+            mean something different in Model Town than in DHA, which is exactly
+            what you do not want when the whole point is comparing places.
+          </p>
+        </section>
+
+        <section className="method__sec">
+          <h2 className="t-heading">CO&#8322; and PM2.5 are estimates, not measurements</h2>
+          <p className="t-body">
+            Both come from <strong>one published coefficient applied to a
+            species&apos; mature crown area</strong> &mdash; roughly 0.44 kg CO&#8322;
+            and 1.2 g PM2.5 per m&sup2; of crown per year, anchored on standard
+            urban-forestry figures. We could have invented seven per-species
+            constants; stating one openly is more defensible than pretending to
+            field data we do not have for Lahore.
+          </p>
+          <p className="t-body">
+            Two things follow, and both are worth saying out loud. First, these
+            assume every tree survives to maturity, which in practice they do
+            not. Second, the totals are <strong>honest but modest</strong>: all
+            600 recommended sites fully grown come to roughly 19 tonnes of CO&#8322;
+            a year, about four cars&apos; worth. Urban planting is a heat and air
+            quality intervention at this scale, not a carbon strategy, and the
+            number says so.
+          </p>
+        </section>
+
+        <section className="method__sec">
+          <h2 className="t-heading">Species matching, and monoculture risk</h2>
+          <p className="t-body">
+            An earlier version picked the first species in list order that
+            cleared the land-use and width bars. Neem sits first and clears a
+            roadside verge at 3 m &mdash; the lowest bar of any species &mdash;
+            and roadside is 91&ndash;100% of the plantable public land here, so
+            Neem won almost every site. <strong>Every region came out
+            91&ndash;100% Neem.</strong>
+          </p>
+          <p className="t-body">
+            That is a genuine urban-forestry failure, not just a cosmetic one:
+            a uniform avenue loses the entire street to one pest or disease.
+            Eligible species are now scored on canopy delivered, drought
+            tolerance against the site&apos;s own vegetation index, water
+            affinity against canal-side ground, and an explicit diversity term
+            that steers away from any species already over its share.
+            {rm?.diversity && (
+              <> In {REGIONS.find((r) => r.id === region)?.name} that gives{' '}
+                <span className="t-data">{rm.diversity.count}</span> species with{' '}
+                {rm.diversity.topSpecies} at{' '}
+                <span className="t-data">
+                  {(rm.diversity.topShare * 100).toFixed(0)}%
+                </span>.</>
+            )}
+          </p>
+        </section>
+
+        <section className="method__sec">
           <h2 className="t-heading">Sources</h2>
           <dl className="method__sources">
             <div><dt className="t-label">Green cover</dt>
@@ -235,6 +301,47 @@ export function Methodology() {
             the headline relationship is thinner there than in Model Town or
             Gulberg.
           </p>
+        </section>
+
+
+        <section className="method__sec">
+          <h2 className="t-heading">What this is not, yet</h2>
+          <p className="t-body">
+            Named here rather than implied, because a tool that is clear about
+            its own edges is easier to trust than one that is not.
+          </p>
+          <ul className="method__list t-body">
+            <li>
+              <strong>Live air quality.</strong> Everything here is precomputed
+              and committed, so nothing can fail mid-demo. A live AQI feed would
+              be the first runtime dependency, and the right way to add it is at
+              regeneration time into the same static files &mdash; genuinely
+              current, still demo-safe.
+            </li>
+            <li>
+              <strong>A WMS/XYZ endpoint.</strong> GeoJSON export exists; serving
+              the layers as tiles a GIS can subscribe to is the natural next step.
+            </li>
+            <li>
+              <strong>Corridor analysis.</strong> Clusters of top sites along a
+              connected stretch of road or canal are worth more than the same
+              trees scattered. The data to detect that is already on hand.
+            </li>
+            <li>
+              <strong>Shade simulation.</strong> Drawing each recommendation&apos;s
+              mature canopy over the imagery would make the payoff legible at a
+              glance.
+            </li>
+            <li>
+              <strong>Change detection.</strong> Only honest once more years of
+              stable data exist &mdash; our own finding is that the 2017&ndash;2025
+              series does not yet show a real trend.
+            </li>
+            <li>
+              <strong>Urdu interface, PDF reports, city-wide ranking, and a
+              planner mode</strong> that records what has actually been planted.
+            </li>
+          </ul>
         </section>
 
         <section className="method__sec">

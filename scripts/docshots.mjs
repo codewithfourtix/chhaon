@@ -83,6 +83,11 @@ const run = async () => {
   await settle(page, 3200)
   await shot(page, '06-people')
 
+  // 6b. Risk bands — the classification a department writes reports in.
+  await click(page, /^Risk/)
+  await settle(page, 3400)
+  await shot(page, '06b-risk')
+
   // 7. Light theme on the vector basemap — the other half of the design.
   await go(page, '#r=gulberg&v=priority&y=2025&t=light&b=map')
   await settle(page, 3600)

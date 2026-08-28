@@ -116,7 +116,55 @@ read as a flat grey rectangle. Surface temperature had the same fault quietly.
 `domainFor()` clips to p2–p98, and **the map and the legend both read from it**,
 so the two cannot drift apart.
 
-### 3.7 Dark and satellite are the defaults
+### 3.7 Species matching is scored best-fit, with a diversity constraint
+
+The first version returned the **first species in list order** that cleared the
+land-use and width bars. Neem is listed first and clears roadside at 3 m — the
+lowest bar of any species — and roadside is 91–100% of plantable public land
+here. So Neem won almost every site and Amaltas was never reached: every region
+shipped **91–100% Neem**.
+
+That is a real urban-forestry failure, not a cosmetic one. A uniform avenue
+loses the whole street to a single pest or disease sweep.
+
+Eligible species are now scored on:
+
+- **canopy delivered** — shade is the product, so more mature crown is better;
+- **drought fit** against the site's own NDVI;
+- **water affinity** against whether the ground is canal-side;
+- an explicit **diversity term** that pushes down any species already over its
+  share (`MAX_SPECIES_SHARE`, 40%).
+
+Result: 4–7 species per region, top share **37–45%**.
+
+One bug caught while building it: the first scoring attempt rewarded *headroom*
+above the minimum width, which favoured whichever species needed the least room
+and handed every dry verge to **Moringa** — a small, short-lived tree. That
+would have replaced one monoculture with a worse one. `test_logic.py` now pins
+the forestry, not just the code: a dry narrow verge must return Neem, canal-side
+must return Arjun, a large park must return Pipal.
+
+### 3.8 CO2 and PM2.5 are one coefficient, not seven invented constants
+
+Both are **estimates**: ~0.44 kg CO2 and ~1.2 g PM2.5 per m² of mature crown per
+year, from standard urban-forestry figures, applied to each species' crown area.
+Stating one coefficient openly is more defensible than inventing per-species
+field data we do not have for Lahore.
+
+The totals are honest and modest — all 600 sites fully grown come to about
+**19 tonnes CO2/year, roughly 4 cars' worth**, plus
+~51 kg of PM2.5. Urban planting at this scale is a heat and air-quality
+intervention, not a carbon strategy, and we say so rather than inflating it.
+
+### 3.9 Risk bands are a relabelling, not a new analysis
+
+Surface temperature above the region's own vegetated baseline, weighted 60/40
+against canopy absence, cut into four **fixed** bands. Fixed deliberately:
+clipping the edges per region would make "High" mean something different in each
+one, which defeats comparing places. Defined once in `src/data/risk.ts` so the
+map, legend and summary statistic cannot drift apart.
+
+### 3.10 Dark and satellite are the defaults
 
 It is a thermal instrument. It reads better dark, and the measured fields land
 on real ground, which is what makes them believable at a glance.
@@ -198,6 +246,8 @@ python pipeline/run.py model-town # one region
 python pipeline/test_logic.py   # scoring, species matching, compositing — offline
 python pipeline/qa.py           # data sanity across every region
 node scripts/smoke.mjs          # map timing regression + rendered dot count
+npm run build && npx vite preview --port 4173
+node scripts/prodcheck.mjs      # the production build, where the worker bug hid
 node scripts/shots.mjs shots    # screenshots of every surface
 ```
 
@@ -220,6 +270,9 @@ Python will happily write but `JSON.parse` rejects.
 | 120 site dots drew nothing | Zoom expression nested inside a multiply — MapLibre needs it at the top level of a paint property |
 | Every Landsat read 403'd mid-run | Planetary Computer SAS tokens expire in under an hour and were cached without honouring it |
 | Overpass returned 406 | Needs a `User-Agent`. Buildings must be a separate query or it times out |
+| Vector basemap blank **in production only** | MapLibre builds its worker URL from a ternary at runtime, so Vite never emitted the file; a static host answered with index.html and `new Worker` hung on HTML. Raster basemaps never touch the worker, so satellite looked fine — see `vite.config.ts` |
+| Every Landsat read 403'd mid-run | Planetary Computer SAS tokens expire in under an hour and were cached without honouring it |
+| Every recommendation was Neem | First-match-wins species selection; Neem is listed first with the lowest width bar |
 
 The pattern in most of these: **the failure was silent.** Nothing threw. That is
 why the checks now count rendered features and parse strictly, rather than

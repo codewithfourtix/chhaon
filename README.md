@@ -81,6 +81,13 @@ underneath. The layer validates itself against the imagery.
 
 ![Population density](docs/images/06-people.jpg)
 
+**Risk** — every cell classified Low / Medium / High / Critical from heat and
+shade deficit. Model Town's leafy core reads Low; the industrial belt to the
+south reads Critical. Discrete bands, because a department writes "High risk"
+in a report and a gradient gives them nothing to write.
+
+![Risk bands](docs/images/06b-risk.jpg)
+
 Light theme and the survey-sheet basemap are equally first-class.
 
 ![Light theme](docs/images/07-light.jpg)
@@ -144,6 +151,9 @@ water instead.
   have not checked ownership or buried utilities.
 - **The scoring weights are our judgment**, not a measurement. They are shown on
   every site so anyone can argue with them.
+- **CO2 and PM2.5 are estimated**, from one published coefficient times mature
+  crown area — not measured, not Lahore-specific, and they assume every tree
+  reaches maturity.
 
 ---
 
@@ -178,7 +188,7 @@ node scripts/docshots.mjs       # the images in this README
 
 | | |
 |---|---|
-| `1` – `4` | Canopy, Heat, People, Priority |
+| `1` – `5` | Canopy, Heat, People, Risk, Priority |
 | `Q W E R T` | Jump between the five regions |
 | `←` `→` | Step through years |
 | `↑` `↓` | Walk the ranked sites |
@@ -189,8 +199,16 @@ node scripts/docshots.mjs       # the images in this README
 | `M` | Method |
 | `Esc` | Clear selection |
 
+**Risk zones** classify every cell Low / Medium / High / Critical from heat and
+shade deficit — the language a department writes reports in, not a gradient.
+**Green cover** charts observed vegetated share by year, labelled an observation
+rather than a trend. Each site carries an **estimated** CO2 and PM2.5 figure
+once mature; all 600 together come to about 19 t CO2/year, roughly
+4 cars' worth — honest, and modest, because urban planting at this
+scale is a heat intervention rather than a carbon one.
+
 The ranked list filters by land use, species and people served, and exports to
-CSV. Every site has copy-coordinates and an open-in-Google-Maps link. The URL
+**CSV or GeoJSON** so a department's GIS team can open it in QGIS or ArcGIS. Every site has copy-coordinates and an open-in-Google-Maps link. The URL
 hash carries region, view, year, selected site, theme and basemap, so any view
 can be sent to someone.
 
