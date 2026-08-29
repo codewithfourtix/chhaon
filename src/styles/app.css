@@ -1557,3 +1557,45 @@ kbd {
 .app.is-mobile .plate__close { width: 48px; height: 48px; font-size: 1.75rem; }
 .app.is-mobile .msheet__grab { height: 34px; }
 .app.is-mobile .plate__loc { gap: calc(var(--u) * 2); margin-top: calc(var(--u) * 2); }
+
+/* ---------- The cold open, on a phone ----------
+   Two things went wrong here, and both come from desktop assumptions.
+
+   First the attribution: the rule at the top of this file offsets it by the
+   thermal scale and the scrubber — 96px in from the right and up from the
+   bottom. That is correct beside desktop chrome and wrong on a 390px screen,
+   where it makes the attribution a near-full-width bar floating 96px off the
+   corner. At 844px tall it clears the button by 14px; at 664px — an iPhone in
+   Safari with its browser chrome — it lands directly on top of it. Neither the
+   scale nor the scrubber exists on mobile, so put the attribution back in the
+   corner and reserve enough room below the content that a three-line wrap on a
+   360px screen still cannot reach it. */
+.app--overture.is-mobile .maplibregl-ctrl-bottom-right {
+  margin: 0 8px max(8px, env(safe-area-inset-bottom)) 0;
+}
+
+/* Second the scrim. The desktop gradient fades out at 78% across, which works
+   beside a 34rem column on a wide screen and does nothing on a phone, where
+   the column is the full width: the numbered site dots read straight through
+   the headline, the body copy and the button. Phones get a vertical scrim
+   instead — the live map still shows at the top, where it is texture, and the
+   type sits on solid ground. */
+.app.is-mobile .overture {
+  padding-bottom: max(calc(var(--u) * 21), calc(env(safe-area-inset-bottom) + var(--u) * 21));
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--plate-0) 50%, transparent) 0%,
+    color-mix(in srgb, var(--plate-0) 88%, transparent) 18%,
+    color-mix(in srgb, var(--plate-0) 95%, transparent) 46%,
+    var(--plate-0) 100%
+  );
+}
+
+/* Seated on its own plate and full width, so under a thumb it reads as a
+   control rather than as something drawn on the map. */
+.app.is-mobile .overture__enter {
+  width: 100%;
+  min-height: 52px;
+  background: var(--plate-1);
+  border-color: var(--hairline-firm);
+}
