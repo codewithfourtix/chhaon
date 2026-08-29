@@ -9,17 +9,20 @@ import { Shortcuts } from './ui/Shortcuts'
 import { Overture } from './ui/Overture'
 import { Methodology } from './ui/Methodology'
 import { MapBoundary } from './ui/MapBoundary'
+import { MobileShell } from './ui/mobile/MobileShell'
+import { useIsMobile } from './ui/useIsMobile'
 import { useApp } from './state/store'
 import { useAppShortcuts, useUrlState } from './state/useAppShortcuts'
 import './styles/app.css'
 
 export default function App() {
   const stage = useApp((s) => s.stage)
+  const mobile = useIsMobile()
   useAppShortcuts()
   useUrlState()
 
   return (
-    <div className={`app app--${stage}`}>
+    <div className={`app app--${stage} ${mobile ? 'is-mobile' : ''}`}>
       {/* The map is permanent. Other stages sit on it; it is never remounted. */}
       <MapBoundary>
         <MapCanvas />
@@ -27,7 +30,17 @@ export default function App() {
 
       {stage === 'overture' && <Overture />}
 
-      {stage === 'workspace' && (
+      {stage === 'workspace' && mobile && (
+        <>
+          <MobileShell />
+          <SitePlate />
+          <CostPanel />
+          <AirPanel />
+          <LoadingBar />
+        </>
+      )}
+
+      {stage === 'workspace' && !mobile && (
         <>
           <InstrumentRail />
           <BasemapToggle />

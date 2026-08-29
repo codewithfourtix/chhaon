@@ -1230,3 +1230,330 @@ kbd {
 
 @media (max-width: 1100px) { .airPanel { left: calc(var(--rail-w-collapsed) + var(--u) * 3); } }
 @media (max-width: 900px) { .airPanel { display: none; } }
+
+/* =====================================================================
+   Mobile
+   =====================================================================
+   Not the desktop layout shrunk. The rail plus the vertical legend alone
+   took 160px of a 390px phone and left 230px of map, with the ranked list
+   and readout hidden — a husk rather than a small version. Mobile gets the
+   layout map apps actually use: full-bleed map, everything else in a
+   bottom sheet.
+   ===================================================================== */
+
+.app.is-mobile { --sheet-peek: 34%; }
+
+/* Safe-area aware, so nothing hides under a notch or a home indicator. */
+.mtop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 2);
+  padding: calc(var(--u) * 2.5) calc(var(--u) * 3);
+  padding-top: max(calc(var(--u) * 2.5), env(safe-area-inset-top));
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--plate-0) 92%, transparent),
+    transparent
+  );
+  pointer-events: none;
+}
+.mtop > * { pointer-events: auto; }
+.mtop__mark { font-size: 1.125rem; line-height: 1; color: var(--canopy); }
+.mtop__right { margin-left: auto; display: flex; gap: calc(var(--u) * 2); }
+
+.mIcon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  background: color-mix(in srgb, var(--plate-1) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  color: var(--ink-1);
+  cursor: pointer;
+}
+
+.mchip {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--u) * 1.5);
+  min-height: 38px;
+  padding: 0 calc(var(--u) * 3.5);
+  background: color-mix(in srgb, var(--plate-1) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--ink-0);
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.mchip.is-on {
+  background: color-mix(in srgb, var(--canopy) 20%, transparent);
+  border-color: var(--canopy);
+}
+.mchip__caret { color: var(--ink-2); font-size: 0.7rem; }
+
+.mregions {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 56px);
+  left: calc(var(--u) * 3);
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  padding: calc(var(--u) * 1.5);
+  background: var(--plate-1);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-plate);
+}
+.mregions__item {
+  min-height: 44px;
+  padding: 0 calc(var(--u) * 3);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius);
+  color: var(--ink-1);
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+.mregions__item.is-active { background: var(--plate-2); color: var(--ink-0); }
+
+.mtools {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 54px);
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  gap: calc(var(--u) * 2);
+  padding: 0 calc(var(--u) * 3);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.mtools::-webkit-scrollbar { display: none; }
+
+.mlegend {
+  position: absolute;
+  left: calc(var(--u) * 3);
+  right: calc(var(--u) * 3);
+  bottom: calc(var(--sheet-peek) + var(--u) * 3);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 2);
+  padding: calc(var(--u) * 2) calc(var(--u) * 3);
+  background: color-mix(in srgb, var(--plate-1) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.mlegend::-webkit-scrollbar { display: none; }
+.mlegend__ramp { flex: 1; min-width: 60px; height: 8px; border-radius: 999px; }
+.mlegend__ramp--heat {
+  background: linear-gradient(90deg, var(--heat-1), var(--heat-2), var(--heat-3),
+    var(--heat-4), var(--heat-5), var(--heat-6));
+}
+.mlegend__ramp--canopy {
+  background: linear-gradient(90deg, var(--canopy-1), var(--canopy-2), var(--canopy-3),
+    var(--canopy-4), var(--canopy-5), var(--canopy-6));
+}
+.mlegend__ramp--people {
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--ink-0) 8%, transparent), var(--ink-0));
+}
+.mlegend__unit { margin-left: auto; white-space: nowrap; }
+.mlegend__band {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.mlegend__sw { width: 12px; height: 12px; border-radius: 3px; }
+
+/* ---------- The sheet ---------- */
+
+.msheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  background: var(--plate-1);
+  border-top: 1px solid var(--hairline);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: 0 -8px 32px rgb(0 0 0 / 0.22);
+  transition: height var(--dur-move) var(--ease-instrument);
+}
+
+.msheet__grab {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  height: 26px;
+  cursor: grab;
+  touch-action: none;
+}
+.msheet__bar {
+  width: 40px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--hairline-firm);
+}
+
+.msheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 calc(var(--u) * 3) calc(var(--u) * 4);
+  padding-bottom: max(calc(var(--u) * 4), env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
+}
+
+.mtabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  gap: calc(var(--u) * 1.5);
+  padding: calc(var(--u) * 1) 0 calc(var(--u) * 2.5);
+  margin-bottom: calc(var(--u) * 2);
+  background: var(--plate-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.mtabs::-webkit-scrollbar { display: none; }
+
+.mtab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex: 1 0 auto;
+  min-width: 62px;
+  min-height: 52px;
+  padding: calc(var(--u) * 1.5) calc(var(--u) * 2);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius);
+  cursor: pointer;
+  color: var(--ink-2);
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+.mtab.is-active { background: var(--plate-2); color: var(--ink-0); }
+.mtab.is-active svg { color: var(--canopy); }
+
+.myear { margin-bottom: calc(var(--u) * 3); }
+.myear__row {
+  display: flex;
+  gap: calc(var(--u) * 1.5);
+  margin-top: calc(var(--u) * 1.5);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.myear__row::-webkit-scrollbar { display: none; }
+.myear__y {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 36px;
+  background: var(--plate-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--ink-1);
+  font-family: var(--font-data);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.myear__y.is-active {
+  background: color-mix(in srgb, var(--canopy) 20%, transparent);
+  border-color: var(--canopy);
+  color: var(--ink-0);
+}
+
+.mstats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: calc(var(--u) * 2);
+  margin-bottom: calc(var(--u) * 3);
+}
+.mstat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: calc(var(--u) * 2.5);
+  background: var(--plate-2);
+  border-radius: var(--radius);
+}
+.mstat .t-data { font-size: 0.9375rem; color: var(--ink-0); }
+.mstat.is-accent .t-data { color: var(--canopy); }
+
+.mexports { display: flex; gap: calc(var(--u) * 2); margin-bottom: calc(var(--u) * 3); }
+.mexports .footBtn { flex: 1; }
+
+.mlist { list-style: none; margin: 0; padding: 0; }
+.mlist .row { min-height: 56px; }
+
+.msheet__note { margin: calc(var(--u) * 2) 0 0; line-height: 1.55; }
+.msheet__note strong { color: var(--ink-1); }
+
+.msheet__foot {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 3);
+  margin-top: calc(var(--u) * 4);
+  padding-top: calc(var(--u) * 3);
+  border-top: 1px solid var(--hairline);
+}
+.msheet__foot .footBtn { flex: 0 0 auto; }
+.msheet__foot p { margin: 0; }
+
+/* Panels become sheets that sit above the main one. */
+.app.is-mobile .costPanel,
+.app.is-mobile .airPanel,
+.app.is-mobile .plate {
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: auto;
+  bottom: 0;
+  width: auto;
+  max-height: 80%;
+  overflow-y: auto;
+  z-index: 9;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  padding-bottom: max(calc(var(--u) * 4), env(safe-area-inset-bottom));
+}
+.app.is-mobile .databar { left: 0; right: 0; }
+
+/* Touch targets. 26px icon buttons are fine under a mouse and too small under
+   a thumb, so they grow on touch layouts rather than everywhere. */
+.app.is-mobile .miniBtn { width: 44px; height: 44px; }
+.app.is-mobile .iconBtn { width: 44px; height: 44px; }
+.app.is-mobile .plate__close { width: 48px; height: 48px; font-size: 1.75rem; }
+.app.is-mobile .msheet__grab { height: 34px; }
+.app.is-mobile .plate__loc { gap: calc(var(--u) * 2); margin-top: calc(var(--u) * 2); }

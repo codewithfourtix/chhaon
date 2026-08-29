@@ -261,6 +261,32 @@ published coefficient. It says what planting would **remove**, never what the ai
 currently **is**, and the panel carries a "why no AQI reading?" disclosure
 explaining exactly this.
 
+### 3.13 Mobile is a different layout, not a smaller one
+
+Below 900 px the app renders a separate shell rather than a responsive squeeze.
+The measurement that forced it: on a 390 px phone the rail (72 px) and the
+vertical legend (88 px) left **230 px of map**, and the ranked list, tools and
+readout were all set to `display: none`. That is a husk, not a small version.
+
+The mobile shell is the pattern every map app converges on:
+
+- **Full-bleed map**, with a draggable bottom sheet at two snap points (34% peek,
+  82% full). Tap the handle to toggle, drag it to choose.
+- **View tabs at the top of the sheet**, so switching layers works in either
+  state without expanding first.
+- **Thumb-height chips** for region, area select, air and cost — the tools that
+  matter are one tap from the map, not behind a menu.
+- **Horizontal legend**, because the vertical one is a quarter of a phone screen.
+- **Panels become sheets** — site plate, air and cost all slide up over the map.
+- **Safe-area aware**, so nothing hides under a notch or home indicator.
+- Selecting a site auto-expands the sheet, because otherwise the plate opens
+  behind it.
+
+`scripts/mobileshots.mjs` runs a real iPhone viewport with touch emulation and
+fails on horizontal overflow or any tap target under 34 px. Map attribution
+links are the one exclusion: a licence obligation at a conventional size, not
+primary interface.
+
 ## 6. Honest limits — say these before you are asked
 
 - **"Green cover", never "tree canopy".** At 10 m/px a vegetated cell may be

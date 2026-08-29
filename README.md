@@ -92,6 +92,24 @@ Light theme and the survey-sheet basemap are equally first-class.
 
 ![Light theme](docs/images/07-light.jpg)
 
+### On a phone
+
+Not the desktop layout shrunk. The rail and the vertical legend alone took
+160&nbsp;px of a 390&nbsp;px phone and left 230&nbsp;px of map, with the ranked
+list and readout hidden entirely. Mobile gets the layout map apps actually use:
+a full-bleed map with a draggable bottom sheet.
+
+<p>
+  <img src="docs/images/m2-priority.jpg" alt="Ranked sites on a phone" width="270">
+  <img src="docs/images/m3-canopy.jpg" alt="Green cover on a phone" width="270">
+  <img src="docs/images/m4-site.jpg" alt="A site opened on a phone" width="270">
+</p>
+
+The view switcher lives at the top of the sheet so it is reachable in both
+states, the tools get thumb-height chips, the legend turns horizontal, and every
+panel becomes a sheet. `node scripts/mobileshots.mjs` asserts no horizontal
+overflow and no tap target under 34&nbsp;px.
+
 ### The Method screen
 
 Written to survive a technical judge reading it closely — limits first.
