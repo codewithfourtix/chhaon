@@ -193,6 +193,9 @@ node scripts/docshots.mjs       # the images in this README
 | `←` `→` | Step through years |
 | `↑` `↓` | Walk the ranked sites |
 | `Enter` | Zoom to the selected site |
+| `A` | Select an area on the map |
+| `C` | Cost |
+| `G` | Air |
 | `L` | Show or hide the ranked list |
 | `B` | Map or satellite |
 | `D` | Light or dark |
@@ -207,7 +210,16 @@ once mature; all 600 together come to about 19 t CO2/year, roughly
 4 cars' worth — honest, and modest, because urban planting at this
 scale is a heat intervention rather than a carbon one.
 
-**Draw a box** on the canopy view to recompute cover, mean surface temperature
+Three tools sit on the main screen — **Select area**, **Air** and **Cost** —
+because in a demo a feature nobody can find in five seconds may as well not
+exist.
+
+**Air** reports the particulate the recommended planting would capture. It does
+**not** show an AQI reading, deliberately: no free source gives measured air
+quality at neighbourhood scale, and Sentinel-5P's 5.5 km pixels would give every
+region here the same number. The panel says so itself.
+
+**Draw a box** anywhere to recompute cover, mean surface temperature
 and population for just that area — a ward, a corridor, the blocks around a
 school. The ranked list carries an **editable cost estimate** (default PKR 1,200
 per tree including establishment care, weighted by species size) so a proposal

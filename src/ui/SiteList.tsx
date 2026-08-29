@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useRegionData } from '../data/useRegionData'
 import { useApp, hasFilters, type LandUse } from '../state/store'
 import { downloadGeoJson, downloadSites } from '../data/exportSites'
-import { estimateCost, formatPkr } from '../data/cost'
 import { IconClose, IconDownload, IconFilter, IconGlobe } from './icons'
 
 const LANDUSES: LandUse[] = ['roadside', 'park', 'canal', 'vacant']
@@ -28,8 +27,6 @@ export function SiteList() {
 
   const { sites, grid, meta } = useRegionData(region)
   const rm = meta?.regions?.[region]
-  const costPkr = useApp((s) => s.costPkr)
-  const setCostPkr = useApp((s) => s.setCostPkr)
   const listRef = useRef<HTMLUListElement>(null)
 
   const all = useMemo(() => sites?.features ?? [], [sites])
@@ -185,30 +182,6 @@ export function SiteList() {
             and <span className="t-data">{rm.pm25KgPerYear.toFixed(1)} kg</span> PM2.5
             per year. {rm.diversity.count} species, {rm.diversity.topSpecies}{' '}
             {(rm.diversity.topShare * 100).toFixed(0)}%.
-          </p>
-          <label className="cost">
-            <span className="t-unit">
-              Planting {shown.length} at PKR{' '}
-              <input
-                type="number"
-                min={0}
-                step={100}
-                value={costPkr}
-                onChange={(e) => setCostPkr(Math.max(0, Number(e.target.value)))}
-                aria-label="Cost per tree in rupees, including establishment care"
-              />{' '}
-              each
-            </span>
-            <span className="t-data cost__total">
-              PKR {formatPkr(estimateCost(
-                shown.map((f) => f.properties.species.crownM), costPkr).totalPkr)}
-            </span>
-          </label>
-          <p className="t-unit">
-            Rate is a starting figure &mdash; a sapling plus about three years of
-            establishment care. Change it to your own. Larger species cost more
-            to establish, so the total is weighted by crown size. Estimated, see
-            Method.
           </p>
         </div>
       )}

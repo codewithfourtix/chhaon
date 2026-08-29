@@ -305,6 +305,44 @@ export function Methodology() {
 
 
         <section className="method__sec">
+          <h2 className="t-heading">Why there is no AQI reading</h2>
+          <p className="t-body">
+            Smog is Lahore&apos;s most visible environmental problem, so the
+            obvious feature is &ldquo;AQI here, before and after&rdquo;. We could
+            not build that without inventing data, and the reason is worth
+            stating rather than hiding.
+          </p>
+          <ul className="method__list t-body">
+            <li>
+              <strong>Measured AQI does not exist at neighbourhood scale.</strong>{' '}
+              Lahore has a handful of ground stations, and every free API serving
+              them now needs a key &mdash; OpenAQ v3 returns 401, v2 is retired.
+            </li>
+            <li>
+              <strong>Satellite air quality is too coarse.</strong> Sentinel-5P is
+              open and keyless, but its NO&#8322; pixels are{' '}
+              <span className="t-data">5.5 &times; 3.5 km</span>. These regions are
+              4&ndash;8 km across, so all five would land in one to four pixels and
+              read nearly the same &mdash; exactly the failure that made us drop
+              climate data from species matching.
+            </li>
+            <li>
+              <strong>Captured mass is not an AQI delta.</strong> Turning
+              kilograms of PM2.5 removed into AQI points needs a dispersion model,
+              mixing heights and background concentrations we do not have.
+            </li>
+          </ul>
+          <p className="t-body">
+            So the Air panel reports the one air-quality quantity we can defend:
+            how much particulate the recommended planting would capture, from
+            crown area and one published coefficient. It says what planting would
+            <strong> remove</strong>, never what the air currently <strong>is</strong>.
+            A number we could not defend would undermine every measured figure
+            beside it.
+          </p>
+        </section>
+
+        <section className="method__sec">
           <h2 className="t-heading">What this is not, yet</h2>
           <p className="t-body">
             Named here rather than implied, because a tool that is clear about

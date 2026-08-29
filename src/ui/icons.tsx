@@ -142,3 +142,19 @@ export const IconSelect = () => (
     <path d="M6 6h4v4H6z" strokeDasharray="1.6 1.4" />
   </svg>
 )
+
+export const IconMoney = () => (
+  <svg {...base}>
+    <rect x="1.8" y="4" width="12.4" height="8" rx="1.4" />
+    <circle cx="8" cy="8" r="2" />
+    <path d="M4.4 8h.01M11.6 8h.01" strokeWidth="1.8" />
+  </svg>
+)
+
+export const IconAir = () => (
+  <svg {...base}>
+    <path d="M2.4 5.6h6.8a2 2 0 1 0-2-2" />
+    <path d="M2.4 8.6h8.4a2 2 0 1 1-2 2" />
+    <path d="M2.4 11.6h4.6" />
+  </svg>
+)

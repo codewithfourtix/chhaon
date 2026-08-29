@@ -33,6 +33,8 @@ interface AppState {
   area: Box | null
   drawing: boolean
   costPkr: number
+  costOpen: boolean
+  airOpen: boolean
   dataLoading: boolean
   dataError: string | null
   /** Bumped to re-focus the camera on the selected site. */
@@ -50,6 +52,8 @@ interface AppState {
   setArea: (b: Box | null) => void
   setDrawing: (d: boolean) => void
   setCostPkr: (v: number) => void
+  toggleCost: () => void
+  toggleAir: () => void
   setFilters: (f: Partial<Filters>) => void
   clearFilters: () => void
   setDataLoading: (loading: boolean, error: string | null) => void
@@ -76,6 +80,8 @@ export const useApp = create<AppState>((set) => ({
   area: null,
   drawing: false,
   costPkr: DEFAULT_COST_PKR,
+  costOpen: false,
+  airOpen: false,
   dataLoading: true,
   dataError: null,
   focusTick: 0,
@@ -93,6 +99,10 @@ export const useApp = create<AppState>((set) => ({
   setArea: (area) => set({ area, drawing: false }),
   setDrawing: (drawing) => set({ drawing }),
   setCostPkr: (costPkr) => set({ costPkr }),
+  // The three tools are mutually exclusive: two panels stacked in the same
+  // corner would cover each other.
+  toggleCost: () => set((s) => ({ costOpen: !s.costOpen, airOpen: false })),
+  toggleAir: () => set((s) => ({ airOpen: !s.airOpen, costOpen: false })),
   setFilters: (f) => set((s) => ({ filters: { ...s.filters, ...f }, selectedSiteId: null })),
   clearFilters: () => set({ filters: NO_FILTERS, selectedSiteId: null }),
   setDataLoading: (dataLoading, dataError) => set({ dataLoading, dataError }),

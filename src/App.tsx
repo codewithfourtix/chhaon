@@ -3,6 +3,8 @@ import { BasemapToggle, BottomBar, InstrumentRail, LoadingBar, ThermalScale } fr
 import { SitePlate } from './ui/SitePlate'
 import { SiteList } from './ui/SiteList'
 import { CoverTrend } from './ui/CoverTrend'
+import { CostPanel, Tools } from './ui/Tools'
+import { AirPanel } from './ui/AirPanel'
 import { Shortcuts } from './ui/Shortcuts'
 import { Overture } from './ui/Overture'
 import { Methodology } from './ui/Methodology'
@@ -29,10 +31,13 @@ export default function App() {
         <>
           <InstrumentRail />
           <BasemapToggle />
+          <Tools />
           <ThermalScale />
           <BottomBar />
           <SiteList />
           <CoverTrend />
+          <CostPanel />
+          <AirPanel />
           <SitePlate />
           <Shortcuts />
           <LoadingBar />

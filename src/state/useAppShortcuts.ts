@@ -69,6 +69,22 @@ export function useAppShortcuts() {
             e.preventDefault()
           }
           break
+        case 'a':
+        case 'A':
+          if (s.area) s.setArea(null)
+          else s.setDrawing(!s.drawing)
+          e.preventDefault()
+          break
+        case 'c':
+        case 'C':
+          s.toggleCost()
+          e.preventDefault()
+          break
+        case 'g':
+        case 'G':
+          s.toggleAir()
+          e.preventDefault()
+          break
         case 'l':
         case 'L':
           s.toggleList()

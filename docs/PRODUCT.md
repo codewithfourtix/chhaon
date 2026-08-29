@@ -234,6 +234,33 @@ measurement depends on. If anyone probes a single region, it will be that one.
 
 ---
 
+### 3.12 Why there is no AQI reading
+
+The obvious smog feature is "AQI here, before and after". It was specified, and
+we did not build it as specified, because it cannot be built honestly:
+
+- **Measured AQI does not exist at neighbourhood scale.** Lahore has a handful of
+  ground stations. Every free API serving them now needs a key — OpenAQ v3
+  returns 401, v2 is retired (both verified, not assumed).
+- **Satellite air quality is too coarse.** Sentinel-5P is open and keyless and
+  we confirmed NO2 granules over Lahore. But its pixels are 5.5 × 3.5 km and our
+  regions are 4–8 km across, so all five would read nearly the same number —
+  the identical failure that made us drop climate data from species matching.
+  A single granule is also 64 MB and timed out at nine minutes on one download.
+- **Captured mass is not an AQI delta.** Converting kilograms of PM2.5 removed
+  into AQI points needs a dispersion model, mixing heights and background
+  concentrations we do not have.
+
+**The answer to the spec's open question** — "two years, or predicted-with-more-
+trees versus current?" — is *neither, as stated*. Option one needs per-area AQI
+that does not exist at 5.5 km. Option two needs the dispersion model.
+
+So the Air panel reports what we can defend: the particulate the recommended
+planting would capture, per region or per drawn area, from crown area and one
+published coefficient. It says what planting would **remove**, never what the air
+currently **is**, and the panel carries a "why no AQI reading?" disclosure
+explaining exactly this.
+
 ## 6. Honest limits — say these before you are asked
 
 - **"Green cover", never "tree canopy".** At 10 m/px a vegetated cell may be
