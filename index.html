@@ -10,14 +10,31 @@
     />
     <title>Chhaon — where Lahore lost its shade</title>
 
-    <!-- Dev only. Self-hosted as woff2 in public/fonts before the demo, so the
-         page makes zero third-party runtime requests. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Nastaliq+Urdu:wght@400;600&display=swap"
-      rel="stylesheet"
-    />
+    <!--
+      Self-hosted, so no font request leaves the origin. The previous Google
+      Fonts link made 5 requests to fonts.gstatic.com for ~395 KB, of which 233 KB
+      was Noto Nastaliq Urdu for the single word چھاؤں. That face is now subsetted
+      to the wordmark at 20 KB.
+
+      Map tiles and imagery are still third-party and deliberately so — that is
+      why there is no tile server to run — so this gets us to "nothing but tiles
+      leaves the origin", which is as far as map-performance's zero-third-party
+      rule can be taken without self-hosting a basemap.
+
+      Regenerate with `python scripts/fetch_fonts.py`.
+
+      Deliberately NOT preloaded. With `font-display: swap` these faces never
+      block meaningful paint — the text is readable immediately in a fallback and
+      restyles when they land — so putting 148 KB of them on the critical path
+      with `preload` would take pipe away from the bundle the map needs to exist
+      at all, for a purely cosmetic gain.
+
+      Measured on the production build at Fast 3G: 3.7-4.0 s to measurements on
+      screen, with the same figure whether the faces are preloaded or not. Run-to-
+      run variance here is a few hundred ms depending on when basemap tiles settle,
+      so do not read a single run as a regression. `node scripts/budget.mjs --3g`.
+    -->
+    <link rel="stylesheet" href="/fonts/fonts.css" />
   </head>
   <body>
     <div id="root"></div>
