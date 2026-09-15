@@ -147,9 +147,14 @@ from orbit.
 A street tree is smaller than one satellite pixel, so felling one moves nothing
 we measure. This is the only route by which it enters the record.
 
-Place a pin, pick what happened, add a photo and a note. Two tiers, never blurred:
-the **public log** (`public/data/reports.json`, committed, timestamped,
-auditable) and **local drafts** (this browser only, labelled as such everywhere).
+Place it from the device's own GPS or by tapping the map, pick what happened, add a
+photo — camera on a phone, file picker on a laptop — and a note. A device fix shows
+its accuracy radius and says when that is wider than the 60 m cell, because a
+coordinate published without it overstates what the log knows.
+
+Two tiers, never blurred: the **public log** (`public/data/reports.json`, committed,
+timestamped, auditable) and **local drafts** (this browser only, labelled as such
+everywhere).
 
 Nothing on it claims a department was alerted. The Citizen Portal is offered as
 the route that does have a workflow, with copyable text, because we cannot walk

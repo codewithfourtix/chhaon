@@ -176,8 +176,23 @@ measure — which is exactly why the product says "green cover, never tree
 canopy". A person on the ground is the only way it enters the record.
 
 Report a felled tree, a fire, dieback or a new planting, with a photo and a
-geotag. Photos are resized to 1280&nbsp;px and re-encoded, which drops EXIF as a
-side effect: the only location kept is the one you deliberately placed.
+geotag. One input serves both routes — a phone opens the rear camera, a laptop the
+file picker — and photos are resized to 1280&nbsp;px and re-encoded, which drops
+EXIF as a side effect.
+
+**Two ways to place it, because they suit different moments.** Standing in front of
+the tree, the phone already knows: *Use my current location* takes a GPS fix, flies
+the camera to it, and shows the accuracy radius. From a desk, working off a
+photograph, only the map does: tap the spot instead.
+
+The accuracy radius is shown rather than swallowed, and it changes what the report
+can claim. A fix wider than the 60&nbsp;m analysis cell says so; past
+500&nbsp;m — which is what a laptop usually reports, being wifi-derived rather than
+GPS — it says that is a neighbourhood, not a tree, and asks you to adjust it. A fix
+outside Lahore is refused rather than pinned where the map cannot show it, and a
+refused permission explains itself and leaves the map route open. How the
+coordinate was obtained, and to what radius, is recorded in the log: it is
+evidence, and evidence carries its provenance.
 
 **Nothing claims the government was alerted.** There is no public API to file
 against, and an email to the PHA is a message in an inbox, not a workflow.
@@ -252,9 +267,13 @@ basemap is still streaming — on a slow connection it competes with the map the
 user is actually looking at.
 
 Measured, not assumed: `node scripts/budget.mjs --3g` reports what is on the
-critical path — **3.7–4.0&nbsp;s** to measurements on screen on the production
-build, throttled to Fast 3G, over three runs. `node scripts/progressive.mjs --3g`
+critical path — **2.7&nbsp;s** to measurements on screen on the production build,
+throttled to Fast 3G, repeatable across runs. `node scripts/progressive.mjs --3g`
 fails if a year file ever lands before the first layer renders.
+
+What remains on that path is the bundle, and it is mostly MapLibre — which is the
+product, not overhead. The Method screen, the mobile shell and the two tool panels
+are split out of it, so nothing downloads a surface you have not opened.
 
 **No font request leaves the origin.** The four fonts are self-hosted, and Noto
 Nastaliq Urdu is subsetted to the five letters of the wordmark — the only string in the app that uses it — taking it from
@@ -339,6 +358,12 @@ python pipeline/split_years.py      # re-shape committed grids into core + per-y
 `run.py` is the slow half and rarely needs re-running. `recent.py` is the half
 meant to run on a schedule — it reuses the grid `run.py` wrote, reads only passes
 it has not seen, and is what keeps the Change panel current.
+
+Its reads run six at a time, because they are HTTP range requests that spend
+almost all their time waiting. Measured on Model Town: **124&nbsp;s serially,
+53&nbsp;s at six** — and byte-identical output at 1, 6 and 12 jobs, so the
+concurrency cannot change what is reported. `--jobs N` if you want more; the
+default stays modest because this is a free catalogue run for everyone.
 
 Verify:
 

@@ -311,9 +311,28 @@ user was actually looking at. `idle` means the tiles have settled.
 renders.
 
 And the honest headline: on the **production** build, throttled to Fast 3G, the
-measurements are on screen in **2.7 s**. The app was never unusable on 3G — the
-dev server was, because it serves 11.5 MB of unbundled modules. Measure the thing
-you ship. `scripts/budget.mjs --3g` prints the breakdown by origin and kind.
+measurements are on screen in **2.7 s**, repeatably. The app was never unusable on
+3G — the dev server was, because it serves 11.5 MB of unbundled modules. Measure
+the thing you ship. `scripts/budget.mjs --3g` prints the breakdown by origin and
+kind.
+
+That figure was wrong twice before it was right, both times because of the
+measurement rather than the app. First the probe waited on `window.__map`, which is
+only exposed in dev, so a production run sat until its timeout and reported 182 s.
+Then it waited on any `<li>` in the ranked list — and the list renders an
+empty-state `<li>` when it has no data, so it fired before a single measurement had
+arrived and reported the shell's load time as the app's. It now waits on
+`[data-site]`, which only exists once real sites are rendered.
+
+The lesson is narrow and worth keeping: a performance probe that can pass without
+the thing it measures will eventually report a number somebody puts in a README.
+
+What is left on the critical path is the bundle, and it is mostly MapLibre. Method,
+the mobile shell and the two tool panels are code-split out of it — the panels had
+to be gated on their open flags as well as lazily imported, because they render
+`null` when closed and `React.lazy` would otherwise have fetched them at mount
+anyway. That is 8.7 KB gzip and, more usefully, no hooks running for a panel nobody
+opened.
 
 ### 3.15 Recent passes are a separate analysis, never mixed with the yearly ones
 
@@ -388,6 +407,26 @@ citizen log is where a cause comes from.
 The rules live in `pipeline/change.py` as pure array logic, separate from the COG
 reading, so `test_logic.py` checks them with numpy alone in two seconds rather
 than needing the network and the whole geospatial stack.
+
+**The reads run six at a time.** They are HTTP range requests that spend almost all
+their time waiting, so a thread pool is the right tool: 16 reads over Model Town
+took **124 s serially and 53 s at six**, and all five regions warm now finish in
+24 s. Output is byte-identical at 1, 6 and 12 jobs — verified, because concurrency
+that changed what got reported would be a far worse bug than a slow script.
+
+The bound is deliberate and the default is modest. Element 84's catalogue is free
+and run for everyone; the aim was to stop wasting our own wall time, not to extract
+maximum throughput from somebody else's infrastructure. `--jobs N` overrides it.
+
+**`run.py`'s compositing loop is left alone**, and that is a considered choice
+rather than an oversight. It is the genuinely slow half — up to eight scenes a year
+across ten years — and parallelising its first three reads would help. But its loop
+is adaptive: it decides whether to read another scene based on the coverage of what
+it already has, so the refactor is not trivially order-preserving. More to the
+point, it could not be verified here without a full uncached run, which would also
+rewrite the committed yearly layers — the highest-stakes data in the product. A
+silent change to those is worse than a slow script, and the same reasoning that
+makes `baseline_before` one-sided applies to touching them at all.
 
 ### 3.16 Watches are one place each, and they do not notify
 
@@ -633,6 +672,8 @@ invisible in the UI: the layer simply keeps showing the previous year.
 | The year prefetch fought the basemap | `requestIdleCallback` fires as soon as the main thread is free, which on a fast machine is immediately — while basemap tiles are still streaming. Hang background fetches off MapLibre's `idle` instead |
 | 17 detected "losses", largest 371 ha | A haze-affected pass cleared the coverage floor at 2.3% vegetated against a ~40% norm, and the baseline was the maximum over four months. Both fixed; both invisible until the numbers were checked against physical plausibility |
 | The Priority legend disagreed with the map | Priority's domain comes from the ranking, not the grid, so `domainFor()` returned a hard-coded 0.25–0.95 while the circles were painted from the real spread (0.33–0.80 in Model Town). Four views honoured the single-source rule and the fifth quietly did not |
+| The 3G load figure was measured wrong, twice | The probe waited on `window.__map` (dev-only, so production reported its 182 s timeout), then on any `<li>` in the ranked list — which matches the empty-state row, so it fired before any data arrived and reported 2.5 s. A perf probe that can pass without the thing it measures will eventually put a wrong number in a README |
+| Area-select and report placement could not be told apart | Both armed the map's click handler. Placement now skips when the other is armed, and arming either disarms the other in the store |
 
 The pattern in most of these: **the failure was silent.** Nothing threw. That is
 why the checks now count rendered features and parse strictly, rather than
