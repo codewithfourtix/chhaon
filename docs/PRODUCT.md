@@ -232,6 +232,16 @@ with them, and they are the first thing to argue about.
 the southern edge, which blurs the built-versus-vegetated contrast the whole
 measurement depends on. If anyone probes a single region, it will be that one.
 
+That farmland shows up in change detection too, and it is the single most likely
+question about the Change panel. The largest detected loss in the current run is
+**53 ha at DHA's north-eastern edge**, 148 contiguous cells dropping from NDVI
+0.57 to 0.33 between 24 August and 8 September 2026. That is a harvest: one
+coherent block of cropland, not the scattered handful of cells a felling produces.
+
+The detection is right and the interpretation would be wrong, which is exactly the
+case the "a drop is not a cause" rule exists for. Say it before you are asked —
+the same way we say it about DHA's correlation.
+
 ---
 
 ### 3.12 Why there is no AQI reading
@@ -260,6 +270,230 @@ planting would capture, per region or per drawn area, from crown area and one
 published coefficient. It says what planting would **remove**, never what the air
 currently **is**, and the panel carries a "why no AQI reading?" disclosure
 explaining exactly this.
+
+### 3.14 First paint carries one year, not nine
+
+"Switch to vector tiles so only what's in the viewport loads" turned out to be
+the wrong fix for the right problem, and measuring said so:
+
+| DHA payload, gzip | | |
+|---|---|---|
+| NDVI, all 9 years | **105 KB** | **73%** — only one year is ever on screen |
+| population | 19 KB | |
+| surface temperature | 12 KB | |
+| land use + built | 3 KB | |
+| 120 ranked sites | 6 KB | |
+
+Viewport culling does not apply here: each region is a *single* 60 m raster
+painted as one image source, so the whole region already **is** the viewport, and
+the only per-viewport vector data is 120 points at 6 KB. PMTiles would add a tile
+pyramid to something far under the 2 MB / 5,000-feature threshold that
+`map-performance` itself sets.
+
+The actual waste was shipping eight years nobody had asked for. The core file now
+carries only the latest year — the app's default, and the one `riskFor()` needs
+for the risk band and the readout — and earlier years are separate files. DHA's
+first paint went **144 KB → 53 KB**.
+
+Two rules in `map-performance` pull in opposite directions here: "the map must be
+interactive before the data arrives" wants the smallest possible first fetch, and
+"filter, do not refetch — swapping datasets per year re-parses on every drag
+frame" wants every year already in memory. Both hold if the visible year is
+fetched on demand and the rest are prefetched at idle, so the scrubber is never
+the thing waiting on the network.
+
+**The prefetch hangs off MapLibre's `idle` event, not `requestIdleCallback`.**
+That was a measured correction, not a preference: `requestIdleCallback` only knows
+the main thread is free, so it fired immediately and pulled all eight years while
+the basemap was still streaming — competing for the same 3G pipe as the map the
+user was actually looking at. `idle` means the tiles have settled.
+`scripts/progressive.mjs` now fails if a year file lands before the first layer
+renders.
+
+And the honest headline: on the **production** build, throttled to Fast 3G, the
+measurements are on screen in **2.7 s**. The app was never unusable on 3G — the
+dev server was, because it serves 11.5 MB of unbundled modules. Measure the thing
+you ship. `scripts/budget.mjs --3g` prints the breakdown by origin and kind.
+
+### 3.15 Recent passes are a separate analysis, never mixed with the yearly ones
+
+The yearly composites are locked to one spring window precisely so that 2017 and
+2025 are comparable. That makes them useless for news: if a stand of trees comes
+down in July, the next comparable observation is nine months away.
+
+Sentinel-2's two satellites revisit every ~5 days, so the observations already
+exist. `pipeline/recent.py` reads them as what they are — individual dated
+observations, each with its own cloud and coverage — and looks for cells that were
+vegetated and abruptly are not.
+
+| | window | scenes | answers |
+|---|---|---|---|
+| `run.py` | one fixed spring window a year | multi-scene composite | is 2025 different from 2017? |
+| `recent.py` | rolling, every usable pass | single scene | did something change last month? |
+
+They are never combined. A single pass cannot carry a multi-year claim, and a
+yearly composite cannot date an event.
+
+Four rules keep it defensible:
+
+- **Smog season is marked unusable, not deleted.** November to February aerosol
+  depresses NDVI scene-wide, so those passes would show loss everywhere at once
+  and recovery everywhere in March. Both are artefacts of the air. They stay in
+  the record with the reason attached, because an unexplained gap looks like a bug
+  and because "we cannot see the ground in December" is itself a finding.
+- **A drop needs prior vegetation.** Bare ground going 0.10 to 0.02 is noise on a
+  car park, not a felled tree.
+- **Single cells are dropped.** One 60 m cell over the threshold is inside what
+  sensor noise, a building shadow or a mown lawn can do. Three contiguous cells
+  (~1.1 ha) is a change somebody can stand in.
+- **The "before" reading is the per-cell maximum of earlier passes**, not the
+  previous pass. One hazy earlier pass would otherwise read as that corner having
+  recovered and then been cleared. A maximum is one-sided in the safe direction —
+  it can miss a real loss but it cannot manufacture one, and for something
+  accusation-shaped that is the correct way to be wrong.
+
+**Two rules that only a real run produced.** The first execution against live
+Sentinel-2 over Model Town reported **17 events, the largest 371 ha** — a quarter
+of the neighbourhood. Both causes were design flaws, not code bugs, and both are
+the same mistake in different clothes: trusting a single observation.
+
+- **A pass can be fully visible and still unusable.** The 2026-09-13 pass cleared
+  the 60% coverage floor and reported the region as **2.3% vegetated** against a
+  38.6% median across its neighbours. Thin haze passes Sentinel-2's cloud mask
+  while still depressing NDVI scene-wide — exactly the physics the yearly
+  composites exist to defeat. Coverage cannot catch it, because the ground *was*
+  visible; it was just wrong. So a pass whose region-wide vegetated fraction falls
+  below 55% of the recent median is rejected as haze. The test is physical rather
+  than statistical: a neighbourhood cannot lose a third of its vegetation in five
+  days, and real felling is local — it moves a handful of cells, not the scene.
+- **The baseline was a seasonal envelope.** Taking the per-cell maximum over every
+  pass in a 120-day window means each cell at its greenest all summer, so a cell
+  merely at its September low against a June peak read as loss. Bounded to the
+  three most recent usable passes, "before" means what the ground was recently
+  like — still a maximum over several observations, so haze in one of them cannot
+  manufacture a loss.
+
+After both: **2 events, the largest 2.2 ha**, and the hazy pass carries its own
+explanation in the pass strip. That is the difference between a monitor worth
+opening and one that cries wolf on its first run.
+
+The lesson is the one in section 8 restated: nothing threw, nothing errored, and
+every automated check passed. It took running the thing against reality and
+looking at whether the number was physically possible.
+
+**It never says why.** Felling, fire, harvest, construction clearance and a mown
+lawn are indistinguishable from orbit. The output says what changed and when; the
+citizen log is where a cause comes from.
+
+The rules live in `pipeline/change.py` as pure array logic, separate from the COG
+reading, so `test_logic.py` checks them with numpy alone in two seconds rather
+than needing the network and the whole geospatial stack.
+
+### 3.16 Watches are one place each, and they do not notify
+
+A monitor that fires on every flicker is muted within a week, and a muted monitor
+is worse than none because it looks like coverage. So:
+
+- A watch is a **drawn area**, not a region. "Somewhere in Lahore" is not
+  something anyone can act on.
+- Each carries its **own threshold**, defaulting to the pipeline's own floor.
+- An alert is raised once and can be **acknowledged**, which keeps it in the
+  record but stops it competing with the next one.
+- Only **usable** passes can raise one, which the pipeline already enforces by
+  excluding smog season from detection.
+
+Who it is for: a journalist watching one contested plot, an NGO watching a green
+belt, someone assembling evidence for a petition. All three need "tell me about
+this specific place", not a feed.
+
+**There is no push and the panel says so.** Static site, no server, nothing to
+send an email with. Watches are evaluated when the app opens. Claiming otherwise
+would be a promise the architecture cannot keep, and it is exactly the kind of
+claim that gets found out on stage.
+
+### 3.17 Citizen reports are a public log, not a complaint
+
+At 10 m/px a street tree is smaller than one pixel. Felling one moves nothing we
+measure — which is exactly why the product says "green cover, never tree canopy".
+A person on the ground is the only way it enters the record, and that is the gap
+this closes.
+
+**What it deliberately does not do:** claim anyone was notified. There is no
+public API to file against, and an email to the PHA is a message in an inbox, not
+a workflow. Promising "the authorities have been alerted" would be the single
+most dishonest thing in this product.
+
+Two tiers, never blurred in the UI:
+
+| | |
+|---|---|
+| **The public log** | `public/data/reports.json`, committed — public, timestamped, auditable in git history, and it exists whether or not anyone acts on it |
+| **Local drafts** | IndexedDB, this browser only, labelled as not public everywhere they appear |
+
+Details that matter:
+
+- **Export merges with the current public log** before downloading, so committing
+  the file cannot drop somebody else's entries. "Export mine, overwrite theirs" is
+  a silent and unrecoverable failure.
+- **Photos are resized to 1280 px and re-encoded**, which drops EXIF as a side
+  effect. A photo bound for a public log should not carry the reporter's camera
+  serial number; the only location kept is the one they placed deliberately.
+- **IndexedDB, not localStorage**, because a 1280 px JPEG is 100-250 KB and
+  localStorage's ~5 MB quota is shared with everything else — a handful of reports
+  would start throwing on the one action the user most expects to succeed.
+- The **Citizen Portal** is offered with copyable text, because that is the route
+  that gets a tracking number and we cannot walk it for them.
+
+### 3.18 Text to filter, not a chatbot
+
+`worst hit areas in johar town` sets the region, the view and the filters. The
+Urdu equivalent does the same.
+
+It is a **deterministic phrase matcher with no model and no network**, and that is
+the entire design. A model writing sentences about this data would eventually
+state a number nobody measured, and every figure in this product is traceable to a
+named satellite scene. A parser that can only *select* — from five regions, five
+views, the years the pipeline actually produced, the species that appear in the
+ranking — has no mechanism for inventing anything.
+
+- **It cannot hallucinate.** There is nothing to hallucinate with.
+- **It is auditable.** It reports what it matched *and what it ignored*, so the
+  user can see they were understood rather than guessed at.
+- **Urdu costs almost nothing**, because setting a filter needs recognition, not
+  generation. It is a synonym table, not a second language model.
+- **It works offline**, like everything else here.
+- **When it understands nothing it says so.** Silently doing nothing is the one
+  genuinely bad outcome — a user cannot tell that from a broken feature.
+
+Two bugs worth remembering, both caught by the end-to-end check:
+
+- "neem sites on roadsides **serving more than 5000 people**" selected the
+  *Population* view, because the trailing "people" matched a view synonym. Fixed by
+  consuming each matched phrase as it is taken, and running the numeric threshold
+  rule first. A phrase matcher is supposed to be immune to this kind of thing; it
+  only is if you consume as you go.
+- "roadside**s**" matched nothing, so the filter was silently dropped — which looks
+  exactly like the feature not working. The matcher now tolerates a plural.
+
+### 3.19 Three mark shapes, three kinds of claim
+
+There are now three kinds of mark on the map, and each is a different kind of
+statement:
+
+| shape | meaning |
+|---|---|
+| **circle** | a ranked planting site — what we recommend |
+| **diamond** | a citizen report — what a person saw |
+| **triangle** | a detected loss — what the satellite measured changing |
+
+Deliberately far apart rather than three sizes of the same dot. Confusing a
+recommendation with an accusation would be the worst of the available mistakes,
+and selection is already a hairline ring around a circle — so a hollow circle for
+a report would have read as a selected site.
+
+Colours stay inside the existing palette: loss takes the hot end of the thermal
+ramp, because losing canopy is a heat event; a new planting is the one case where
+canopy green is legitimate, being literally new canopy.
 
 ### 3.13 Mobile is a different layout, not a smaller one
 
@@ -302,6 +536,10 @@ primary interface.
   between sites less than the other two terms do.
 - **Species matching is best-effort.** Confirm with the Parks & Horticulture
   Authority or a nursery.
+- **A detected loss may be agriculture.** DHA's bounds reach cropland, and a
+  harvested field produces a larger, cleaner NDVI drop than any felling. The
+  product never names a cause; pair an event with a citizen report before calling
+  it tree loss.
 - **No trend.** If someone expects a "Lahore is losing its trees" chart, this
   data does not give one.
 
@@ -317,22 +555,59 @@ npm run build
 pip install rasterio pyproj shapely numpy
 python pipeline/run.py            # all five regions (slow, results are cached)
 python pipeline/run.py model-town # one region
+python pipeline/recent.py         # the fast rolling stage — recent passes, detected loss
+python pipeline/split_years.py    # re-shape committed grids into core + per-year files
 ```
+
+The pipeline is two stages with different cadences. `run.py` builds the decade of
+yearly layers and rarely needs re-running. `recent.py` is meant to run on a
+schedule: it reuses the grid `run.py` wrote, reads only passes it has not seen,
+and is what keeps the Change panel current.
+
+`split_years.py` is stdlib-only on purpose — it re-shapes data that is already
+committed, so it must run without rasterio, without network, and without
+repeating an hour of COG reads. `run.py` imports its writer rather than
+reimplementing it, so a full run and the migration cannot drift into two
+different on-disk layouts.
 
 ### Verification, all of which must pass before shipping
 
 ```bash
-python pipeline/test_logic.py   # scoring, species matching, compositing — offline
-python pipeline/qa.py           # data sanity across every region
-node scripts/smoke.mjs          # map timing regression + rendered dot count
+python pipeline/test_logic.py      # scoring, species matching, compositing, change rules
+python pipeline/qa.py              # data sanity across every region
+node scripts/smoke.mjs             # map timing regression + rendered dot count
+node scripts/progressive.mjs       # first paint stays small; the scrubber really repaints
+node scripts/features.mjs          # reporting, change detection, watches, text-to-filter
+node scripts/mobileshots.mjs       # no overflow, no tap target under 34px
 npm run build && npx vite preview --port 4173
-node scripts/prodcheck.mjs      # the production build, where the worker bug hid
-node scripts/shots.mjs shots    # screenshots of every surface
+node scripts/prodcheck.mjs         # the production build, where the worker bug hid
+CHHAON_ORIGIN=http://localhost:4173 node scripts/budget.mjs --3g
+node scripts/shots.mjs shots       # screenshots of every surface
 ```
+
+`test_logic.py` imports `run.py` lazily, so the checks that need numpy alone —
+including every change-detection rule — still report when rasterio is not
+installed, instead of one missing optional dependency hiding every result after
+it. Skips are printed and named.
+
+`features.mjs` drives the Change panel from a **fixture served by route
+interception**, not from committed data. The alert path has to be testable
+without inventing satellite observations, because the one thing this product must
+never do is ship numbers nobody measured.
+
+Both new browser checks assert on state the user would have to notice was
+missing — the request log, the rendered image bytes, the applied filter chips —
+rather than on a layer merely existing. That is the lesson from every bug in
+section 8: the failure was silent.
 
 `qa.py` parses the way a browser does. It catches dead layers, collapsed
 rankings, rank-order violations, sites outside the analysed grid, and JSON that
 Python will happily write but `JSON.parse` rejects.
+
+Since the payload split it also checks that **every year the metadata promises
+actually resolves** — inline or as its own file, with matching dimensions. A year
+listed in `years` with no data behind it is a dead scrubber tick, and it would be
+invisible in the UI: the layer simply keeps showing the previous year.
 
 ---
 
@@ -350,8 +625,14 @@ Python will happily write but `JSON.parse` rejects.
 | Every Landsat read 403'd mid-run | Planetary Computer SAS tokens expire in under an hour and were cached without honouring it |
 | Overpass returned 406 | Needs a `User-Agent`. Buildings must be a separate query or it times out |
 | Vector basemap blank **in production only** | MapLibre builds its worker URL from a ternary at runtime, so Vite never emitted the file; a static host answered with index.html and `new Worker` hung on HTML. Raster basemaps never touch the worker, so satellite looked fine — see `vite.config.ts` |
-| Every Landsat read 403'd mid-run | Planetary Computer SAS tokens expire in under an hour and were cached without honouring it |
 | Every recommendation was Neem | First-match-wins species selection; Neem is listed first with the lowest width bar |
+| A drawn area was never committed | `mouseup` was bound to the *map*, so releasing over any overlay — the attribution control in the corner, a panel, the ranked list — never reached it. The box stayed on screen and nothing happened. Move and release are now bound to the window |
+| Report markers drew nothing | A `zoom` interpolate nested inside a `case` on `icon-size`. Same class of bug as the site circles above, reintroduced in new code — MapLibre needs zoom at the **top level** of the property |
+| "serving more than 5000 people" switched to the Population view | The trailing "people" matched a view synonym. The query parser now consumes each phrase as it matches and runs numeric rules first |
+| "roadsides" matched no filter | The phrase matcher only knew the singular, so the filter was silently dropped — indistinguishable from the feature not working |
+| The year prefetch fought the basemap | `requestIdleCallback` fires as soon as the main thread is free, which on a fast machine is immediately — while basemap tiles are still streaming. Hang background fetches off MapLibre's `idle` instead |
+| 17 detected "losses", largest 371 ha | A haze-affected pass cleared the coverage floor at 2.3% vegetated against a ~40% norm, and the baseline was the maximum over four months. Both fixed; both invisible until the numbers were checked against physical plausibility |
+| The Priority legend disagreed with the map | Priority's domain comes from the ranking, not the grid, so `domainFor()` returned a hard-coded 0.25–0.95 while the circles were painted from the real spread (0.33–0.80 in Model Town). Four views honoured the single-source rule and the fifth quietly did not |
 
 The pattern in most of these: **the failure was silent.** Nothing threw. That is
 why the checks now count rendered features and parse strictly, rather than

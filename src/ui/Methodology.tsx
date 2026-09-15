@@ -160,7 +160,7 @@ export function Methodology() {
             not work here, and we verified that rather than assuming it: every
             free weather API with Pakistan coverage resolves Model Town, Gulberg
             and DHA to a <strong>single grid cell</strong>. NASA POWER returns
-            byte-identical temperature, wind and elevation for all three. A
+            byte-identical temperature, wind and elevation for the three regions we tested it against. A
             climate-driven matcher would recommend the same tree for every site
             on the map.
           </p>
@@ -261,7 +261,7 @@ export function Methodology() {
         </section>
 
         <section className="method__sec">
-          <h2 className="t-heading">The three regions compared</h2>
+          <h2 className="t-heading">The five regions compared</h2>
           <p className="t-body">
             The heat gap is not uniform, and the differences are worth stating
             rather than averaging away.
@@ -303,6 +303,84 @@ export function Methodology() {
           </p>
         </section>
 
+
+        <section className="method__sec">
+          <h2 className="t-heading">Detecting sudden loss, and what it cannot tell you</h2>
+          <p className="t-body">
+            The yearly layers above are locked to one spring window so that 2017
+            and 2025 are comparable. That is the right design for a trend and the
+            wrong one for news: if a stand of trees comes down in July, the next
+            comparable observation is nine months away.
+          </p>
+          <p className="t-body">
+            Sentinel-2&apos;s two satellites revisit every{' '}
+            <span className="t-data">~5 days</span>, so those observations already
+            exist. The Change panel reads them as what they are &mdash; individual
+            dated passes, each with its own cloud and coverage &mdash; and looks for
+            cells that were vegetated and abruptly are not. The two analyses are
+            never mixed: a single pass cannot carry a multi-year claim, and a
+            yearly composite cannot date an event.
+          </p>
+          <ul className="method__list t-body">
+            <li>
+              <strong>A drop is not a cause.</strong> Felling, fire, harvest,
+              construction clearance and a mown lawn are indistinguishable from
+              orbit. Every event states what changed and when, never why.
+            </li>
+            <li>
+              <strong>We cannot see the ground from November to February.</strong>{' '}
+              Smog-season aerosol depresses the vegetation signal scene-wide, so
+              those passes would show loss everywhere at once and recovery
+              everywhere in March. They are kept in the record and marked
+              unusable with the reason, never silently dropped.
+            </li>
+            <li>
+              <strong>A loss must be at least three contiguous cells.</strong> One
+              60 m cell over the threshold is inside what sensor noise, a building
+              shadow or a cut lawn can produce. Three cells is about{' '}
+              <span className="t-data">1.1 ha</span>.
+            </li>
+            <li>
+              <strong>The &ldquo;before&rdquo; reading is the maximum of earlier
+              passes</strong>, not the previous one. Haze in a single pass would
+              otherwise read as that ground having recovered and then been
+              cleared. A maximum can miss a real loss but cannot manufacture one,
+              which for an accusation is the correct way to be wrong.
+            </li>
+          </ul>
+          <p className="t-body">
+            Watched areas are evaluated when you open the app. There is{' '}
+            <strong>no notification</strong> &mdash; this is a static site with no
+            server, so there is nothing to send one with, and saying otherwise
+            would be a promise the architecture cannot keep.
+          </p>
+        </section>
+
+        <section className="method__sec">
+          <h2 className="t-heading">What the satellite cannot see, and who can</h2>
+          <p className="t-body">
+            At <span className="t-data">10 m/px</span> a single street tree is
+            smaller than one pixel. Felling one moves nothing we measure &mdash;
+            which is the same reason this product says green cover rather than tree
+            canopy. A person standing in front of it is the only way it enters the
+            record.
+          </p>
+          <p className="t-body">
+            So citizen reports are ground truth, deliberately kept in two tiers
+            that the interface never blurs: the <strong>public log</strong>, a
+            committed and timestamped file anyone can check, and{' '}
+            <strong>local drafts</strong>, which live on one device and say so
+            everywhere they appear.
+          </p>
+          <p className="t-body">
+            <strong>Nothing here claims a department was alerted.</strong> There is
+            no public API to file against, and an email to the Parks &amp;
+            Horticulture Authority is a message in an inbox, not a workflow. What a
+            report gives you is a record that exists whether or not anyone acts on
+            it, and which can be cited; for a complaint that gets a tracking
+            number, the Pakistan Citizen Portal is linked from every report.
+          </p>
+        </section>
 
         <section className="method__sec">
           <h2 className="t-heading">Why there is no AQI reading</h2>

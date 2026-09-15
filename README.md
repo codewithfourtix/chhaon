@@ -64,7 +64,7 @@ Click any site and every figure is traceable back to a named satellite scene.
 
 ![A single site, fully sourced](docs/images/03-site.jpg)
 
-### Four ways of seeing one neighbourhood
+### Five ways of seeing one neighbourhood
 
 **Heat** — Landsat surface temperature, rendered as a continuous field so the
 streets read *through* it.
@@ -110,6 +110,112 @@ states, the tools get thumb-height chips, the legend turns horizontal, and every
 panel becomes a sheet. `node scripts/mobileshots.mjs` asserts no horizontal
 overflow and no tap target under 34&nbsp;px.
 
+### Catching change while it is still news
+
+The yearly layers are locked to one spring window so 2017 and 2025 are
+comparable. That is right for a trend and useless for news: if a stand of trees
+comes down in July, the next comparable observation is nine months away.
+
+Sentinel-2 revisits every ~5 days, so the observations already exist.
+`pipeline/recent.py` is the fast half of the pipeline — it reuses the grid, reads
+only passes it has not seen, and looks for cells that **were vegetated and
+abruptly are not**.
+
+The two analyses are never mixed. A single pass cannot carry a multi-year claim,
+and a yearly composite cannot date an event.
+
+**Smog season is stated, not hidden.** From November to February aerosol
+depresses NDVI across the whole scene, so those passes would show loss
+everywhere at once and recovery everywhere in March. They are kept in the record
+and marked unusable with the reason — because a gap nobody explains looks like a
+bug, and "we cannot see the ground in December" is itself worth knowing.
+
+**A single observation is never trusted.** The first live run reported 17 events,
+the largest 371&nbsp;ha — a quarter of Model Town. One pass had cleared the
+coverage floor while reporting the region as 2.3&nbsp;% vegetated against a
+38.6&nbsp;% median: thin haze passes the cloud mask and still depresses the
+signal everywhere. So a pass whose whole scene collapses against its neighbours is
+rejected as haze, and the "before" reading is the maximum over the three most
+recent passes rather than a four-month seasonal envelope. After both: **2 events,
+largest 2.2&nbsp;ha**, with the rejected pass carrying its own explanation.
+
+**A drop is not a cause.** Felling, fire, harvest, construction clearance and a
+mown lawn are indistinguishable from orbit. Every event says what changed and
+when, never why.
+
+The current run makes that concrete. The largest detected loss anywhere is
+**53&nbsp;ha at DHA's north-eastern edge** — 148 contiguous cells going from NDVI
+0.57 to 0.33 in a fortnight. That is a field being harvested, not trees coming
+down: one coherent block, in the farmland DHA's bounds reach into. The detection
+is correct and the cause is agricultural, which is precisely why the product
+refuses to name causes and why a citizen report is what turns an event into a
+finding.
+
+### Watched areas
+
+Draw a box and Chhaon answers a standing question: *has anything changed here?*
+
+Built for the people who actually need it — a journalist watching one contested
+plot, an NGO watching a green belt, someone assembling evidence for a petition.
+
+The design constraint that mattered most was **not alerting on everything**. A
+monitor that fires on every flicker is muted within a week, and a muted monitor
+is worse than none because it looks like coverage. So a watch is one drawn area
+rather than a region, it carries its own threshold (default: an NDVI drop of
+0.15 over at least 3 contiguous cells, ~1.1 ha), and an alert can be
+acknowledged so it stops competing with the next one.
+
+**There is no push, and the panel says so.** This is a static site with no
+server; watches are evaluated when you open it. Promising an email would be a
+promise the architecture cannot keep.
+
+### Citizen reports
+
+A street tree is smaller than one satellite pixel. Felling one moves nothing we
+measure — which is exactly why the product says "green cover, never tree
+canopy". A person on the ground is the only way it enters the record.
+
+Report a felled tree, a fire, dieback or a new planting, with a photo and a
+geotag. Photos are resized to 1280&nbsp;px and re-encoded, which drops EXIF as a
+side effect: the only location kept is the one you deliberately placed.
+
+**Nothing claims the government was alerted.** There is no public API to file
+against, and an email to the PHA is a message in an inbox, not a workflow.
+Instead there are two clearly separated tiers:
+
+| | |
+|---|---|
+| **The public log** | `public/data/reports.json`, committed — public, timestamped, auditable in git history |
+| **Local drafts** | this browser only, labelled that way everywhere they appear |
+
+Export produces a `reports.json` **already merged with the current public log**,
+so committing it cannot drop anyone else's entries. For a complaint that gets a
+tracking number, each report offers copyable text for the Pakistan Citizen
+Portal — the route that does have a workflow behind it.
+
+### Ask the map
+
+Type `worst hit areas in johar town` and the region, the view and the filters
+move. Type `گلبرگ میں گرمی` and the same thing happens.
+
+It is a **deterministic phrase matcher, not a chatbot** — and that is the whole
+design. It answers by moving the map, never by writing sentences, so there is no
+mechanism by which it can state a figure nobody measured. Every output is an
+existing piece of app state: one of five regions, one of five views, a year the
+pipeline actually produced, a species that appears in the ranking.
+
+Consequences, all of them in its favour here:
+
+- **It cannot hallucinate.** There is nothing to hallucinate with.
+- **It is auditable.** It shows what it matched *and what it ignored*, so you can
+  see it was understood rather than guessed at.
+- **Urdu costs almost nothing**, because setting a filter needs recognition, not
+  generation.
+- **It works offline**, like the rest of the product.
+
+When it understands nothing it says so. Silently doing nothing is the one
+genuinely bad outcome — you cannot tell that from a broken feature.
+
 ### The Method screen
 
 Written to survive a technical judge reading it closely — limits first.
@@ -131,6 +237,35 @@ Written to survive a technical judge reading it closely — limits first.
 **No API key is needed for any of it**, and the app makes **zero runtime API
 calls** — everything is precomputed and committed, so nothing can time out during
 a demo.
+
+### It opens on 3G
+
+First paint fetches three files. The core grid carries only the **latest** NDVI
+year — the one the app defaults to and the one the risk layer needs — and the
+earlier years become separate files, fetched when the scrubber asks and
+prefetched once the map reports idle. On DHA, the worst case, that took first
+paint from 144&nbsp;KB gzip to **53&nbsp;KB**.
+
+The prefetch waits for MapLibre's `idle` event rather than `requestIdleCallback`,
+which only knows the main thread is free and starts pulling years while the
+basemap is still streaming — on a slow connection it competes with the map the
+user is actually looking at.
+
+Measured, not assumed: `node scripts/budget.mjs --3g` reports what is on the
+critical path — **3.7–4.0&nbsp;s** to measurements on screen on the production
+build, throttled to Fast 3G, over three runs. `node scripts/progressive.mjs --3g`
+fails if a year file ever lands before the first layer renders.
+
+**No font request leaves the origin.** The four fonts are self-hosted, and Noto
+Nastaliq Urdu is subsetted to the five letters of the wordmark — the only string in the app that uses it — taking it from
+**233&nbsp;KB to 20&nbsp;KB**. `python scripts/fetch_fonts.py` regenerates them;
+`scripts/features.mjs` measures the rendered wordmark and fails if it falls back
+to a system face, because Nastaliq is a joining script and a bad subset would
+look wrong while every other check still passed.
+
+The basemap and the imagery are still third-party, deliberately — OpenFreeMap and
+Esri are the whole reason there is no tile server to run. So the honest claim is
+that **nothing but map tiles leaves the origin**, not that nothing does.
 
 You can verify any figure yourself. Re-reading the raw scene at the top-ranked
 site gives **45.8 °C** against the **45.7 °C** the app reports, and NDVI **0.13**
@@ -172,6 +307,14 @@ water instead.
 - **CO2 and PM2.5 are estimated**, from one published coefficient times mature
   crown area — not measured, not Lahore-specific, and they assume every tree
   reaches maturity.
+- **A detected loss is not a cause.** Felling, fire, harvest, clearance and a mown
+  lawn look identical from orbit. Pair an event with a citizen report to say what
+  happened.
+- **Watches do not notify.** No server, so nothing arrives while the tab is shut.
+- **A citizen report is not a complaint.** It is a public timestamped record; the
+  Citizen Portal is where a complaint gets a tracking number.
+- **We cannot see the ground from November to February.** Smog-season passes are
+  kept and marked unusable, never silently dropped.
 
 ---
 
@@ -187,18 +330,33 @@ Regenerate the data (slow; results are cached):
 
 ```bash
 pip install rasterio pyproj shapely numpy
-python pipeline/run.py              # all five regions
+python pipeline/run.py              # all five regions — slow, the decade of yearly layers
 python pipeline/run.py model-town   # just one
+python pipeline/recent.py           # the fast rolling stage: recent passes and detected loss
+python pipeline/split_years.py      # re-shape committed grids into core + per-year files
 ```
+
+`run.py` is the slow half and rarely needs re-running. `recent.py` is the half
+meant to run on a schedule — it reuses the grid `run.py` wrote, reads only passes
+it has not seen, and is what keeps the Change panel current.
 
 Verify:
 
 ```bash
-python pipeline/test_logic.py   # scoring, species matching, compositing
-python pipeline/qa.py           # data sanity across every region
-node scripts/smoke.mjs          # map timing + rendered dot count
-node scripts/docshots.mjs       # the images in this README
+python pipeline/test_logic.py      # scoring, species matching, compositing, change rules
+python pipeline/qa.py              # data sanity across every region
+node scripts/smoke.mjs             # map timing + rendered dot count
+node scripts/progressive.mjs       # first paint stays small; the scrubber really repaints
+node scripts/progressive.mjs --3g  # the same, throttled to Fast 3G
+node scripts/budget.mjs --3g       # where the time goes before the map is usable
+node scripts/features.mjs          # reporting, change detection, watches, text-to-filter
+node scripts/mobileshots.mjs       # no overflow, no tap target under 34px
+node scripts/docshots.mjs          # the images in this README
 ```
+
+`test_logic.py` runs the change-detection rules on numpy alone, so the checks
+that decide whether the product accuses anyone of felling trees take two seconds
+rather than needing the geospatial stack and the network.
 
 ---
 
@@ -206,6 +364,7 @@ node scripts/docshots.mjs       # the images in this README
 
 | | |
 |---|---|
+| `/` | Ask the map — sets filters from a description |
 | `1` – `5` | Canopy, Heat, People, Risk, Priority |
 | `Q W E R T` | Jump between the five regions |
 | `←` `→` | Step through years |
@@ -214,6 +373,8 @@ node scripts/docshots.mjs       # the images in this README
 | `A` | Select an area on the map |
 | `C` | Cost |
 | `G` | Air |
+| `V` | Recent change and watched areas |
+| `N` | Report a felled tree or fire |
 | `L` | Show or hide the ranked list |
 | `B` | Map or satellite |
 | `D` | Light or dark |
