@@ -6,8 +6,7 @@ import { SiteList } from './ui/SiteList'
 import { CoverTrend } from './ui/CoverTrend'
 import { CostPanel, Tools } from './ui/Tools'
 import { AirPanel } from './ui/AirPanel'
-import { ReportPanel } from './ui/ReportPanel'
-import { AlertsPanel } from './ui/AlertsPanel'
+
 import { CommandBar } from './ui/CommandBar'
 import { Shortcuts } from './ui/Shortcuts'
 import { Overture } from './ui/Overture'
@@ -36,9 +35,17 @@ const Methodology = lazy(() =>
 const MobileShell = lazy(() =>
   import('./ui/mobile/MobileShell').then((m) => ({ default: m.MobileShell }))
 )
+const ReportPanel = lazy(() =>
+  import('./ui/ReportPanel').then((m) => ({ default: m.ReportPanel }))
+)
+const AlertsPanel = lazy(() =>
+  import('./ui/AlertsPanel').then((m) => ({ default: m.AlertsPanel }))
+)
 
 export default function App() {
   const stage = useApp((s) => s.stage)
+  const reportsOpen = useApp((s) => s.reportsOpen)
+  const alertsOpen = useApp((s) => s.alertsOpen)
   const mobile = useIsMobile()
   useAppShortcuts()
   useUrlState()
@@ -58,8 +65,8 @@ export default function App() {
           <SitePlate />
           <CostPanel />
           <AirPanel />
-          <ReportPanel />
-          <AlertsPanel />
+          {reportsOpen && <Suspense fallback={null}><ReportPanel /></Suspense>}
+          {alertsOpen && <Suspense fallback={null}><AlertsPanel /></Suspense>}
           <LoadingBar />
         </>
       )}
@@ -76,8 +83,8 @@ export default function App() {
           <CoverTrend />
           <CostPanel />
           <AirPanel />
-          <ReportPanel />
-          <AlertsPanel />
+          {reportsOpen && <Suspense fallback={null}><ReportPanel /></Suspense>}
+          {alertsOpen && <Suspense fallback={null}><AlertsPanel /></Suspense>}
           <SitePlate />
           <Shortcuts />
           <LoadingBar />

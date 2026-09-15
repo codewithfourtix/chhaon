@@ -44,6 +44,7 @@ Output: public/data/<region>-recent.json
 import json
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -63,6 +64,11 @@ from run import (  # noqa: E402
 
 import pyproj  # noqa: E402
 import rasterio  # noqa: E402
+
+
+# How many COG reads run at once. Six gets most of the available speed-up while
+# staying a polite client of a free public catalogue; override with --jobs.
+JOBS = 6
 
 
 def find_recent_passes(bbox, days):
@@ -131,25 +137,45 @@ def run_region(region_id):
     log(f"  {len(items)} scene(s) in the last {RECENT_DAYS} days")
 
     passes = []
-    usable = []  # (iso_date, grid) oldest-first, only usable ones
+    usable = []  # (record, grid) oldest-first, only usable ones
 
-    # Every judgement below lives in change.py, which needs numpy alone, so the
-    # rules that decide whether a pass may drive change detection are checked by
-    # test_logic.py in two seconds instead of only by a run that needs the network.
+    # Smog-season passes are never read: the aerosol makes the values meaningless,
+    # and a COG read we will throw away is a minute of somebody else's bandwidth.
+    wanted = [it for it in items if not in_smog_season(it["properties"]["datetime"][:10])]
+
+    # These reads are HTTP range requests against a public catalogue — almost
+    # entirely waiting on the network — so they go in a thread pool rather than one
+    # after another. Measured on Model Town: 16 reads took 124 s serially.
+    #
+    # Bounded, and deliberately modest. This is a free service run for everyone; the
+    # aim is to stop wasting our own wall time, not to extract maximum throughput
+    # from somebody else's infrastructure.
+    log(f"  reading {len(wanted)} pass(es), {JOBS} at a time...")
+    grids = {}
+    with ThreadPoolExecutor(max_workers=JOBS) as pool:
+        futures = {pool.submit(read_pass, it, bbox, grid, region_id): it["id"] for it in wanted}
+        for fut, scene_id in futures.items():
+            try:
+                grids[scene_id] = fut.result()
+            except Exception as e:  # noqa: BLE001
+                grids[scene_id] = e
+
+    # Judged in scene order, so the log and the output stay chronological however
+    # the reads happened to finish. Every judgement lives in change.py, which needs
+    # numpy alone, so these rules are checked by test_logic.py in two seconds rather
+    # than only by a run that needs the network.
     for item in items:
         iso = item["properties"]["datetime"][:10]
         record = new_pass(item["id"], iso, round(item["properties"].get("eo:cloud_cover", 0), 1))
 
         if in_smog_season(iso):
-            # Not read at all — the aerosol makes the values meaningless, and a
-            # COG read we will never use is a minute of somebody's bandwidth.
             passes.append(smog_skip(record))
             continue
 
-        try:
-            cells = read_pass(item, bbox, grid, region_id)
-        except Exception as e:  # noqa: BLE001
-            passes.append(read_failed(record, e))
+        cells = grids.get(item["id"])
+        if cells is None or isinstance(cells, BaseException):
+            passes.append(read_failed(record, cells or RuntimeError("not read")))
+            log(f"  {iso} unread — {record['reason']}")
             continue
 
         classify_pass(record, cells)
@@ -219,7 +245,17 @@ def run_region(region_id):
 
 
 def main():
-    targets = sys.argv[1:] or list(REGIONS)
+    global JOBS
+    args = sys.argv[1:]
+
+    # --jobs N, because the right number depends on the connection rather than on
+    # anything knowable here.
+    if "--jobs" in args:
+        i = args.index("--jobs")
+        JOBS = max(1, int(args[i + 1]))
+        del args[i:i + 2]
+
+    targets = args or list(REGIONS)
     wrote = 0
     for rid in targets:
         if run_region(rid):

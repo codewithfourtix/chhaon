@@ -70,7 +70,11 @@ const run = async () => {
   await page
     .waitForFunction(
       () =>
-        document.querySelectorAll('.sitelist__rows li, .msheet .row').length > 0 &&
+        // `[data-site]` specifically, NOT any <li> in the ranked list: the list
+        // renders an empty-state <li> when it has no data, so a looser selector
+        // fired before a single measurement had arrived and reported the shell's
+        // load time as the app's — 2.5s while the grid was still in flight.
+        document.querySelectorAll('[data-site]').length > 0 &&
         !!document.querySelector('.maplibregl-canvas'),
       null,
       { timeout: 180_000 }
