@@ -44,6 +44,9 @@ from config import (  # noqa: E402
     STAC_S2, WEIGHTS,
 )
 from cogs import lst_celsius_from, ndvi_from  # noqa: E402
+# Imported rather than reimplemented, so a full run and `split_years.py` cannot
+# drift into writing two different on-disk layouts.
+from split_years import write_year  # noqa: E402
 
 CELL_M = 60  # analysis cell size; coarse enough to ship, fine enough to act on
 
@@ -712,6 +715,16 @@ def run_region(region_id):
     # zone's central meridian the error is well under a metre.
     gl, gb, gr, gt = grid["bounds_utm"]
     corner = lambda x, y: [round(v, 6) for v in to_wgs(x, y)]  # noqa: E731
+
+    # Only the latest year goes inline. The app defaults to it, riskFor() needs
+    # it for the risk band, and shipping the other eight in the same file tripled
+    # first paint to draw a layer nobody had asked for yet — 105 KB of 144 KB
+    # gzip on DHA. Earlier years become <region>-ndvi-<year>.json, fetched when
+    # the scrubber first asks and prefetched at idle. See split_years.py.
+    latest_year = years[-1]
+    for y in years[:-1]:
+        write_year(region_id, y, grid, q(ndvi_by_year[y], 100))
+
     grid_out = {
         "region": region_id, "name": cfg["name"],
         "bbox": [w, s, e, n],
@@ -722,7 +735,7 @@ def run_region(region_id):
         "boundsUtm": list(grid["bounds_utm"]), "utmEpsg": 32643,
         "cellM": CELL_M, "cols": grid["cols"], "rows": grid["rows"],
         "years": years,
-        "ndvi": {str(y): q(ndvi_by_year[y], 100) for y in years},
+        "ndvi": {str(latest_year): q(ndvi_by_year[latest_year], 100)},
         "lst": q(lst_cells, 10),
         "pop": q(pop, 10),
         "landuse": [int(v) for v in landuse.ravel()],

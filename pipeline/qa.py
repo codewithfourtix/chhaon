@@ -80,13 +80,49 @@ def check_region(rid, meta):
     if np.nansum(pop) <= 0:
         bad(f"{rid}: population layer is empty — the 'people served' term is dead")
 
+    # NDVI years live in two places since the payload split: the latest year is
+    # inline in the core file, earlier years are separate files the app fetches
+    # on demand. A year the metadata promises but that resolves to nothing is a
+    # dead scrubber tick, and it would be invisible in the UI — the layer would
+    # simply keep showing the previous year — so it is checked here.
+    ndvi = {}
     for y in g["years"]:
-        v = unq(g["ndvi"][str(y)], 100)
-        if np.isfinite(v).mean() < 0.5:
+        key = str(y)
+        if key in g["ndvi"]:
+            ndvi[y] = g["ndvi"][key]
+            continue
+        ypath = f"{OUT}/{rid}-ndvi-{y}.json"
+        if not os.path.exists(ypath):
+            bad(f"{rid}: year {y} is listed in 'years' but neither inline nor at "
+                f"{os.path.basename(ypath)} — run `python pipeline/split_years.py`")
+            continue
+        ydoc = strict_load(ypath, rid)
+        if ydoc is None:
+            continue
+        if ydoc.get("cols") != g["cols"] or ydoc.get("rows") != g["rows"]:
+            bad(f"{rid}: {os.path.basename(ypath)} is {ydoc.get('cols')}x"
+                f"{ydoc.get('rows')}, but the grid is {g['cols']}x{g['rows']} — "
+                "stale split, regenerate it")
+            continue
+        if len(ydoc["ndvi"]) != n:
+            bad(f"{rid}: {os.path.basename(ypath)} has {len(ydoc['ndvi'])} values, "
+                f"expected {n}")
+            continue
+        ndvi[y] = ydoc["ndvi"]
+
+    latest = g["years"][-1]
+    if str(latest) not in g["ndvi"]:
+        bad(f"{rid}: the latest year ({latest}) must stay inline in the core file — "
+            "the risk layer and the default view both need it on first paint")
+
+    for y, vals in ndvi.items():
+        if np.isfinite(unq(vals, 100)).mean() < 0.5:
             bad(f"{rid}: {y} NDVI is more than half empty")
-    veg = {y: round(float(np.nanmean(unq(g["ndvi"][str(y)], 100) >= 0.30)) * 100, 1)
-           for y in g["years"]}
+    veg = {y: round(float(np.nanmean(unq(vals, 100) >= 0.30)) * 100, 1)
+           for y, vals in sorted(ndvi.items())}
     print(f"  veg %    {veg}")
+    print(f"  ndvi     {len(ndvi)}/{len(g['years'])} years resolved "
+          f"({latest} inline, {len(ndvi) - 1} on demand)")
 
     lu = Counter(g["landuse"])
     plantable = n - lu.get(0, 0)

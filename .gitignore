@@ -25,3 +25,7 @@ dist-ssr
 
 # Pipeline scratch — cached COG grids and Overpass responses
 pipeline/.cache/
+
+# Python bytecode
+__pycache__/
+*.pyc

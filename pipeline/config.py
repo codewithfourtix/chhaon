@@ -91,6 +91,84 @@ LST_MAX_CLOUD = 20
 # threshold separating sparse/bare ground from real vegetation.
 NDVI_VEG_THRESHOLD = 0.30
 
+# --------------------------------------------------------------------------
+# Recent passes — sudden loss, not the yearly trend
+# --------------------------------------------------------------------------
+#
+# The yearly composites above exist to be comparable across a decade, which is
+# why they are locked to one season. That makes them useless for "a stand of
+# trees came down last month": the next comparable reading is a year away.
+#
+# Sentinel-2's two satellites give a 5-day revisit, so the observations already
+# exist. This is a separate, deliberately different analysis over them:
+#
+#   yearly composites  one window a year, multi-scene, for comparing years
+#   recent passes      every usable pass in a rolling window, single-scene,
+#                      for catching a change while it is still news
+#
+# They are never mixed. A single pass cannot carry a multi-year claim, and a
+# year composite cannot date an event.
+RECENT_DAYS = 120
+RECENT_MAX_CLOUD = 40
+# Per-pass coverage floor. Lower than the composite's 92% because a single pass
+# is allowed to be partial — it is one observation, not the year's record — but
+# below this there is not enough ground to compare.
+RECENT_MIN_COVERAGE = 0.60
+
+# Lahore's smog season. November to February is not a data-quality inconvenience
+# here, it is a wall: persistent aerosol depresses NDVI across the whole scene,
+# so a smog-season pass shows "canopy loss" everywhere at once and recovery
+# everywhere in March. Both are artefacts.
+#
+# These passes are NOT discarded — they are kept in the record and marked
+# unusable with the reason, because a gap the user cannot explain looks like a
+# bug, and because "we cannot see the ground in December" is itself a finding a
+# journalist should know about. They are excluded from change detection only.
+SMOG_MONTHS = (11, 12, 1, 2)
+
+# What counts as a loss event, per cell.
+#
+# The NDVI drop must clear this AND the cell must have been genuinely vegetated
+# beforehand: a bare cell going from 0.10 to 0.02 is noise on a parking lot, not
+# a felled tree.
+RECENT_DROP_NDVI = 0.15
+RECENT_WAS_VEGETATED = 0.30
+# Single cells are dropped. One 60 m cell crossing the threshold is within what
+# sensor noise, a shadow or a harvested lawn can do; three contiguous cells
+# (~1.1 ha) is a real change on the ground.
+RECENT_MIN_EVENT_CELLS = 3
+# Above this, an event is called severe — roughly a hectare and a half of
+# vegetated ground losing most of its signal.
+RECENT_SEVERE_CELLS = 8
+
+# Scene-level haze rejection.
+#
+# Found by running this for real: the 2026-09-13 pass over Model Town cleared the
+# coverage floor at 60% and still reported the region as 2.3% vegetated, against
+# ~40% on every neighbouring pass. Compared against the earlier record, almost the
+# whole neighbourhood read as loss — one event of 371 ha.
+#
+# The coverage floor cannot catch this. Sentinel-2's scene classification masks
+# opaque cloud, but thin haze passes the mask and still depresses NDVI across the
+# whole scene. That is the same physics the yearly composites were built to defeat,
+# and it needs its own guard here.
+#
+# The test is physical rather than statistical: a region cannot lose a third of its
+# vegetation in five days. So a pass whose region-wide vegetated fraction falls
+# below this share of the recent median is haze, not ground change, and is marked
+# unusable with that reason. Real felling is local — it moves a few cells, not the
+# whole scene — so this cannot hide the events we are looking for.
+RECENT_SCENE_HAZE_RATIO = 0.55
+
+# How many earlier usable passes form the "before" reading.
+#
+# Also found by running it: taking the maximum over every pass in a 120-day window
+# builds a seasonal envelope, so any cell merely at its September low against a
+# June peak read as loss. Bounded to the few most recent passes, "before" means
+# what the ground was actually like recently, while still being a maximum over
+# several observations so haze in one of them cannot manufacture a loss.
+RECENT_BASELINE_PASSES = 3
+
 STAC_S2 = "https://earth-search.aws.element84.com/v1/search"
 STAC_MPC = "https://planetarycomputer.microsoft.com/api/stac/v1/search"
 MPC_SAS = "https://planetarycomputer.microsoft.com/api/sas/v1/token/landsat-c2-l2"
