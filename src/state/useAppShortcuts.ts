@@ -85,6 +85,18 @@ export function useAppShortcuts() {
           s.toggleAir()
           e.preventDefault()
           break
+        // N for a new report. R is already a region key.
+        case 'n':
+        case 'N':
+          s.toggleReports()
+          e.preventDefault()
+          break
+        // V for the change/watch panel — C and A are taken by cost and area.
+        case 'v':
+        case 'V':
+          s.toggleAlerts()
+          e.preventDefault()
+          break
         case 'l':
         case 'L':
           s.toggleList()
@@ -107,7 +119,13 @@ export function useAppShortcuts() {
           e.preventDefault()
           break
         case 'Escape':
-          if (s.selectedSiteId) s.selectSite(null)
+          // Most specific first: a half-placed report is the most recent thing
+          // the user did, so Escape should undo that before clearing anything else.
+          if (s.placingReport || s.pendingReport) {
+            s.setPlacingReport(false)
+            s.setPendingReport(null)
+          } else if (s.selectedReportId) s.selectReport(null)
+          else if (s.selectedSiteId) s.selectSite(null)
           else if (s.stage === 'methodology') s.enterWorkspace()
           break
         default:

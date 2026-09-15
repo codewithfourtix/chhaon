@@ -30,6 +30,10 @@ export function useRegionData(region: RegionId): RegionData {
       .then(([meta, grid, sites]) => {
         if (!live) return
         setState({ meta, grid, sites, loading: false, error: null })
+        // Earlier NDVI years are NOT prefetched here. MapCanvas kicks that off
+        // when the map reports idle, because only the map knows when its tiles
+        // have settled — requestIdleCallback sees a free main thread and starts
+        // pulling immediately, competing with the basemap for the same 3G pipe.
       })
       .catch((e: unknown) => {
         if (!live) return

@@ -4,10 +4,17 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 
 import { buildBasemapStyle, LIGHT_TOKENS, DARK_TOKENS, FIRST_LABEL_LAYER } from './basemapStyle'
 import { LAHORE_BOUNDS, REGIONS } from '../data/regions'
-import { domainFor, domainForScores, rampBreaks } from '../data/load'
+import {
+  domainFor, loadNdviYear, prefetchNdviYears, rampBreaks, useNdviYears,
+} from '../data/load'
 import { rasterizeGrid } from './rasterize'
+import {
+  addEventIcons, addReportIcons, EVENT_ICONS, PENDING_ICON, reportIconId,
+} from './reportMarkers'
+import { loadRecent, type LossEvent } from '../data/recent'
 import { RISK_COLOURS } from '../data/risk'
 import { useRegionData } from '../data/useRegionData'
+import { useReports } from '../data/useReports'
 import { useApp } from '../state/store'
 
 /**
@@ -23,6 +30,7 @@ const FIELD = 'field'
 const EDGE = 'field-edge-src'
 const BOX = 'area-box'
 const SITES = 'sites'
+const REPORTS = 'reports'
 const DATA_LAYERS = ['field-raster', 'field-edge', 'sites-halo', 'sites-circles', 'sites-rank'] as const
 
 const HEAT_LIGHT = ['#E4E9ED', '#E9C88E', '#DC9A5A', '#C56836', '#9C3324', '#5C1015']
@@ -71,9 +79,20 @@ export function MapCanvas() {
   const area = useApp((s) => s.area)
   const setArea = useApp((s) => s.setArea)
   const setLoading = useApp((s) => s.setDataLoading)
+  const placingReport = useApp((s) => s.placingReport)
+  const pendingReport = useApp((s) => s.pendingReport)
+  const setPendingReport = useApp((s) => s.setPendingReport)
+  const selectedReportId = useApp((s) => s.selectedReportId)
+  const selectReport = useApp((s) => s.selectReport)
+  const { all: reports } = useReports()
+  const alertsOpen = useApp((s) => s.alertsOpen)
+  const eventFocus = useApp((s) => s.eventFocus)
+  const [events, setEvents] = useState<LossEvent[]>([])
 
   const dark = theme === 'dark'
   const { grid, sites, loading, error } = useRegionData(region)
+  // Bumps when a year of NDVI arrives, so the layer effect re-runs and paints it.
+  const ndviVersion = useNdviYears()
 
   useEffect(() => {
     setLoading(loading, error)
@@ -142,7 +161,22 @@ export function MapCanvas() {
   // Sources and layers.
   useEffect(() => {
     const m = map.current
-    if (!m || !styleReadyRef.current || !grid || !sites) return
+    // Sites are NOT required here. The measured fields only need the grid, so
+    // waiting on the ranked-site file would hold the whole layer back for data
+    // four of the five views never read.
+    if (!m || !styleReadyRef.current || !grid) return
+
+    // The canopy year may still be in flight, because only the latest year ships
+    // in the core file. Kick the fetch and leave the current layer alone: tearing
+    // it down would blank the map mid-scrub and read as a broken scrubber rather
+    // than a loading one. The progress hairline already says data is coming.
+    if (view === 'canopy') {
+      const y = year !== null && grid.years.includes(year) ? year : grid.years[grid.years.length - 1]
+      if (!grid.ndvi[String(y)]) {
+        void loadNdviYear(grid, y)
+        return
+      }
+    }
 
     for (const id of DATA_LAYERS) if (m.getLayer(id)) m.removeLayer(id)
     for (const src of [FIELD, EDGE, SITES]) if (m.getSource(src)) m.removeSource(src)
@@ -173,6 +207,9 @@ export function MapCanvas() {
     }, FIRST_LABEL_LAYER)
 
     if (view === 'priority') {
+      // The study-area edge is already drawn above, so the map is not empty
+      // while the ranked sites are still arriving.
+      if (!sites) return
       const shown = {
         ...sites,
         features: sites.features.filter((f) => {
@@ -188,7 +225,15 @@ export function MapCanvas() {
       // The ramp spans the scores that exist. A fixed 0.25-0.95 domain over
       // scores that run 0.66-0.80 put every site in two of six buckets, so the
       // top site and the fortieth came out the same colour.
-      const [slo, shi] = domainForScores(sites.features.map((f) => f.properties.score))
+      //
+      // Through domainFor rather than domainForScores directly, so the legend —
+      // which calls the same function with the same scores — cannot print a
+      // different range from the one being painted here.
+      //
+      // Unfiltered on purpose: filtering to roadside sites must not re-scale the
+      // ramp, or the same site changes colour depending on what else is shown.
+      const [slo, shi] = domainFor(grid, 'priority', year,
+        sites.features.map((f) => f.properties.score))
       // Size by score. MapLibre requires the zoom expression at the TOP level of
       // a paint property — wrapping it in a multiply makes the whole property
       // invalid and the layer silently draws nothing, which is exactly what
@@ -292,7 +337,215 @@ export function MapCanvas() {
         'raster-contrast': satellite ? 0.06 : 0,
       },
     }, FIRST_LABEL_LAYER)
-  }, [view, grid, sites, dark, year, styleEpoch, basemap, filters])
+  }, [view, grid, sites, dark, year, styleEpoch, basemap, filters, ndviVersion])
+
+  /**
+   * Citizen reports.
+   *
+   * Its own effect, not part of the data-layer one, for two reasons: reports are
+   * shown in every view (they are ground truth, not one of the measured fields),
+   * and they change on a completely different cadence — saving a report must not
+   * rebuild the heat raster.
+   *
+   * `setData` rather than remove-and-re-add when the source already exists, per
+   * .claude/skills/map-performance/SKILL.md.
+   */
+  useEffect(() => {
+    const m = map.current
+    if (!m || !styleReadyRef.current) return
+
+    // setStyle wipes registered images along with layers, so re-register.
+    addReportIcons(m, dark)
+
+    const fc = {
+      type: 'FeatureCollection' as const,
+      features: reports.map((r) => ({
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates: [r.lon, r.lat] },
+        properties: { id: r.id, kind: r.kind, icon: reportIconId(r.kind) },
+      })),
+    }
+
+    const existing = m.getSource(REPORTS) as { setData?: (d: unknown) => void } | undefined
+    if (existing?.setData) {
+      existing.setData(fc)
+    } else {
+      m.addSource(REPORTS, { type: 'geojson', data: fc })
+    }
+
+    if (!m.getLayer('reports-marks')) {
+      m.addLayer({
+        id: 'reports-marks',
+        type: 'symbol',
+        source: REPORTS,
+        layout: {
+          'icon-image': ['get', 'icon'] as never,
+          // Reports are sparse and every one matters, so none is ever hidden to
+          // resolve a collision.
+          'icon-allow-overlap': true,
+          'icon-size': ['interpolate', ['linear'], ['zoom'], 11, 0.8, 16, 1.15] as never,
+        },
+      }, FIRST_LABEL_LAYER)
+    }
+
+    // The unsaved pin, drawn above the saved ones.
+    const pendingFc = {
+      type: 'FeatureCollection' as const,
+      features: pendingReport
+        ? [{
+            type: 'Feature' as const,
+            geometry: {
+              type: 'Point' as const,
+              coordinates: [pendingReport.lon, pendingReport.lat],
+            },
+            properties: {},
+          }]
+        : [],
+    }
+    const pendingSrc = m.getSource('reports-pending-src') as
+      | { setData?: (d: unknown) => void }
+      | undefined
+    if (pendingSrc?.setData) {
+      pendingSrc.setData(pendingFc)
+    } else {
+      m.addSource('reports-pending-src', { type: 'geojson', data: pendingFc })
+    }
+    if (!m.getLayer('reports-pending')) {
+      m.addLayer({
+        id: 'reports-pending',
+        type: 'symbol',
+        source: 'reports-pending-src',
+        layout: {
+          'icon-image': PENDING_ICON,
+          'icon-allow-overlap': true,
+          'icon-size': 1.3,
+        },
+      }, FIRST_LABEL_LAYER)
+    }
+  }, [reports, pendingReport, dark, styleEpoch])
+
+  // A selected report lifts slightly, which is the design system's selection
+  // language. Paint-only, so it never rebuilds the layer.
+  //
+  // The zoom interpolate has to stay at the TOP level: wrapping it in a `case`
+  // makes the whole property invalid and MapLibre silently draws nothing. That is
+  // the same mistake documented in docs/PRODUCT.md that once left 120 site
+  // circles rendering at zero radius, so the selected/unselected choice lives
+  // inside each zoom stop instead.
+  useEffect(() => {
+    const m = map.current
+    if (!m || !styleReadyRef.current || !m.getLayer('reports-marks')) return
+    const pick = (sel: number, base: number) => [
+      'case', ['==', ['get', 'id'], selectedReportId ?? ' '], sel, base,
+    ]
+    m.setLayoutProperty('reports-marks', 'icon-size', [
+      'interpolate', ['linear'], ['zoom'],
+      11, pick(1.2, 0.8),
+      16, pick(1.7, 1.15),
+    ] as never)
+  }, [selectedReportId, styleEpoch, reports])
+
+  // Recent-pass data, fetched per region and absent until the rolling stage has
+  // been run. Absence is normal, so it is not an error path.
+  useEffect(() => {
+    let live = true
+    loadRecent(region).then((d) => {
+      if (live) setEvents(d?.events ?? [])
+    })
+    return () => {
+      live = false
+    }
+  }, [region])
+
+  /**
+   * Detected losses, drawn only while the Change panel is open.
+   *
+   * Deliberately not always on. These are the loudest marks on the map and they
+   * are an accusation-shaped claim; leaving them over every view would compete
+   * with the measured fields the rest of the product is about. The panel that
+   * explains what they are is what turns them on.
+   */
+  useEffect(() => {
+    const m = map.current
+    if (!m || !styleReadyRef.current) return
+    addEventIcons(m, dark)
+
+    const fc = {
+      type: 'FeatureCollection' as const,
+      features: (alertsOpen ? events : []).map((e) => ({
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates: [e.lon, e.lat] },
+        properties: { id: e.id, icon: EVENT_ICONS[e.severity], ha: e.areaM2 / 10_000 },
+      })),
+    }
+
+    const src = m.getSource('loss') as { setData?: (d: unknown) => void } | undefined
+    if (src?.setData) src.setData(fc)
+    else m.addSource('loss', { type: 'geojson', data: fc })
+
+    if (!m.getLayer('loss-marks')) {
+      m.addLayer({
+        id: 'loss-marks',
+        type: 'symbol',
+        source: 'loss',
+        layout: {
+          'icon-image': ['get', 'icon'] as never,
+          'icon-allow-overlap': true,
+          'icon-size': ['interpolate', ['linear'], ['zoom'], 11, 0.85, 16, 1.25] as never,
+        },
+      }, FIRST_LABEL_LAYER)
+    }
+  }, [events, alertsOpen, dark, styleEpoch])
+
+  // Fly to a detected loss picked from the panel. Zoomed in enough to see the
+  // ground, because the question after "where" is "what is actually there".
+  useEffect(() => {
+    const m = map.current
+    if (!m || !eventFocus) return
+    const centre: [number, number] = [eventFocus.lon, eventFocus.lat]
+    if (reducedMotion()) m.jumpTo({ center: centre, zoom: Math.max(m.getZoom(), 15.5) })
+    else m.flyTo({ center: centre, zoom: Math.max(m.getZoom(), 15.5), curve: 1.3, speed: 1.1 })
+  }, [eventFocus])
+
+  // Placing a report: the next click on the map fixes its position.
+  useEffect(() => {
+    const m = map.current
+    if (!m || !placingReport) return
+    m.getCanvas().style.cursor = 'crosshair'
+    const onClick = (e: { lngLat: { lng: number; lat: number } }) => {
+      setPendingReport({ lon: e.lngLat.lng, lat: e.lngLat.lat })
+    }
+    m.on('click', onClick)
+    return () => {
+      m.off('click', onClick)
+      m.getCanvas().style.cursor = ''
+    }
+  }, [placingReport, setPendingReport])
+
+  // Earlier NDVI years, pulled once the map has actually settled.
+  //
+  // MapLibre's `idle` fires when every tile has loaded and nothing is left to
+  // render — which is the real "the user has their map" moment. Hanging the
+  // prefetch off that rather than off requestIdleCallback is the difference
+  // between filling the cache with spare capacity and racing the basemap for it
+  // on a slow connection. Fires once per region.
+  useEffect(() => {
+    const m = map.current
+    if (!m || !grid) return
+    let done = false
+    const start = () => {
+      if (done) return
+      done = true
+      prefetchNdviYears(grid)
+    }
+    // `once` would never fire if the map had already gone idle before this
+    // effect ran, which is the common case on a fast connection.
+    if (m.loaded()) start()
+    else m.once('idle', start)
+    return () => {
+      m.off('idle', start)
+    }
+  }, [grid])
 
   // Selection ring — a paint update, never a layer rebuild.
   useEffect(() => {
@@ -349,20 +602,39 @@ export function MapCanvas() {
 
     let start: { lng: number; lat: number } | null = null
 
+    /**
+     * Where a raw pointer event is on the map.
+     *
+     * Move and release are tracked on the WINDOW, not on the map, because the map
+     * is full-bleed with chrome floating over it: the rail, the tool panels, the
+     * ranked list, the thermal scale and MapLibre's own attribution control all
+     * sit on top of it. A release over any of those never reaches the map, so the
+     * box was drawn and then silently never committed — the user saw their
+     * rectangle sitting there and nothing happening. Releasing over the
+     * attribution in the bottom-right corner hit this every time.
+     *
+     * Only mousedown stays on the map, so a drag can still only *begin* on it.
+     */
+    const at = (clientX: number, clientY: number) => {
+      const rect = m.getContainer().getBoundingClientRect()
+      return m.unproject([clientX - rect.left, clientY - rect.top])
+    }
+
     const down = (e: { lngLat: { lng: number; lat: number } }) => {
       start = { ...e.lngLat }
     }
-    const move = (e: { lngLat: { lng: number; lat: number } }) => {
+    const onMove = (e: MouseEvent) => {
       if (!start) return
-      draw(start, e.lngLat)
+      draw(start, at(e.clientX, e.clientY))
     }
-    const up = (e: { lngLat: { lng: number; lat: number } }) => {
+    const onUp = (e: MouseEvent) => {
       if (!start) return
+      const end = at(e.clientX, e.clientY)
       const b = {
-        w: Math.min(start.lng, e.lngLat.lng),
-        e: Math.max(start.lng, e.lngLat.lng),
-        s: Math.min(start.lat, e.lngLat.lat),
-        n: Math.max(start.lat, e.lngLat.lat),
+        w: Math.min(start.lng, end.lng),
+        e: Math.max(start.lng, end.lng),
+        s: Math.min(start.lat, end.lat),
+        n: Math.max(start.lat, end.lat),
       }
       start = null
       // A stray click is not a selection.
@@ -371,12 +643,12 @@ export function MapCanvas() {
     }
 
     m.on('mousedown', down)
-    m.on('mousemove', move)
-    m.on('mouseup', up)
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
     return () => {
       m.off('mousedown', down)
-      m.off('mousemove', move)
-      m.off('mouseup', up)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
       m.dragPan.enable()
       m.getCanvas().style.cursor = ''
     }
@@ -396,13 +668,30 @@ export function MapCanvas() {
     if (!m) return
 
     const onClick = (e: { point: { x: number; y: number } }) => {
-      if (!m.getLayer('sites-circles')) return
+      // While a report is being placed the click belongs to the placement
+      // handler, or one tap would drop a pin and open a site plate over it.
+      if (useApp.getState().placingReport) return
+
       const P = 8
-      const hits = m.queryRenderedFeatures(
-        [[e.point.x - P, e.point.y - P], [e.point.x + P, e.point.y + P]],
-        { layers: ['sites-circles'] }
-      ) as MapGeoJSONFeature[]
-      selectSite((hits[0]?.properties?.id as string) ?? null)
+      const box: [[number, number], [number, number]] = [
+        [e.point.x - P, e.point.y - P],
+        [e.point.x + P, e.point.y + P],
+      ]
+      const at = (layer: string) =>
+        m.getLayer(layer) ? (m.queryRenderedFeatures(box, { layers: [layer] }) as MapGeoJSONFeature[]) : []
+
+      // Reports are checked first: they are smaller marks and sit on top, so a
+      // report over a ranked site must still be selectable.
+      const report = at('reports-marks')[0]
+      if (report) {
+        selectReport((report.properties?.id as string) ?? null)
+        selectSite(null)
+        return
+      }
+
+      const site = at('sites-circles')[0]
+      selectSite((site?.properties?.id as string) ?? null)
+      if (!site) selectReport(null)
     }
     const enter = () => { m.getCanvas().style.cursor = 'pointer' }
     const leave = () => { m.getCanvas().style.cursor = '' }
@@ -410,12 +699,16 @@ export function MapCanvas() {
     m.on('click', onClick)
     m.on('mouseenter', 'sites-circles', enter)
     m.on('mouseleave', 'sites-circles', leave)
+    m.on('mouseenter', 'reports-marks', enter)
+    m.on('mouseleave', 'reports-marks', leave)
     return () => {
       m.off('click', onClick)
       m.off('mouseenter', 'sites-circles', enter)
       m.off('mouseleave', 'sites-circles', leave)
+      m.off('mouseenter', 'reports-marks', enter)
+      m.off('mouseleave', 'reports-marks', leave)
     }
-  }, [selectSite])
+  }, [selectSite, selectReport])
 
   function clearBox() {
     const m = map.current

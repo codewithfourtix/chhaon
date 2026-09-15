@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { REGIONS, SOURCE_RES, UNIT, VIEWS } from '../../data/regions'
-import { domainFor } from '../../data/load'
+import { domainFor, useNdviYears } from '../../data/load'
 import { RISK_BANDS, riskFor } from '../../data/risk'
 import { statsForBox } from '../../data/subarea'
 import { estimateCost, formatPkr } from '../../data/cost'
 import { downloadGeoJson, downloadSites } from '../../data/exportSites'
 import { useRegionData } from '../../data/useRegionData'
+import { useUnseenAlerts } from '../../data/useUnseenAlerts'
+import { CommandBar } from '../CommandBar'
 import { useApp } from '../../state/store'
 import type { ViewId } from '../../data/types'
 import {
   IconAir, IconCanopy, IconClose, IconDownload, IconGlobe, IconHeat, IconMethod,
-  IconMoney, IconPeople, IconPriority, IconRisk, IconSelect, IconTheme,
+  IconMoney, IconPeople, IconPriority, IconReport, IconRisk, IconSelect, IconTheme,
+  IconWatch,
 } from '../icons'
 
 const VIEW_ICON: Record<ViewId, () => React.ReactElement> = {
@@ -137,6 +140,11 @@ export function MobileShell() {
           })}
         </nav>
 
+        {/* Typing a place and a layer beats hunting for them on a phone, and the
+            Urdu path matters most here — this is the device most people in
+            Lahore will open it on. */}
+        <CommandBar />
+
         <MobileYear />
         <MobileBody onExpand={() => setExpanded(true)} />
 
@@ -224,6 +232,11 @@ function MobileTools() {
   const toggleAir = useApp((s) => s.toggleAir)
   const costOpen = useApp((s) => s.costOpen)
   const toggleCost = useApp((s) => s.toggleCost)
+  const reportsOpen = useApp((s) => s.reportsOpen)
+  const toggleReports = useApp((s) => s.toggleReports)
+  const alertsOpen = useApp((s) => s.alertsOpen)
+  const toggleAlerts = useApp((s) => s.toggleAlerts)
+  const unseen = useUnseenAlerts()
 
   return (
     <div className="mtools" role="group" aria-label="Tools">
@@ -254,6 +267,27 @@ function MobileTools() {
         <IconMoney />
         Cost
       </button>
+      {/* Reporting is the one tool most likely to be used standing in front of
+          the tree, so on a phone it is a first-class chip rather than buried. */}
+      <button
+        type="button"
+        className={`mchip ${reportsOpen ? 'is-on' : ''}`}
+        aria-pressed={reportsOpen}
+        onClick={toggleReports}
+      >
+        <IconReport />
+        Report
+      </button>
+      <button
+        type="button"
+        className={`mchip ${alertsOpen ? 'is-on' : ''}`}
+        aria-pressed={alertsOpen}
+        onClick={toggleAlerts}
+      >
+        <IconWatch />
+        Change
+        {!!unseen && <span className="tool__n tool__n--alert t-data">{unseen}</span>}
+      </button>
     </div>
   )
 }
@@ -263,8 +297,12 @@ function MobileLegend() {
   const view = useApp((s) => s.view)
   const region = useApp((s) => s.region)
   const year = useApp((s) => s.year)
-  const { grid } = useRegionData(region)
-  if (!grid || view === 'priority') return null
+  const { grid, sites } = useRegionData(region)
+  // Recompute the canopy domain when the displayed year arrives.
+  useNdviYears()
+  // Priority used to return nothing here, which left the *default* view with no
+  // key at all on a phone. A map with colour and no key is a decoration.
+  if (!grid) return null
 
   if (view === 'risk') {
     return (
@@ -279,8 +317,9 @@ function MobileLegend() {
     )
   }
 
-  const [lo, hi] = domainFor(grid, view, year)
-  const dp = view === 'canopy' ? 2 : 0
+  const [lo, hi] = domainFor(grid, view, year,
+    sites?.features.map((f) => f.properties.score))
+  const dp = view === 'canopy' || view === 'priority' ? 2 : 0
   const ramp = view === 'canopy' ? 'canopy' : view === 'people' ? 'people' : 'heat'
   return (
     <div className="mlegend" aria-label={`Legend, ${UNIT[view]}`}>
@@ -338,6 +377,8 @@ function MobileBody({ onExpand }: { onExpand: () => void }) {
   const { sites, grid, meta } = useRegionData(region)
 
   const rm = meta?.regions?.[region]
+  // Years arrive progressively, and the cover series is built from all of them.
+  useNdviYears()
   const stats = grid ? statsForBox(grid, area) : null
 
   if (!grid) return <p className="t-unit msheet__note">Loading measurements…</p>

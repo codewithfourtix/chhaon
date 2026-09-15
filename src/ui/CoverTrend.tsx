@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { allYearsLoaded, useNdviYears } from '../data/load'
 import { statsForBox } from '../data/subarea'
 import { downloadGeoPng, downloadGridGeoJson } from '../data/exportLayers'
 import { useRegionData } from '../data/useRegionData'
@@ -33,10 +34,14 @@ export function CoverTrend() {
   const setArea = useApp((s) => s.setArea)
   const setDrawing = useApp((s) => s.setDrawing)
   const { grid } = useRegionData(region)
+  // The series is built from every year, which now arrive progressively, so this
+  // has to recompute as they land.
+  const ndviVersion = useNdviYears()
 
   // Recomputed over whichever cells the drawn box contains — no new data, and
   // the same arithmetic the whole-region figure uses.
-  const stats = useMemo(() => (grid ? statsForBox(grid, area) : null), [grid, area])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const stats = useMemo(() => (grid ? statsForBox(grid, area) : null), [grid, area, ndviVersion])
 
   const series = useMemo(() => {
     if (!stats || !grid) return []
@@ -142,6 +147,17 @@ export function CoverTrend() {
             development — this series swings {lo.toFixed(0)}–{hi.toFixed(0)}% with
             no monotonic direction. See Method.
           </p>
+
+          {/* The swing above is the panel's whole argument, and it is computed
+              from the years currently in memory. While the rest are still
+              arriving it would understate the range, so say so rather than
+              printing a figure that quietly changes a second later. */}
+          {!allYearsLoaded(grid) && (
+            <p className="t-unit cover__pending">
+              {series.length} of {grid.years.length} years loaded — the range will
+              widen as the rest arrive.
+            </p>
+          )}
         </>
       ) : (
         <p className="cover__hint t-unit">

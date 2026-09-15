@@ -2,7 +2,9 @@ import { useMemo } from 'react'
 import { estimateCost, formatPkr } from '../data/cost'
 import { useRegionData } from '../data/useRegionData'
 import { useApp } from '../state/store'
-import { IconAir, IconClose, IconMoney, IconSelect } from './icons'
+import { IconAir, IconClose, IconMoney, IconReport, IconSelect, IconWatch } from './icons'
+import { useReports } from '../data/useReports'
+import { useUnseenAlerts } from '../data/useUnseenAlerts'
 
 /**
  * Top-level entry points for the three things worth finding fast.
@@ -22,6 +24,12 @@ export function Tools() {
   const toggleCost = useApp((s) => s.toggleCost)
   const airOpen = useApp((s) => s.airOpen)
   const toggleAir = useApp((s) => s.toggleAir)
+  const reportsOpen = useApp((s) => s.reportsOpen)
+  const toggleReports = useApp((s) => s.toggleReports)
+  const alertsOpen = useApp((s) => s.alertsOpen)
+  const toggleAlerts = useApp((s) => s.toggleAlerts)
+  const { all: reports } = useReports()
+  const unseen = useUnseenAlerts()
 
   return (
     <div className="tools" role="group" aria-label="Tools">
@@ -56,6 +64,31 @@ export function Tools() {
       >
         <IconMoney />
         <span>Cost</span>
+      </button>
+
+      <button
+        type="button"
+        className={`tool ${alertsOpen ? 'is-on' : ''}`}
+        aria-pressed={alertsOpen}
+        title="Recent satellite passes, detected canopy loss, and watched areas"
+        onClick={toggleAlerts}
+      >
+        <IconWatch />
+        <span>Change</span>
+        {/* Only unacknowledged alerts on watched areas — see useUnseenAlerts. */}
+        {!!unseen && <span className="tool__n tool__n--alert t-data">{unseen}</span>}
+      </button>
+
+      <button
+        type="button"
+        className={`tool ${reportsOpen ? 'is-on' : ''}`}
+        aria-pressed={reportsOpen}
+        title="Report a felled tree, a fire or a new planting — ground truth the satellite cannot see"
+        onClick={toggleReports}
+      >
+        <IconReport />
+        <span>Report</span>
+        {!!reports.length && <span className="tool__n t-data">{reports.length}</span>}
       </button>
     </div>
   )

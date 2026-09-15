@@ -158,3 +158,36 @@ export const IconAir = () => (
     <path d="M2.4 11.6h4.6" />
   </svg>
 )
+
+/* A field marker: a pin planted at an observed spot, not a recommended one. */
+export const IconReport = () => (
+  <svg {...base}>
+    <path d="M4.4 14V2.4" />
+    <path d="M4.4 3h6.9l-1.5 2.6 1.5 2.6H4.4z" />
+  </svg>
+)
+
+/* A watched area with a change alert on it. */
+export const IconWatch = () => (
+  <svg {...base}>
+    <path d="M2 8s2.2-4 6-4 6 4 6 4-2.2 4-6 4-6-4-6-4Z" />
+    <circle cx="8" cy="8" r="1.7" />
+  </svg>
+)
+
+/* Recent satellite passes — a pass line over ground. */
+export const IconPass = () => (
+  <svg {...base}>
+    <path d="M1.8 11.4c3.4-3.6 9-3.6 12.4 0" />
+    <path d="M8 2v4.2" />
+    <path d="M6.1 4.1 8 2l1.9 2.1" />
+  </svg>
+)
+
+/* The command bar. A search glass, because that is what it looks like it does. */
+export const IconSearch = () => (
+  <svg {...base}>
+    <circle cx="7" cy="7" r="4.3" />
+    <path d="M10.2 10.2 13.6 13.6" />
+  </svg>
+)

@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { REGIONS, SOURCE_RES, UNIT, VIEWS } from '../data/regions'
-import { domainFor } from '../data/load'
+import { domainFor, ndviPending, useNdviYears } from '../data/load'
 import { RISK_BANDS, riskFor } from '../data/risk'
 import { useRegionData } from '../data/useRegionData'
 import { useApp } from '../state/store'
@@ -129,12 +129,19 @@ export function ThermalScale() {
   const view = useApp((s) => s.view)
   const region = useApp((s) => s.region)
   const year = useApp((s) => s.year)
-  const { grid } = useRegionData(region)
+  const { grid, sites } = useRegionData(region)
+  // The canopy domain is read from the year's own values, so the legend has to
+  // recompute when a year arrives — otherwise it keeps the fallback range.
+  useNdviYears()
 
   // Exactly the domain the map is drawing with — same function, same numbers.
+  // Priority's domain comes from the ranking rather than the grid, so the scores
+  // have to be handed over here too; without them this printed a placeholder
+  // while the map painted the real range.
   let ends: [string, string] = ['—', '—']
   if (grid) {
-    const [lo, hi] = domainFor(grid, view, year)
+    const [lo, hi] = domainFor(grid, view, year,
+      sites?.features.map((f) => f.properties.score))
     const dp = view === 'canopy' || view === 'priority' ? 2 : 0
     ends = [lo.toFixed(dp), hi.toFixed(dp)]
   }
@@ -281,6 +288,12 @@ export function BottomBar() {
 export function LoadingBar() {
   const loading = useApp((s) => s.dataLoading)
   const error = useApp((s) => s.dataError)
+  const region = useApp((s) => s.region)
+  const year = useApp((s) => s.year)
+  useNdviYears()
+  // A year fetched on demand is also "data in flight", and the hairline is the
+  // only thing telling the user the scrubber is working rather than stuck.
+  const waitingOnYear = ndviPending(region, year)
   if (error) {
     return (
       <div className="databar databar--error">
@@ -288,5 +301,5 @@ export function LoadingBar() {
       </div>
     )
   }
-  return loading ? <div className="databar" aria-hidden="true" /> : null
+  return loading || waitingOnYear ? <div className="databar" aria-hidden="true" /> : null
 }

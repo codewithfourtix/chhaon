@@ -35,6 +35,19 @@ interface AppState {
   costPkr: number
   costOpen: boolean
   airOpen: boolean
+  reportsOpen: boolean
+  alertsOpen: boolean
+  /** Bumped when a watch is added, removed or acknowledged. */
+  watchVersion: number
+  /** A detected loss the camera should fly to. */
+  eventFocus: { lon: number; lat: number; tick: number } | null
+  /** Armed to place a report pin by clicking the map. */
+  placingReport: boolean
+  /** Where the user just clicked, awaiting the rest of the report. */
+  pendingReport: { lon: number; lat: number } | null
+  selectedReportId: string | null
+  /** Bumped after a save or delete so the log reloads from IndexedDB. */
+  reportsVersion: number
   dataLoading: boolean
   dataError: string | null
   /** Bumped to re-focus the camera on the selected site. */
@@ -54,6 +67,14 @@ interface AppState {
   setCostPkr: (v: number) => void
   toggleCost: () => void
   toggleAir: () => void
+  toggleReports: () => void
+  toggleAlerts: () => void
+  watchesChanged: () => void
+  focusEvent: (lon: number, lat: number) => void
+  setPlacingReport: (p: boolean) => void
+  setPendingReport: (p: { lon: number; lat: number } | null) => void
+  selectReport: (id: string | null) => void
+  reportsChanged: () => void
   setFilters: (f: Partial<Filters>) => void
   clearFilters: () => void
   setDataLoading: (loading: boolean, error: string | null) => void
@@ -82,6 +103,14 @@ export const useApp = create<AppState>((set) => ({
   costPkr: DEFAULT_COST_PKR,
   costOpen: false,
   airOpen: false,
+  reportsOpen: false,
+  alertsOpen: false,
+  watchVersion: 0,
+  eventFocus: null,
+  placingReport: false,
+  pendingReport: null,
+  selectedReportId: null,
+  reportsVersion: 0,
   dataLoading: true,
   dataError: null,
   focusTick: 0,
@@ -91,18 +120,51 @@ export const useApp = create<AppState>((set) => ({
   setView: (view) => set({ view, selectedSiteId: null }),
   // A drawn area belongs to the region it was drawn over.
   setRegion: (region) =>
-    set({ region, selectedSiteId: null, filters: NO_FILTERS, area: null, drawing: false }),
+    set({
+      region, selectedSiteId: null, filters: NO_FILTERS, area: null, drawing: false,
+      // A half-placed report belongs to the map the user was looking at.
+      placingReport: false, pendingReport: null, selectedReportId: null,
+    }),
   setYear: (year) => set({ year }),
   selectSite: (selectedSiteId) => set({ selectedSiteId }),
   setBasemap: (basemap) => set({ basemap }),
   toggleList: () => set((s) => ({ listOpen: !s.listOpen })),
   setArea: (area) => set({ area, drawing: false }),
-  setDrawing: (drawing) => set({ drawing }),
+  // Area-draw and report-placement both take over the map's click and drag, so
+  // arming either one disarms the other.
+  setDrawing: (drawing) => set({ drawing, placingReport: false }),
   setCostPkr: (costPkr) => set({ costPkr }),
-  // The three tools are mutually exclusive: two panels stacked in the same
-  // corner would cover each other.
-  toggleCost: () => set((s) => ({ costOpen: !s.costOpen, airOpen: false })),
-  toggleAir: () => set((s) => ({ airOpen: !s.airOpen, costOpen: false })),
+  // The tool panels are mutually exclusive: two stacked in the same corner would
+  // cover each other.
+  toggleCost: () =>
+    set((s) => ({ costOpen: !s.costOpen, airOpen: false, reportsOpen: false, alertsOpen: false })),
+  toggleAir: () =>
+    set((s) => ({ airOpen: !s.airOpen, costOpen: false, reportsOpen: false, alertsOpen: false })),
+  toggleReports: () =>
+    set((s) => ({
+      reportsOpen: !s.reportsOpen,
+      costOpen: false,
+      airOpen: false,
+      alertsOpen: false,
+      // Closing the panel must disarm placement, or the next map click drops a
+      // pin the user has no open form to finish.
+      placingReport: s.reportsOpen ? false : s.placingReport,
+    })),
+  toggleAlerts: () =>
+    set((s) => ({
+      alertsOpen: !s.alertsOpen,
+      costOpen: false,
+      airOpen: false,
+      reportsOpen: false,
+      placingReport: false,
+    })),
+  watchesChanged: () => set((s) => ({ watchVersion: s.watchVersion + 1 })),
+  focusEvent: (lon, lat) =>
+    set((s) => ({ eventFocus: { lon, lat, tick: (s.eventFocus?.tick ?? 0) + 1 } })),
+  setPlacingReport: (placingReport) => set({ placingReport, drawing: false }),
+  setPendingReport: (pendingReport) => set({ pendingReport, placingReport: false }),
+  selectReport: (selectedReportId) => set({ selectedReportId }),
+  reportsChanged: () => set((s) => ({ reportsVersion: s.reportsVersion + 1 })),
   setFilters: (f) => set((s) => ({ filters: { ...s.filters, ...f }, selectedSiteId: null })),
   clearFilters: () => set({ filters: NO_FILTERS, selectedSiteId: null }),
   setDataLoading: (dataLoading, dataError) => set({ dataLoading, dataError }),

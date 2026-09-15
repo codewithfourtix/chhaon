@@ -63,13 +63,20 @@ function sample(
   ]
 }
 
-/** Values for a view, already unquantised, or null where there is no reading. */
+/**
+ * Values for a view, already unquantised, or null where there is no reading.
+ *
+ * Returns an empty array when the requested NDVI year has not been fetched yet —
+ * which the caller must treat as "not ready", NOT as "no vegetation". Painting a
+ * pending year would blank the canopy layer mid-scrub.
+ */
 function valuesFor(g: RegionGrid, view: ViewId, year: number | null): (number | null)[] {
   if (view === 'risk') return riskFor(g).values
   if (view === 'heat') return g.lst.map((v) => (v === null ? null : v / 10))
   if (view === 'people') return g.pop.map((v) => (v === null ? null : v / 10))
   const y = year !== null && g.years.includes(year) ? year : g.years[g.years.length - 1]
-  const nd = g.ndvi[String(y)] ?? []
+  const nd = g.ndvi[String(y)]
+  if (!nd) return []
   return nd.map((v) => (v === null ? null : v / 100))
 }
 

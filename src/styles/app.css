@@ -287,6 +287,136 @@
 .segmented__btn:hover { color: var(--ink-0); }
 .segmented__btn.is-active { background: var(--plate-2); color: var(--ink-0); }
 
+/* ---------- Command bar ----------
+   A second row under the basemap toggle. The top row is already the basemap
+   segmented control plus five tools, and squeezing a text field between them
+   would give it about 60px. */
+
+.cmd {
+  position: absolute;
+  top: calc(var(--u) * 4 + 54px);
+  left: calc(var(--rail-w) + var(--u) * 4);
+  z-index: 7;
+  width: 400px;
+  max-width: calc(100vw - var(--rail-w) - var(--scale-w) - var(--u) * 8);
+}
+
+.cmd__form {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 2);
+  min-height: 40px;
+  padding: 0 calc(var(--u) * 3);
+  background: color-mix(in srgb, var(--plate-1) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  box-shadow: var(--shadow-plate);
+  transition: border-color var(--dur-tick) var(--ease-instrument);
+}
+.cmd.is-open .cmd__form { border-color: var(--hairline-firm); }
+.cmd__form:focus-within { border-color: var(--canopy); }
+
+.cmd__icon { display: flex; color: var(--ink-2); }
+
+.cmd__input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 0;
+  outline: none;
+  color: var(--ink-0);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+}
+.cmd__input::placeholder { color: var(--ink-2); }
+
+.cmd__clear {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: 0;
+  color: var(--ink-2);
+  font-size: 1.125rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 999px;
+}
+.cmd__clear:hover { background: var(--plate-2); color: var(--ink-0); }
+
+.cmd__drop {
+  margin-top: calc(var(--u) * 2);
+  padding: calc(var(--u) * 3.5);
+  background: color-mix(in srgb, var(--plate-1) 96%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-plate);
+}
+
+.cmd__did { margin: 0 0 calc(var(--u) * 2); color: var(--ink-1); }
+
+/* What it understood, shown before anything else. A control that silently
+   reinterprets an instruction is worse than one that refuses. */
+.cmd__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--u) * 1.5);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cmd__chip {
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--u));
+  padding: calc(var(--u)) calc(var(--u) * 2);
+  background: var(--plate-2);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+}
+.cmd__chipLabel { color: var(--ink-2); }
+.cmd__chipValue { color: var(--ink-0); font-weight: 500; }
+
+.cmd__note { margin: calc(var(--u) * 2) 0 0; line-height: 1.5; }
+.cmd__ignored { margin: calc(var(--u) * 2) 0 0; color: var(--ink-2); }
+.cmd__none { margin: 0; line-height: 1.5; }
+
+.cmd__eg { list-style: none; margin: 0; padding: 0; }
+.cmd__eg li + li { margin-top: 2px; }
+.cmd__eg button {
+  width: 100%;
+  min-height: 32px;
+  padding: calc(var(--u)) calc(var(--u) * 2);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--ink-1);
+  font: inherit;
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+}
+.cmd__eg button:hover { background: var(--plate-2); color: var(--ink-0); }
+
+@media (max-width: 1100px) {
+  .cmd { left: calc(var(--rail-w-collapsed) + var(--u) * 3); }
+}
+@media (max-width: 900px) { .cmd { display: none; } }
+
+/* On mobile it lives inside the sheet rather than floating, so it takes the
+   sheet's flow instead of covering the map. */
+.app.is-mobile .cmd {
+  display: block;
+  position: static;
+  width: auto;
+  max-width: none;
+  margin-bottom: calc(var(--u) * 3);
+}
+.app.is-mobile .cmd__form { min-height: 44px; }
+.app.is-mobile .cmd__drop { max-height: 40vh; overflow-y: auto; }
+
 /* ---------- Thermal scale ---------- */
 
 .scale {
@@ -1046,6 +1176,14 @@ kbd {
 }
 .cover__caveat strong { color: var(--ink-1); }
 
+/* Years arrive progressively, so the stated range is provisional until they are
+   all in. A quiet line, not a warning — nothing is wrong, it is just not final. */
+.cover__pending {
+  margin: calc(var(--u) * 2) 0 0;
+  color: var(--ink-2);
+  font-style: normal;
+}
+
 /* ---------- Region rollup in the ranked list ---------- */
 
 .sitelist__roll {
@@ -1143,6 +1281,23 @@ kbd {
   color: var(--ink-0);
 }
 
+/* How many reports exist. Ink, not an accent — a count is not an alert. */
+.tool__n {
+  padding: 1px calc(var(--u) * 1.5);
+  background: var(--plate-2);
+  border-radius: 999px;
+  color: var(--ink-1);
+  font-size: 0.6875rem;
+}
+.tool.is-on .tool__n { background: var(--plate-0); color: var(--ink-0); }
+/* Unacknowledged alerts. Canopy ring rather than a red dot: the thermal ramp
+   owns warm colour on this interface and a badge is chrome, not data. */
+.tool__n--alert {
+  background: color-mix(in srgb, var(--canopy) 22%, transparent);
+  border: 1px solid var(--canopy);
+  color: var(--ink-0);
+}
+
 /* ---------- Cost panel ---------- */
 
 .costPanel {
@@ -1230,6 +1385,450 @@ kbd {
 
 @media (max-width: 1100px) { .airPanel { left: calc(var(--rail-w-collapsed) + var(--u) * 3); } }
 @media (max-width: 900px) { .airPanel { display: none; } }
+
+/* ---------- Report panel ----------
+   Taller than the other tool panels because it carries a form and a log. The
+   log scrolls; the form never does, so saving is always reachable. */
+
+.reportPanel {
+  position: absolute;
+  left: calc(var(--rail-w) + var(--u) * 4);
+  bottom: calc(var(--scrubber-h) + var(--u) * 4);
+  z-index: 6;
+  width: 358px;
+  max-height: calc(100vh - var(--scrubber-h) - var(--u) * 12);
+  overflow-y: auto;
+  padding: calc(var(--u) * 4);
+  background: color-mix(in srgb, var(--plate-1) 96%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-plate);
+}
+
+.reportPanel__why {
+  margin: calc(var(--u) * 3) 0 0;
+  padding-bottom: calc(var(--u) * 3);
+  border-bottom: 1px solid var(--hairline);
+  line-height: 1.55;
+}
+
+.reportPanel__place {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 2);
+  width: 100%;
+  min-height: 44px;
+  margin: calc(var(--u) * 3) 0;
+  padding: 0 calc(var(--u) * 3);
+  background: transparent;
+  color: var(--ink-1);
+  font: inherit;
+  font-size: 0.875rem;
+  border: 1px dashed var(--hairline-firm);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--dur-tick) var(--ease-instrument),
+    color var(--dur-tick) var(--ease-instrument);
+}
+.reportPanel__place:hover { background: var(--plate-2); color: var(--ink-0); }
+/* Armed. The canopy ring is the system's "this control is live" signal. */
+.reportPanel__place.is-on {
+  border-style: solid;
+  border-color: var(--canopy);
+  color: var(--ink-0);
+}
+
+.reportPanel__saved {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 1.5);
+  margin: calc(var(--u) * 2) 0 0;
+  color: var(--canopy);
+}
+
+.reportPanel__sec {
+  margin-top: calc(var(--u) * 4);
+  padding-top: calc(var(--u) * 3);
+  border-top: 1px solid var(--hairline);
+}
+.reportPanel__sec > h3 { margin: 0 0 calc(var(--u) * 2); color: var(--ink-1); }
+/* Drafts are not public, and the label has to carry that without a colour that
+   reads as an error — nothing has gone wrong. */
+.reportPanel__warn { color: var(--heat-4); }
+
+.reportPanel__exports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--u) * 2);
+  margin-top: calc(var(--u) * 3);
+}
+
+/* ---------- Report form ---------- */
+
+.reportForm { margin: calc(var(--u) * 3) 0 0; }
+
+.reportForm__at {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--u) * 2);
+  margin: 0 0 calc(var(--u) * 3);
+  padding: calc(var(--u) * 2) calc(var(--u) * 2.5);
+  background: var(--plate-2);
+  border-radius: var(--radius-sm);
+  color: var(--ink-0);
+}
+.reportForm__move {
+  background: none;
+  border: 0;
+  padding: calc(var(--u)) calc(var(--u) * 1.5);
+  color: var(--ink-1);
+  font: inherit;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.reportForm__move:hover { color: var(--ink-0); background: var(--plate-0); }
+
+.reportForm__kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--u) * 1.5);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.reportForm__kinds legend {
+  padding: 0 0 calc(var(--u) * 1.5);
+  color: var(--ink-1);
+}
+.reportForm__blurb { margin: calc(var(--u) * 2) 0 0; }
+
+.reportForm__field {
+  display: block;
+  margin-top: calc(var(--u) * 3);
+}
+.reportForm__field > span:first-child {
+  display: block;
+  margin-bottom: calc(var(--u) * 1.5);
+  color: var(--ink-1);
+}
+.reportForm__field textarea,
+.reportForm__field input[type='text'] {
+  width: 100%;
+  padding: calc(var(--u) * 2) calc(var(--u) * 2.5);
+  background: var(--plate-0);
+  color: var(--ink-0);
+  font: inherit;
+  font-size: 0.875rem;
+  border: 1px solid var(--hairline-firm);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+}
+.reportForm__field input[type='file'] {
+  width: 100%;
+  color: var(--ink-1);
+  font: inherit;
+  font-size: 0.8125rem;
+}
+.reportForm__photook {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u));
+  margin-top: calc(var(--u) * 1.5);
+  color: var(--canopy);
+}
+.reportForm__err { display: block; margin-top: calc(var(--u) * 1.5); color: var(--heat-5); }
+
+.reportForm__acts {
+  display: flex;
+  gap: calc(var(--u) * 2);
+  margin-top: calc(var(--u) * 4);
+}
+.reportForm__save {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 calc(var(--u) * 4);
+  background: var(--ink-0);
+  color: var(--plate-0);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 0;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.reportForm__save:hover:not(:disabled) { background: var(--ink-1); }
+.reportForm__save:disabled { opacity: 0.55; cursor: default; }
+
+.reportForm__caveat {
+  margin: calc(var(--u) * 3) 0 0;
+  line-height: 1.55;
+}
+.reportForm__caveat strong { color: var(--ink-1); }
+
+/* ---------- Report log ---------- */
+
+.reportLog { list-style: none; margin: 0; padding: 0; }
+.reportLog__item { border-bottom: 1px solid var(--hairline); }
+.reportLog__item:last-child { border-bottom: 0; }
+
+.reportLog__row {
+  display: flex;
+  align-items: flex-start;
+  gap: calc(var(--u) * 2.5);
+  width: 100%;
+  min-height: 44px;
+  padding: calc(var(--u) * 2) 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  color: var(--ink-0);
+  cursor: pointer;
+}
+.reportLog__row:hover { color: var(--ink-0); }
+.reportLog__row:hover .reportLog__meta { color: var(--ink-1); }
+
+/* Diamonds, matching the map markers — a report is never a circle, because a
+   circle is a planting recommendation. */
+.reportLog__dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  margin-top: 5px;
+  transform: rotate(45deg);
+  background: var(--ink-1);
+}
+.reportLog__dot--felled { background: var(--heat-6); }
+.reportLog__dot--fire { background: var(--heat-5); }
+.reportLog__dot--dieback { background: var(--heat-3); }
+.reportLog__dot--planted { background: var(--canopy); }
+
+.reportLog__body { display: block; min-width: 0; }
+.reportLog__kind { display: block; font-size: 0.875rem; font-weight: 500; }
+.reportLog__meta { display: block; margin-top: 2px; color: var(--ink-2); }
+
+.reportLog__detail { padding: 0 0 calc(var(--u) * 3) calc(var(--u) * 4); }
+.reportLog__note { margin: 0 0 calc(var(--u) * 2); color: var(--ink-1); }
+.reportLog__photo {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  margin-bottom: calc(var(--u) * 2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--hairline);
+}
+.reportLog__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--u) * 1.5);
+  margin-top: calc(var(--u) * 2);
+}
+.reportLog__del { color: var(--heat-5); }
+
+@media (max-width: 1100px) {
+  .reportPanel { left: calc(var(--rail-w-collapsed) + var(--u) * 3); }
+}
+@media (max-width: 900px) { .reportPanel { display: none; } }
+
+/* ---------- Change / alerts panel ---------- */
+
+.alertsPanel {
+  position: absolute;
+  left: calc(var(--rail-w) + var(--u) * 4);
+  bottom: calc(var(--scrubber-h) + var(--u) * 4);
+  z-index: 6;
+  width: 366px;
+  max-height: calc(100vh - var(--scrubber-h) - var(--u) * 12);
+  overflow-y: auto;
+  padding: calc(var(--u) * 4);
+  background: color-mix(in srgb, var(--plate-1) 96%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-plate);
+}
+
+.alertsPanel__note { margin: calc(var(--u) * 2) 0 0; line-height: 1.55; }
+
+.alertsPanel__status {
+  display: flex;
+  gap: calc(var(--u) * 2);
+  align-items: flex-start;
+  margin: calc(var(--u) * 3) 0 0;
+  padding: calc(var(--u) * 2.5);
+  background: var(--plate-2);
+  border-radius: var(--radius-sm);
+}
+.alertsPanel__status p { margin: 0; line-height: 1.5; }
+.alertsPanel__statusIcon { flex: 0 0 auto; color: var(--ink-1); margin-top: 1px; }
+
+.alertsPanel__empty { margin-top: calc(var(--u) * 3); }
+.alertsPanel__empty p { margin: calc(var(--u) * 2) 0 0; line-height: 1.55; }
+.alertsPanel__cmd {
+  display: block;
+  padding: calc(var(--u) * 2) calc(var(--u) * 2.5);
+  background: var(--plate-2);
+  border-radius: var(--radius-sm);
+  color: var(--ink-0);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.alertsPanel__add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--u) * 2);
+  width: 100%;
+  min-height: 44px;
+  margin: calc(var(--u) * 3) 0;
+  padding: 0 calc(var(--u) * 3);
+  background: var(--ink-0);
+  color: var(--plate-0);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 0;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.alertsPanel__add:hover { background: var(--ink-1); }
+
+/* ---------- Pass strip ----------
+   Every pass in the window, usable or not. A gap the user cannot explain looks
+   like a bug, so the unusable ones are shown rather than filtered away. */
+
+.passStrip { margin-top: calc(var(--u) * 3); }
+.passStrip__row {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 20px;
+}
+.passStrip__tick {
+  flex: 1 1 auto;
+  min-width: 4px;
+  max-width: 14px;
+  border-radius: 1px;
+}
+.passStrip__tick.is-usable { height: 18px; background: var(--canopy); }
+/* Not an error — we simply could not see the ground. Hairline, not a warning. */
+.passStrip__tick.is-blocked { height: 8px; background: var(--hairline-firm); }
+
+.passStrip__key {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u));
+  margin: calc(var(--u) * 1.5) 0 0;
+  color: var(--ink-2);
+}
+.passStrip__key .passStrip__tick {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  min-width: 0;
+  border-radius: 999px;
+}
+.passStrip__key .passStrip__tick.is-usable { height: 8px; }
+.passStrip__key .passStrip__tick:not(:first-child) { margin-left: calc(var(--u) * 2); }
+.passStrip__age { margin-left: auto; }
+
+/* ---------- Detected loss ---------- */
+
+.eventList { list-style: none; margin: calc(var(--u) * 2) 0 0; padding: 0; }
+.eventList__item { border-top: 1px solid var(--hairline); }
+.eventList--inWatch { margin-top: calc(var(--u) * 1.5); }
+
+.eventList__row {
+  display: flex;
+  align-items: flex-start;
+  gap: calc(var(--u) * 2.5);
+  width: 100%;
+  min-height: 44px;
+  padding: calc(var(--u) * 2) 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  color: var(--ink-0);
+  cursor: pointer;
+}
+.eventList__row:hover .eventList__meta { color: var(--ink-1); }
+
+/* Triangles, matching the map markers — never a circle or a diamond. */
+.eventList__sev {
+  flex: 0 0 auto;
+  width: 0;
+  height: 0;
+  margin-top: 6px;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 9px solid var(--heat-4);
+}
+.eventList__sev--severe { border-bottom-color: var(--heat-6); }
+.eventList__sev--notable { border-bottom-color: var(--heat-4); }
+
+.eventList__body { display: block; min-width: 0; flex: 1; }
+.eventList__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--u) * 2);
+}
+.eventList__area { color: var(--ink-0); }
+.eventList__meta { display: block; margin-top: 2px; color: var(--ink-2); }
+
+/* An unseen alert gets a leading rule, not a colour — the severity colour is
+   already carrying the measurement and must not be competed with. */
+.eventList__item.is-unseen { border-left: 2px solid var(--canopy); padding-left: calc(var(--u) * 2); }
+
+/* ---------- Watch list ---------- */
+
+.watchList { list-style: none; margin: calc(var(--u) * 3) 0 0; padding: 0; }
+.watchList__item {
+  padding: calc(var(--u) * 3) 0;
+  border-top: 1px solid var(--hairline);
+}
+.watchList__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: calc(var(--u) * 2);
+}
+.watchList__id { min-width: 0; }
+.watchList__name {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.watchList__id p:last-child { margin: 2px 0 0; }
+.watchList__badge {
+  flex: 0 0 auto;
+  padding: 2px calc(var(--u) * 1.5);
+  background: color-mix(in srgb, var(--canopy) 20%, transparent);
+  border: 1px solid var(--canopy);
+  border-radius: 999px;
+  color: var(--ink-0);
+  font-size: 0.6875rem;
+}
+.watchList__summary { margin: calc(var(--u) * 2) 0 0; }
+.watchList__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--u) * 1.5);
+  margin-top: calc(var(--u) * 2);
+}
+
+@media (max-width: 1100px) {
+  .alertsPanel { left: calc(var(--rail-w-collapsed) + var(--u) * 3); }
+}
+@media (max-width: 900px) { .alertsPanel { display: none; } }
 
 /* =====================================================================
    Mobile
@@ -1531,6 +2130,8 @@ kbd {
 /* Panels become sheets that sit above the main one. */
 .app.is-mobile .costPanel,
 .app.is-mobile .airPanel,
+.app.is-mobile .reportPanel,
+.app.is-mobile .alertsPanel,
 .app.is-mobile .plate {
   display: block;
   position: absolute;

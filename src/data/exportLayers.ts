@@ -1,4 +1,5 @@
 import { rasterizeGrid, type Ramp } from '../map/rasterize'
+import { ensureAllNdviYears } from './load'
 import { riskBand, riskFor } from './risk'
 import type { RegionGrid, ViewId } from './types'
 
@@ -54,7 +55,13 @@ const LANDUSE = ['none', 'roadside', 'vacant', 'canal', 'park']
  * Cells with no reading at all are dropped rather than exported as zero — a gap
  * has to stay a gap once it is in someone else's GIS, where our caveats are not.
  */
-export function downloadGridGeoJson(g: RegionGrid) {
+export async function downloadGridGeoJson(g: RegionGrid) {
+  // Years load progressively, so wait for all of them first. Without this the
+  // export would silently carry only whichever years happened to be cached, and
+  // a missing ndvi_2019 column in someone else's GIS is indistinguishable from
+  // a year we never measured.
+  await ensureAllNdviYears(g)
+
   const at = corners(g)
   const { values: risk } = riskFor(g)
   const features: unknown[] = []

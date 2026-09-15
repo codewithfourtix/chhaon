@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { IconKeyboard } from './icons'
 
 const KEYS: [string, string][] = [
+  ['/', 'Ask the map — sets filters from a description'],
   ['1 – 5', 'Canopy, Heat, People, Risk, Priority'],
   ['Q W E R T', 'Jump between the five regions'],
   ['← →', 'Step through years'],
@@ -10,6 +11,8 @@ const KEYS: [string, string][] = [
   ['A', 'Select an area on the map'],
   ['C', 'Cost'],
   ['G', 'Air'],
+  ['N', 'Report a felled tree or fire'],
+  ['V', 'Recent change and watched areas'],
   ['L', 'Show or hide the ranked list'],
   ['B', 'Map or satellite'],
   ['D', 'Light or dark'],
