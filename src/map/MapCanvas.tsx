@@ -507,13 +507,27 @@ export function MapCanvas() {
     else m.flyTo({ center: centre, zoom: Math.max(m.getZoom(), 15.5), curve: 1.3, speed: 1.1 })
   }, [eventFocus])
 
+  // A device fix flies the camera to it, so the reporter can see where their phone
+  // thought they were and correct it. A map-placed pin is skipped — they just
+  // tapped that spot, and moving the camera under their finger is disorienting.
+  useEffect(() => {
+    const m = map.current
+    if (!m || pendingReport?.source !== 'device') return
+    const centre: [number, number] = [pendingReport.lon, pendingReport.lat]
+    // Zoomed enough to judge the position against the ground, which is the point
+    // of showing it rather than just accepting the coordinate.
+    if (reducedMotion()) m.jumpTo({ center: centre, zoom: Math.max(m.getZoom(), 16) })
+    else m.flyTo({ center: centre, zoom: Math.max(m.getZoom(), 16), curve: 1.3, speed: 1.1 })
+  }, [pendingReport])
+
   // Placing a report: the next click on the map fixes its position.
   useEffect(() => {
     const m = map.current
     if (!m || !placingReport) return
     m.getCanvas().style.cursor = 'crosshair'
     const onClick = (e: { lngLat: { lng: number; lat: number } }) => {
-      setPendingReport({ lon: e.lngLat.lng, lat: e.lngLat.lat })
+      // No accuracy radius: a tap is exactly where the reporter meant.
+      setPendingReport({ lon: e.lngLat.lng, lat: e.lngLat.lat, source: 'map' })
     }
     m.on('click', onClick)
     return () => {

@@ -43,8 +43,21 @@ interface AppState {
   eventFocus: { lon: number; lat: number; tick: number } | null
   /** Armed to place a report pin by clicking the map. */
   placingReport: boolean
-  /** Where the user just clicked, awaiting the rest of the report. */
-  pendingReport: { lon: number; lat: number } | null
+  /**
+   * Where the report is going, awaiting the rest of the form.
+   *
+   * Carries how the position was obtained, because the two are not equally
+   * trustworthy: a tap on the map is exactly where the reporter meant, while a
+   * device fix has an accuracy radius that can be worse than the 60 m analysis
+   * cell — and on a laptop is often wifi-derived and kilometres out.
+   */
+  pendingReport: {
+    lon: number
+    lat: number
+    source: 'map' | 'device'
+    /** Reported accuracy radius in metres. Device fixes only. */
+    accuracyM?: number
+  } | null
   selectedReportId: string | null
   /** Bumped after a save or delete so the log reloads from IndexedDB. */
   reportsVersion: number
@@ -72,7 +85,9 @@ interface AppState {
   watchesChanged: () => void
   focusEvent: (lon: number, lat: number) => void
   setPlacingReport: (p: boolean) => void
-  setPendingReport: (p: { lon: number; lat: number } | null) => void
+  setPendingReport: (
+    p: { lon: number; lat: number; source: 'map' | 'device'; accuracyM?: number } | null
+  ) => void
   selectReport: (id: string | null) => void
   reportsChanged: () => void
   setFilters: (f: Partial<Filters>) => void

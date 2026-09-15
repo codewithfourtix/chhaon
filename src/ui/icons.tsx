@@ -191,3 +191,11 @@ export const IconSearch = () => (
     <path d="M10.2 10.2 13.6 13.6" />
   </svg>
 )
+
+/* A map pin: the reporter's own position, as opposed to a spot they chose. */
+export const IconPin = () => (
+  <svg {...base}>
+    <path d="M8 14.2s4.3-4.2 4.3-7.4a4.3 4.3 0 0 0-8.6 0C3.7 10 8 14.2 8 14.2Z" />
+    <circle cx="8" cy="6.7" r="1.6" />
+  </svg>
+)

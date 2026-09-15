@@ -107,12 +107,21 @@ const testReporting = async (page) => {
   check(copy.includes('this device'), 'says plainly that a report is local until exported')
 
   // Arm placement and drop a pin near the middle of the map.
-  await page.getByRole('button', { name: /Place a report on the map/ }).click()
+  await page.getByRole('button', { name: /place it on the map/ }).click()
   const r = await freeMapRect(page)
   await page.mouse.click((r.x1 + r.x2) / 2, (r.y1 + r.y2) / 2)
   await page.waitForTimeout(700)
 
   check(await page.locator('.reportForm').isVisible(), 'placing a pin opens the form')
+
+  // One input serves both routes: a phone opens the camera, a laptop the file
+  // picker. `capture` is what makes the camera the default on mobile.
+  const photo = await page.evaluate(() => {
+    const i = document.querySelector('.reportForm input[type=file]')
+    return i ? { accept: i.accept, capture: i.getAttribute('capture') } : null
+  })
+  check(photo?.accept === 'image/*', `photos accept any image (${photo?.accept})`)
+  check(photo?.capture === 'environment', 'and a phone opens the rear camera directly')
   const pendingMarks = await rendered(page, 'reports-pending')
   check(pendingMarks === 1, `the unsaved pin renders on the map (got ${pendingMarks})`)
 
@@ -152,6 +161,102 @@ const testReporting = async (page) => {
   // Clean up, so repeated runs do not pile up drafts.
   await page.getByRole('button', { name: 'Delete' }).first().click()
   await page.waitForTimeout(800)
+}
+
+/* ------------------------------------------------- report location routes */
+
+/**
+ * Both ways of putting a report on the ground.
+ *
+ * Takes its own browser contexts, because each case needs a different geolocation
+ * permission and a different simulated fix, and Playwright fixes those per context.
+ *
+ * The accuracy radius is the point of most of these. A coordinate published without
+ * it overstates what the log knows: browser geolocation on a laptop is often
+ * wifi-derived and kilometres out, and even a real GPS fix can be wider than the
+ * 60 m cell the analysis works in.
+ */
+const testReportLocation = async (browser) => {
+  console.log('\nReport location: device fix and map')
+
+  const open = async (ctx) => {
+    const page = await ctx.newPage()
+    await page.goto(`${ORIGIN}/`, { waitUntil: 'networkidle', timeout: 90_000 })
+    await enterWorkspace(page)
+    await page.getByRole('button', { name: /^Report/ }).click()
+    await page.waitForTimeout(600)
+    return page
+  }
+  const at = (latitude, longitude, accuracy) => ({
+    viewport: { width: 1500, height: 950 },
+    permissions: ['geolocation'],
+    geolocation: { latitude, longitude, accuracy },
+  })
+
+  // Both routes must be offered before either is used.
+  let ctx = await browser.newContext(at(31.4805, 74.3239, 18))
+  let page = await open(ctx)
+  check(
+    (await page.getByRole('button', { name: /Use my current location/ }).count()) === 1 &&
+      (await page.getByRole('button', { name: /place it on the map/ }).count()) === 1,
+    'both location routes are offered'
+  )
+
+  // A good fix inside the region: accepted, shown with its radius, no caveat.
+  await page.getByRole('button', { name: /Use my current location/ }).click()
+  await page.waitForTimeout(3000)
+  const coord = await page.locator('.reportForm__at').innerText()
+  check(await page.locator('.reportForm').isVisible(), 'an accurate fix opens the form')
+  check(/±18\s*m/.test(coord), `the accuracy radius is shown (${coord.replace(/\n/g, ' ')})`)
+  check(
+    (await page.locator('.reportForm__caution').count()) === 0,
+    'a fix tighter than one cell carries no caveat'
+  )
+  check(
+    (await page.evaluate(() => window.__map.queryRenderedFeatures({ layers: ['reports-pending'] }).length)) === 1,
+    'the located pin renders on the map'
+  )
+  check(
+    (await page.evaluate(() => window.__map.getZoom())) >= 15.5,
+    'the camera flies in so the reporter can check the position against the ground'
+  )
+  await ctx.close()
+
+  // A coarse fix is usable but must say what it cannot claim.
+  ctx = await browser.newContext(at(31.4805, 74.3239, 1400))
+  page = await open(ctx)
+  await page.getByRole('button', { name: /Use my current location/ }).click()
+  await page.waitForTimeout(2500)
+  const caution = await page.locator('.reportForm__caution').innerText().catch(() => '')
+  check(/1400\s*m/.test(caution) && /not a tree/.test(caution),
+    'a kilometre-wide fix says it is a neighbourhood, not a tree')
+  await ctx.close()
+
+  // Outside the mapped area: refused rather than pinned where the map cannot show it.
+  ctx = await browser.newContext(at(24.8607, 67.0011, 20))  // Karachi
+  page = await open(ctx)
+  await page.getByRole('button', { name: /Use my current location/ }).click()
+  await page.waitForTimeout(2500)
+  check(
+    /outside the mapped area/i.test(await page.locator('.reportForm__err').innerText().catch(() => '')),
+    'a fix outside Lahore is refused'
+  )
+  check((await page.locator('.reportForm').count()) === 0, 'and no form is opened for it')
+  await ctx.close()
+
+  // Refused permission must degrade to the map, not dead-end.
+  ctx = await browser.newContext({ viewport: { width: 1500, height: 950 } })
+  await ctx.grantPermissions([])
+  page = await open(ctx)
+  await page.getByRole('button', { name: /Use my current location/ }).click()
+  await page.waitForTimeout(4000)
+  const denied = await page.locator('.reportForm__err').innerText().catch(() => '')
+  check(/permission/i.test(denied), `a refusal is explained (${denied.slice(0, 54)})`)
+  check(
+    (await page.getByRole('button', { name: /place it on the map/ }).count()) === 1,
+    'and the map route is still there'
+  )
+  await ctx.close()
 }
 
 /* ------------------------------------------------- change detection + watches */
@@ -514,6 +619,7 @@ const run = async () => {
 
   await testFonts(page)
   await testReporting(page)
+  await testReportLocation(browser)
   await testEmptyChangeState(page)
   await testChangeAndWatches(page)
   await testLegendMatchesMap(page)

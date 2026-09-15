@@ -1439,6 +1439,46 @@ kbd {
   color: var(--ink-0);
 }
 
+/* Two location routes, stacked. The device fix leads because it is the one that
+   suits standing in front of the tree, which is where most reports start. */
+.reportPanel__where { margin: calc(var(--u) * 3) 0; }
+
+.reportPanel__locate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--u) * 2);
+  width: 100%;
+  min-height: 44px;
+  padding: 0 calc(var(--u) * 3);
+  background: var(--ink-0);
+  color: var(--plate-0);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 0;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.reportPanel__locate:hover:not(:disabled) { background: var(--ink-1); }
+.reportPanel__locate:disabled { opacity: 0.6; cursor: progress; }
+
+.reportPanel__where .reportPanel__place { margin: calc(var(--u) * 2) 0 0; }
+
+/* The accuracy radius, beside the coordinate it qualifies. */
+.reportForm__acc { margin-left: calc(var(--u) * 1.5); color: var(--ink-2); }
+
+/* A fix wider than the analysis cell. Not an error — the report is still valid,
+   it just cannot claim a single tree — so it takes ink, not the error colour. */
+.reportForm__caution {
+  margin: 0 0 calc(var(--u) * 3);
+  padding: calc(var(--u) * 2) calc(var(--u) * 2.5);
+  background: var(--plate-2);
+  border-left: 2px solid var(--heat-3);
+  border-radius: var(--radius-sm);
+  line-height: 1.5;
+}
+
 .reportPanel__saved {
   display: flex;
   align-items: center;

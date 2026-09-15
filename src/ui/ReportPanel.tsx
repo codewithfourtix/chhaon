@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  CITIZEN_PORTAL, KIND_BLURB, KIND_LABEL, REPORT_KINDS, complaintText,
-  deleteLocalReport, downloadReportsCsv, exportForPublicLog, localPhoto,
-  newReportId, saveLocalReport, shrinkPhoto, type Report, type ReportKind,
+  CITIZEN_PORTAL, KIND_BLURB, KIND_LABEL, REPORT_KINDS, accuracyCaveat,
+  complaintText, deleteLocalReport, downloadReportsCsv, exportForPublicLog,
+  localPhoto, locateDevice, newReportId, saveLocalReport, shrinkPhoto,
+  type Report, type ReportKind,
 } from '../data/reports'
+import { LAHORE_BOUNDS } from '../data/regions'
 import { useReports } from '../data/useReports'
 import { useApp } from '../state/store'
-import { IconCheck, IconClose, IconCopy, IconDownload, IconExternal, IconSelect } from './icons'
+import {
+  IconCheck, IconClose, IconCopy, IconDownload, IconExternal, IconPin, IconSelect,
+} from './icons'
 
 /**
  * Reporting a felled tree, a fire, or a new planting.
@@ -42,6 +46,8 @@ export function ReportPanel() {
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
+  const [locating, setLocating] = useState(false)
+  const [locateError, setLocateError] = useState<string | null>(null)
 
   // A form that stayed filled after saving invites accidental duplicates of the
   // same tree.
@@ -50,7 +56,37 @@ export function ReportPanel() {
     setNote('')
     setPhoto(null)
     setPhotoError(null)
+    setLocateError(null)
     setPending(null)
+  }
+
+  /**
+   * Use the device's own position.
+   *
+   * The fix is offered, not trusted: the camera flies to it and the accuracy
+   * radius is shown, because browser geolocation on a laptop is often wifi-derived
+   * and kilometres out, and even a good GPS fix can be wider than the 60 m cell
+   * this is analysed in.
+   */
+  const locateMe = async () => {
+    setLocating(true)
+    setLocateError(null)
+    try {
+      const fix = await locateDevice()
+      const [[w, s], [e, n]] = LAHORE_BOUNDS
+      if (fix.lon < w || fix.lon > e || fix.lat < s || fix.lat > n) {
+        // Better to refuse than to drop a pin the map cannot even show.
+        setLocateError(
+          'That position is outside the mapped area of Lahore. Place the report on the map instead.'
+        )
+        return
+      }
+      setPending({ lon: fix.lon, lat: fix.lat, source: 'device', accuracyM: fix.accuracyM })
+    } catch (err) {
+      setLocateError(err instanceof Error ? err.message : 'Could not get a location.')
+    } finally {
+      setLocating(false)
+    }
   }
 
   if (!open) return null
@@ -68,6 +104,8 @@ export function ReportPanel() {
         note: note.trim(),
         region,
         reporter: reporter.trim(),
+        locationSource: pending.source,
+        ...(pending.accuracyM !== undefined ? { accuracyM: pending.accuracyM } : {}),
       }
       await saveLocalReport(r, photo)
       reset()
@@ -104,15 +142,30 @@ export function ReportPanel() {
 
       {/* ---- capture ---- */}
       {!pending ? (
-        <button
-          type="button"
-          className={`reportPanel__place ${placing ? 'is-on' : ''}`}
-          aria-pressed={placing}
-          onClick={() => setPlacing(!placing)}
-        >
-          <IconSelect />
-          <span>{placing ? 'Now tap the spot on the map' : 'Place a report on the map'}</span>
-        </button>
+        <div className="reportPanel__where">
+          {/* Two routes, because they suit different moments: standing in front of
+              the tree, the phone already knows; at a desk from a photograph,
+              only the map does. */}
+          <button
+            type="button"
+            className="reportPanel__locate"
+            disabled={locating}
+            onClick={() => void locateMe()}
+          >
+            <IconPin />
+            <span>{locating ? 'Getting your location…' : 'Use my current location'}</span>
+          </button>
+          <button
+            type="button"
+            className={`reportPanel__place ${placing ? 'is-on' : ''}`}
+            aria-pressed={placing}
+            onClick={() => setPlacing(!placing)}
+          >
+            <IconSelect />
+            <span>{placing ? 'Now tap the spot on the map' : 'Or place it on the map'}</span>
+          </button>
+          {locateError && <p className="t-unit reportForm__err">{locateError}</p>}
+        </div>
       ) : (
         <form
           className="reportForm"
@@ -123,6 +176,9 @@ export function ReportPanel() {
         >
           <p className="t-data reportForm__at">
             {pending.lat.toFixed(5)}, {pending.lon.toFixed(5)}
+            {pending.source === 'device' && pending.accuracyM !== undefined && (
+              <span className="t-unit reportForm__acc">&plusmn;{pending.accuracyM} m</span>
+            )}
             <button
               type="button"
               className="reportForm__move t-label"
@@ -134,6 +190,15 @@ export function ReportPanel() {
               Move
             </button>
           </p>
+
+          {/* An accuracy radius wider than the analysis cell is not a failure, but
+              it does change what the report can claim — so it is said, not hidden. */}
+          {pending.source === 'device' && pending.accuracyM !== undefined &&
+            accuracyCaveat(pending.accuracyM) && (
+              <p className="t-unit reportForm__caution">
+                {accuracyCaveat(pending.accuracyM)}
+              </p>
+            )}
 
           <fieldset className="reportForm__kinds">
             <legend className="t-label">What happened</legend>

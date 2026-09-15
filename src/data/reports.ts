@@ -57,6 +57,14 @@ export interface Report {
   at: string
   note: string
   region: RegionId | null
+  /**
+   * How the coordinate was obtained. A tap on the map is where the reporter meant;
+   * a device fix is wherever the phone thought it was, to within `accuracyM`.
+   * Recorded because the public log is evidence, and evidence carries provenance.
+   */
+  locationSource?: 'map' | 'device'
+  /** Accuracy radius in metres, for device fixes. */
+  accuracyM?: number
   /** Optional attribution, free text — never an account, never an email. */
   reporter: string
   /**
@@ -216,6 +224,83 @@ export async function shrinkPhoto(file: File, maxEdge = 1280): Promise<Blob> {
 }
 
 /* --------------------------------------------------------------------------
+ * The reporter's own position
+ * -------------------------------------------------------------------------- */
+
+/** The analysis cell is 60 m, so a fix coarser than that cannot place a report in one. */
+export const CELL_M = 60
+/** Beyond this a fix is almost certainly wifi- or IP-derived rather than GPS. */
+export const COARSE_FIX_M = 500
+
+export interface DeviceFix {
+  lon: number
+  lat: number
+  accuracyM: number
+}
+
+/**
+ * Ask the device where it is.
+ *
+ * `enableHighAccuracy` asks for GPS rather than the cheap network estimate, which
+ * is the whole point here — someone standing in front of a felled tree wants the
+ * tree's position, not their neighbourhood's.
+ *
+ * The accuracy radius comes back with the fix and is kept, not discarded. It is
+ * the difference between "this tree" and "somewhere on this street", and a log
+ * that reports a coordinate without it is overstating what it knows. The UI shows
+ * it and says when it is worse than one analysis cell.
+ *
+ * Rejects with a message worth showing. Geolocation also requires a secure
+ * context, so this works on the deployed site and on localhost but not over plain
+ * HTTP — stated rather than surfaced as a mystery failure.
+ */
+export function locateDevice(timeoutMs = 15_000): Promise<DeviceFix> {
+  return new Promise((resolve, reject) => {
+    if (!('geolocation' in navigator)) {
+      reject(new Error('This browser cannot report a location.'))
+      return
+    }
+    if (!window.isSecureContext) {
+      reject(new Error('Location needs a secure connection (https). Place the report on the map instead.'))
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) =>
+        resolve({
+          lon: pos.coords.longitude,
+          lat: pos.coords.latitude,
+          accuracyM: Math.round(pos.coords.accuracy),
+        }),
+      (err) => {
+        // Each case needs a different action from the user, so each gets its own
+        // sentence rather than one generic failure.
+        const message =
+          err.code === err.PERMISSION_DENIED
+            ? 'Location permission was refused. You can still place the report on the map.'
+            : err.code === err.POSITION_UNAVAILABLE
+              ? 'Your device could not get a fix. Indoors this often fails — try outside, or place it on the map.'
+              : err.code === err.TIMEOUT
+                ? 'Getting a location took too long. Try again, or place the report on the map.'
+                : 'Could not get a location. Place the report on the map instead.'
+        reject(new Error(message))
+      },
+      { enableHighAccuracy: true, timeout: timeoutMs, maximumAge: 0 }
+    )
+  })
+}
+
+/** Plain-language note on what a fix is good for. Null when it is fine. */
+export function accuracyCaveat(accuracyM: number): string | null {
+  if (accuracyM > COARSE_FIX_M) {
+    return `±${accuracyM} m — that is a neighbourhood, not a tree, and is usually what a laptop reports rather than a phone. Drag the map to the actual spot before saving.`
+  }
+  if (accuracyM > CELL_M) {
+    return `±${accuracyM} m, which is wider than the ${CELL_M} m cell this is analysed in. Adjust it on the map if you can see the exact spot.`
+  }
+  return null
+}
+
+/* --------------------------------------------------------------------------
  * Export, for committing to the public log
  * -------------------------------------------------------------------------- */
 
@@ -257,6 +342,8 @@ export async function exportForPublicLog(drafts: Report[]): Promise<{ reports: n
       note: d.note,
       region: d.region,
       reporter: d.reporter,
+      ...(d.locationSource ? { locationSource: d.locationSource } : {}),
+      ...(d.accuracyM !== undefined ? { accuracyM: d.accuracyM } : {}),
       ...(blob ? { photo: `reports/${d.id}.jpg` } : {}),
     }
     byId.set(d.id, entry)
@@ -279,13 +366,15 @@ export async function exportForPublicLog(drafts: Report[]): Promise<{ reports: n
 
 /** CSV, for handing the log to someone who works in a spreadsheet. */
 export function reportsToCsv(reports: Report[]): string {
-  const headers = ['id', 'kind', 'recorded_at_utc', 'latitude', 'longitude', 'region', 'reporter', 'note', 'photo']
+  const headers = ['id', 'kind', 'recorded_at_utc', 'latitude', 'longitude',
+    'location_source', 'accuracy_m', 'region', 'reporter', 'note', 'photo']
   const cell = (v: unknown) => {
     const s = String(v ?? '')
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
   }
   const rows = reports.map((r) =>
-    [r.id, r.kind, r.at, r.lat.toFixed(5), r.lon.toFixed(5), r.region ?? '', r.reporter, r.note, r.photo ?? '']
+    [r.id, r.kind, r.at, r.lat.toFixed(5), r.lon.toFixed(5),
+     r.locationSource ?? '', r.accuracyM ?? '', r.region ?? '', r.reporter, r.note, r.photo ?? '']
       .map(cell)
       .join(',')
   )
