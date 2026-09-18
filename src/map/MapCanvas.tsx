@@ -12,6 +12,7 @@ import {
   addEventIcons, addReportIcons, EVENT_ICONS, PENDING_ICON, reportIconId,
 } from './reportMarkers'
 import { loadRecent, type LossEvent } from '../data/recent'
+import { imageryFor, loadImagery, type ImageryDoc } from '../data/imagery'
 import { RISK_COLOURS } from '../data/risk'
 import { useRegionData } from '../data/useRegionData'
 import { useReports } from '../data/useReports'
@@ -66,6 +67,7 @@ export function MapCanvas() {
   // counter always differs, so the effect always fires.
   const [styleEpoch, setStyleEpoch] = useState(0)
 
+  const stage = useApp((s) => s.stage)
   const view = useApp((s) => s.view)
   const region = useApp((s) => s.region)
   const year = useApp((s) => s.year)
@@ -447,6 +449,45 @@ export function MapCanvas() {
       16, pick(1.7, 1.15),
     ] as never)
   }, [selectedReportId, styleEpoch, reports])
+
+  /**
+   * The photograph under the data follows the scrubber.
+   *
+   * It used to be one current mosaic regardless of the year selected, so choosing
+   * 2017 changed the overlay and left 2026's ground underneath — a control that
+   * looked like it did nothing. Now each period resolves to the Wayback release
+   * whose photograph was actually *taken* nearest it (see pipeline/imagery.py),
+   * and the tiles are swapped in place with setTiles rather than a restyle, so the
+   * data layers are never torn down to change the ground under them.
+   *
+   * Re-applied on every style epoch, because setStyle rebuilds the imagery source
+   * from the basemap definition and would otherwise snap back to the live mosaic.
+   */
+  const [imagery, setImagery] = useState<ImageryDoc | null>(null)
+  useEffect(() => {
+    loadImagery().then(setImagery)
+  }, [])
+
+  useEffect(() => {
+    const m = map.current
+    if (!m || !styleReadyRef.current || basemap !== 'satellite') return
+    // Not during the intro. Its countdown steps through every year at 900 ms, and
+    // following it fetched a full screen of photographs for each — 10 releases and
+    // 200 tiles, ~5 MB, in the first eleven seconds, for a cinematic nobody is
+    // reading the ground in. On 3G that alone would have undone the payload work.
+    if (stage !== 'workspace') return
+    const src = m.getSource('imagery') as { setTiles?: (t: string[]) => void } | undefined
+    if (!src?.setTiles) return
+    const choice = imageryFor(imagery, region, activePeriod(cadence, year, month))
+    // No index, or no period yet: leave the live mosaic, which is exactly what the
+    // basemap showed before this existed.
+    if (!choice) return
+    // Settled, not immediate: holding an arrow key or clicking along the scrubber
+    // should fetch the year you stop on, not every year you pass through. Same
+    // principle as map-performance's "commit the scrubber's final value".
+    const t = window.setTimeout(() => src.setTiles?.([choice.tiles]), 350)
+    return () => window.clearTimeout(t)
+  }, [imagery, region, cadence, year, month, basemap, styleEpoch, stage])
 
   // Recent-pass data, fetched per region and absent until the rolling stage has
   // been run. Absence is normal, so it is not an error path.

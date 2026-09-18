@@ -100,7 +100,18 @@ export function Overture() {
           </span>
         </p>
 
-        <button type="button" className="overture__enter" onClick={enter}>
+        <button
+          type="button"
+          className="overture__enter"
+          onClick={() => {
+            // The countdown above walks the year backwards, so without this the
+            // workspace opened on whichever year it had reached when the button
+            // was pressed — 2023 one time, 2019 the next — under data from the
+            // latest year. Always arrive on the most recent measurement.
+            if (years.length) setYear(years[years.length - 1])
+            enter()
+          }}
+        >
           Open the workspace
         </button>
       </div>

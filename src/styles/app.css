@@ -521,6 +521,12 @@
 
 .scrubber__track { position: relative; flex: 1; height: 44px; min-width: 120px; }
 
+/* The photograph's capture date. When no photograph was taken in the period being
+   viewed, the label says so and the value takes the ramp's warm edge — a flag that
+   the ground and the data are from different moments, not an error. */
+.stats__item--imagery.is-earlier dd { color: var(--heat-4); }
+.stats__item--imagery { cursor: help; }
+
 /* A month with no usable composite. Present so the gap is visible and titled,
    never a clickable tick — there is nothing behind it to show. */
 .scrubber__gap {
@@ -595,6 +601,33 @@
 .stats__item dt { font-size: 0.625rem; }
 .stats__item dd { margin: 0; color: var(--ink-0); }
 .stats__item--accent dd { color: var(--canopy); }
+
+/* Below a wide desktop the readout moves onto its own line under the scrubber.
+
+   Side by side, the readout kept its full width and the scrubber took what was
+   left: 120-190 px for nine years on an ordinary laptop, ticks 15-24 px apart with
+   40 px hit areas, so every tick overlapped its neighbour and a click on 2020
+   landed on 2021. The design spec already says the scrubber runs the full width
+   between rail and scale; this makes that true at the widths people actually use.
+   The readout is not hidden — the instrument depends on it — it just stops
+   competing for the same row. */
+@media (max-width: 1700px) {
+  .bottombar {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: calc(var(--u) * 1.5);
+    padding-block: calc(var(--u) * 2);
+  }
+  .bottombar__scrub { flex: 0 0 auto; }
+  .stats {
+    gap: calc(var(--u) * 5);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  /* Label and value on one line, so the readout costs one short row, not two. */
+  .stats__item { flex-direction: row; align-items: baseline; gap: calc(var(--u) * 1.5); }
+}
 
 /* ---------- Site plate ---------- */
 

@@ -475,6 +475,115 @@ const testFonts = async (page) => {
   await enterWorkspace(page)
 }
 
+/* ------------------------------------------------- the scrubber moves the ground */
+
+/**
+ * Reported as a bug: "when I click 2017 I still see the 2026 satellite view,
+ * nothing changes." Three things were true at once, and each is checked here:
+ *
+ *  1. The photograph never changed — it was one current mosaic. Now each year
+ *     resolves to a historical Wayback release by the date it was *taken*.
+ *  2. The workspace opened on whatever year the intro countdown had reached.
+ *  3. On laptop widths the ticks overlapped, so a click on one year could land on
+ *     the next.
+ */
+const testScrubberMovesTheGround = async (page) => {
+  console.log('\nThe scrubber moves the ground')
+
+  // Count the archived releases fetched while the intro plays. Its countdown steps
+  // through every year, and the first version of this followed it — ten releases
+  // and two hundred tiles in eleven seconds. The intro must not move the ground.
+  const introReleases = new Set()
+  const onIntroRequest = (r) => {
+    const m = r.url().match(/wayback\.maptiles.*\/tile\/(\d+)\//)
+    if (m) introReleases.add(m[1])
+  }
+  page.on('request', onIntroRequest)
+  await page.goto(`${ORIGIN}/`, { waitUntil: 'load', timeout: 90_000 })
+  await page.waitForTimeout(6000)
+  page.off('request', onIntroRequest)
+  check(
+    introReleases.size === 0,
+    `the intro countdown does not fetch historical imagery (${introReleases.size} releases)`
+  )
+
+  const enter = page.getByRole('button', { name: 'Open the workspace' })
+  if (await enter.count()) await enter.click()
+  await page.waitForSelector('.scrubber__tick', { timeout: 60_000 })
+  await page.waitForTimeout(2500)
+
+  const years = await page.evaluate(() =>
+    [...document.querySelectorAll('.scrubber__tick')].map((t) => t.getAttribute('aria-label')?.replace('Show ', '')))
+  const latest = years[years.length - 1]
+  const onEntry = (await page.locator('.scrubber__year').innerText()).trim()
+  check(onEntry === latest, `the workspace opens on the latest year, not wherever the intro stopped (${onEntry})`)
+
+  // Every tick must receive its own click. Overlapping hit areas sent 2020 to 2021.
+  const clickable = await page.evaluate(() =>
+    [...document.querySelectorAll('.scrubber__tick')].every((t) => {
+      const r = t.getBoundingClientRect()
+      return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+        ?.closest('.scrubber__tick') === t
+    }))
+  check(clickable, 'every year tick receives its own click — no overlapping hit areas')
+
+  const read = () => page.evaluate(() => {
+    const it = document.querySelector('.stats__item--imagery')
+    const tiles = window.__map.getStyle().sources.imagery?.tiles?.[0] ?? ''
+    return {
+      label: it?.querySelector('dt')?.textContent ?? null,
+      date: it?.querySelector('dd')?.textContent ?? null,
+      release: (tiles.match(/tile\/(\d+)\//) || [])[1] ?? null,
+    }
+  })
+
+  if (!(await page.locator('.stats__item--imagery').count())) {
+    console.log('SKIP imagery — no imagery.json. Run `python pipeline/imagery.py` first.')
+    return
+  }
+
+  const first = years[0]
+  const atLatest = await read()
+  await page.getByRole('button', { name: `Show ${first}`, exact: true }).click()
+  await page.waitForTimeout(2500)
+  const atFirst = await read()
+
+  check(
+    atFirst.release && atFirst.release !== atLatest.release,
+    `clicking ${first} swaps the photograph (release ${atLatest.release} -> ${atFirst.release})`
+  )
+  check(
+    !!atFirst.date && atFirst.date.endsWith(first) || /none in/.test(atFirst.label ?? ''),
+    `the readout states the photograph's own date (${atFirst.date})`
+  )
+
+  // Find a year with no photograph of its own and check it is labelled, not implied.
+  let sawEarlier = false
+  for (const y of years) {
+    await page.getByRole('button', { name: `Show ${y}`, exact: true }).click()
+    await page.waitForTimeout(1500)
+    const r = await read()
+    const photoYear = (r.date ?? '').slice(-4)
+    if (photoYear > y) {
+      check(false, `${y} was shown a photograph from ${r.date} — a future photograph`)
+    }
+    if (photoYear !== y) {
+      sawEarlier = true
+      check(/none in/.test(r.label ?? ''), `${y}: says no photograph was taken that year (${r.label})`)
+    }
+  }
+  check(sawEarlier, 'at least one year falls back to an earlier photograph, and every one that does says so')
+
+  // Collapsed rail: the view buttons must keep an accessible name.
+  await page.setViewportSize({ width: 1000, height: 900 })
+  await page.waitForTimeout(800)
+  const unnamed = await page.evaluate(() =>
+    [...document.querySelectorAll('.rail .nav')].filter((b) => !b.getAttribute('aria-label')).length)
+  check(unnamed === 0, `the collapsed rail's buttons keep their names (${unnamed} unnamed)`)
+  await page.setViewportSize({ width: 1500, height: 950 })
+  await page.waitForTimeout(800)
+}
+
 /* --------------------------------------------------------------- cadence */
 
 /**
@@ -729,6 +838,7 @@ const run = async () => {
   await testReportLocation(browser)
   await testEmptyChangeState(page)
   await testChangeAndWatches(page)
+  await testScrubberMovesTheGround(page)
   await testCadence(page)
   await testLegendMatchesMap(page)
   await testQueryBar(page)

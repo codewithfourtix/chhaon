@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { REGIONS, SOURCE_RES, UNIT, VIEWS } from '../data/regions'
 import { activePeriod, domainFor, ndviPending, useNdviYears } from '../data/load'
 import { loadMonthly, monthLabel, usableMonths, type MonthlyDoc } from '../data/monthly'
+import {
+  captureLabel, imageryFor, loadImagery, sensorName, type ImageryDoc,
+} from '../data/imagery'
 import { RISK_BANDS, riskFor } from '../data/risk'
 import { useRegionData } from '../data/useRegionData'
 import { useApp } from '../state/store'
@@ -56,6 +59,11 @@ export function InstrumentRail() {
               type="button"
               className={`nav ${view === v.id ? 'is-active' : ''}`}
               aria-current={view === v.id}
+              // The collapsed rail hides the text with display:none, which also
+              // removes it from the accessibility tree — below 1100 px these were
+              // five unnamed buttons. The label keeps a name when the text goes.
+              aria-label={v.name}
+              title={v.name}
               onClick={() => setView(v.id)}
             >
               <span className="nav__icon"><Icon /></span>
@@ -74,6 +82,8 @@ export function InstrumentRail() {
             type="button"
             className={`nav nav--tight ${region === r.id ? 'is-active' : ''}`}
             aria-current={region === r.id}
+            aria-label={r.name}
+            title={r.name}
             onClick={() => setRegion(r.id)}
           >
             <span className="nav__icon"><IconRegion /></span>
@@ -214,7 +224,13 @@ export function BottomBar() {
   const setMonth = useApp((s) => s.setMonth)
   const region = useApp((s) => s.region)
   const view = useApp((s) => s.view)
+  const basemap = useApp((s) => s.basemap)
   const { grid, sites, meta, loading } = useRegionData(region)
+
+  const [imagery, setImagery] = useState<ImageryDoc | null>(null)
+  useEffect(() => {
+    loadImagery().then(setImagery)
+  }, [])
 
   const [monthly, setMonthly] = useState<MonthlyDoc | null>(null)
   useEffect(() => {
@@ -259,6 +275,14 @@ export function BottomBar() {
     allMonths.length > 1
       ? (allMonths.findIndex((p) => p.period === period) / (allMonths.length - 1)) * 100
       : 0
+
+  // Each tick's hit area, capped at the distance to its neighbour. At a fixed 40 px
+  // the ticks overlapped on any laptop-width window — 9 years in a 191 px track sit
+  // 24 px apart — so a click on 2020 landed on 2021, which sits later in the DOM
+  // and on top. Capped this way two ticks cannot overlap however narrow the track
+  // gets; the % is of the track, which is the ticks' containing block.
+  const yearHit = `min(40px, ${100 / span}%)`
+  const monthHit = `min(40px, ${100 / Math.max(1, allMonths.length - 1)}%)`
 
   return (
     <div className="bottombar">
@@ -307,7 +331,7 @@ export function BottomBar() {
                       key={y}
                       type="button"
                       className={`scrubber__tick ${y === year ? 'is-active' : ''}`}
-                      style={{ left: `${((y - first) / span) * 100}%` }}
+                      style={{ left: `${((y - first) / span) * 100}%`, width: yearHit }}
                       aria-label={`Show ${y}`}
                       aria-current={y === year}
                       onClick={() => setYear(y)}
@@ -321,7 +345,7 @@ export function BottomBar() {
                         key={p.period}
                         type="button"
                         className={`scrubber__tick ${p.period === month ? 'is-active' : ''}`}
-                        style={{ left: `${monthAt(p.period)}%` }}
+                        style={{ left: `${monthAt(p.period)}%`, width: monthHit }}
                         aria-label={`Show ${monthLabel(p.period)}, ${p.vegPct}% vegetated`}
                         aria-current={p.period === month}
                         title={`${monthLabel(p.period)} · ${p.vegPct}% vegetated · ${p.scenes} scenes`}
@@ -351,6 +375,15 @@ export function BottomBar() {
       </div>
 
       <dl className="stats" aria-label="Current readout">
+        <ImageryStat
+          doc={basemap === 'satellite' ? imagery : null}
+          region={region}
+          period={
+            cadence === 'monthly'
+              ? month
+              : year === null ? null : String(year)
+          }
+        />
         <div className="stats__item">
           <dt className="t-label">Sites</dt>
           <dd className="t-data">{loading ? '—' : (sites?.features.length ?? 0)}</dd>
@@ -414,4 +447,52 @@ export function LoadingBar() {
     )
   }
   return loading || waitingOnYear ? <div className="databar" aria-hidden="true" /> : null
+}
+
+/**
+ * Which photograph is under the data, by the date it was actually taken.
+ *
+ * The answer to "I clicked 2017 and still see today's ground". The imagery now
+ * follows the scrubber, but a release is not a capture: Esri's 2019 release shows
+ * Model Town as photographed in February 2017. So this states the capture date, and
+ * says plainly when no photograph was taken in the period being viewed rather than
+ * letting the year on the scrubber imply one was.
+ */
+function ImageryStat({
+  doc,
+  region,
+  period,
+}: {
+  doc: ImageryDoc | null
+  region: Parameters<typeof imageryFor>[1]
+  period: string | null
+}) {
+  const choice = imageryFor(doc, region, period)
+  if (!choice || !period) return null
+
+  const { capture, matchesPeriod } = choice
+  const periodLabel = period.includes('-') ? monthLabel(period) : period
+  const mixed = capture.matching < capture.samples
+
+  const detail = [
+    `Photographed ${captureLabel(capture.captured)} by ${sensorName(capture.source)}`,
+    `at ${capture.resM} m`,
+    matchesPeriod
+      ? ''
+      : `— no photograph was taken over this area in ${periodLabel}, so this is the most recent one before it`,
+    mixed
+      ? `. The date holds at ${capture.matching} of ${capture.samples} points sampled; other parts of the mosaic are from ${capture.otherDates.map(captureLabel).join(', ')}`
+      : '',
+    `. Esri Wayback release of ${captureLabel(capture.releaseDate)}.`,
+  ].join(' ').replace(/\s+([.,—])/g, '$1')
+
+  return (
+    <div
+      className={`stats__item stats__item--imagery ${matchesPeriod ? '' : 'is-earlier'}`}
+      title={detail}
+    >
+      <dt className="t-label">{matchesPeriod ? 'Imagery' : `Imagery · none in ${periodLabel}`}</dt>
+      <dd className="t-data">{captureLabel(capture.captured)}</dd>
+    </div>
+  )
 }
