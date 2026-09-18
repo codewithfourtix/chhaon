@@ -335,8 +335,10 @@ basemap is still streaming — on a slow connection it competes with the map the
 user is actually looking at.
 
 Measured, not assumed: `node scripts/budget.mjs --3g` reports what is on the
-critical path — **2.7&nbsp;s** to measurements on screen on the production build,
-throttled to Fast 3G, repeatable across runs. `node scripts/progressive.mjs --3g`
+critical path — **about 3&nbsp;s** (2.7–3.6&nbsp;s across runs and days) to
+measurements on screen on the production build, throttled to Fast 3G. The imagery
+index is kept off that path: it loads once the workspace is open and the map has
+settled. `node scripts/progressive.mjs --3g`
 fails if a year file ever lands before the first layer renders.
 
 What remains on that path is the bundle, and it is mostly MapLibre — which is the

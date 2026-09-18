@@ -465,9 +465,27 @@ export function MapCanvas() {
    * from the basemap definition and would otherwise snap back to the live mosaic.
    */
   const [imagery, setImagery] = useState<ImageryDoc | null>(null)
+  // Not on the critical path: nothing reads it during the intro, and until it
+  // arrives the basemap is simply the live mosaic. So it waits for the workspace
+  // and for the map to settle, rather than competing with the data layer on 3G.
   useEffect(() => {
-    loadImagery().then(setImagery)
-  }, [])
+    const m = map.current
+    if (stage !== 'workspace' || !m) return
+    let live = true
+    const go = () => {
+      window.clearTimeout(fallback)
+      m.off('idle', go)
+      loadImagery().then((d) => live && setImagery(d))
+    }
+    // `idle` does not fire again if the map is already still.
+    const fallback = window.setTimeout(go, 3000)
+    m.once('idle', go)
+    return () => {
+      live = false
+      window.clearTimeout(fallback)
+      m.off('idle', go)
+    }
+  }, [stage])
 
   useEffect(() => {
     const m = map.current

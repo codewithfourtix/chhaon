@@ -264,7 +264,9 @@ def main():
                 "anchor": NDVI_TARGET,
                 "monthsWindow": MONTHLY_MONTHS,
                 "regions": existing,
-            }, f, indent=1, allow_nan=False)
+            # Compact: the app fetches this as the workspace opens, and indentation
+            # was a third of its size.
+            }, f, separators=(",", ":"), allow_nan=False)
         print("", flush=True)
 
     print(f"wrote {out_path}")

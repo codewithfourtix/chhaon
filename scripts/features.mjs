@@ -24,6 +24,15 @@ const check = (ok, msg) => {
  */
 const enterWorkspace = async (page) => {
   const enter = page.getByRole('button', { name: 'Open the workspace' })
+  // Waited for, not counted: callers load with 'load' rather than 'networkidle',
+  // because the background imagery prefetch keeps the network busy by design.
+  // Either the intro's button or, when the hash skipped the intro, the workspace.
+  await page
+    .locator('.scrubber__tick')
+    .or(enter)
+    .first()
+    .waitFor({ timeout: 60_000 })
+    .catch(() => null)
   if (await enter.count()) await enter.click()
   await page.waitForTimeout(3500)
 }
@@ -141,7 +150,7 @@ const testReporting = async (page) => {
   )
 
   // It must survive a reload — that is the whole point of storing it.
-  await page.reload({ waitUntil: 'networkidle' })
+  await page.reload({ waitUntil: 'load' })
   await enterWorkspace(page)
   await page.getByRole('button', { name: /^Report/ }).click()
   await page.waitForTimeout(900)
@@ -305,7 +314,7 @@ const testEmptyChangeState = async (page) => {
   // `recent.py` has been run for real the data exists, and a test that depended on
   // its absence would quietly stop testing the empty state.
   await page.route('**/data/*-recent.json', (route) => route.fulfill({ status: 404 }))
-  await page.reload({ waitUntil: 'networkidle' })
+  await page.reload({ waitUntil: 'load' })
   await enterWorkspace(page)
 
   await page.getByRole('button', { name: /^Change/ }).click()
@@ -327,7 +336,7 @@ const testChangeAndWatches = async (page) => {
     route.fulfill({ contentType: 'application/json', body: JSON.stringify(RECENT_FIXTURE) })
   )
   // The loader memoises per region, so reload to pick the fixture up.
-  await page.reload({ waitUntil: 'networkidle' })
+  await page.reload({ waitUntil: 'load' })
   await enterWorkspace(page)
 
   await page.getByRole('button', { name: /^Change/ }).click()
@@ -823,6 +832,20 @@ const testQueryBar = async (page) => {
     none.includes('does not answer questions') || none.includes('nothing in that matched'),
     'refuses input it cannot turn into map state, rather than doing nothing'
   )
+
+  // Reported as a bug: once opened, the dropdown never went away except on Escape.
+  const drop = page.locator('.cmd__drop')
+  await page.locator('.cmd__input').click()
+  check(await drop.isVisible(), 'clicking the search box opens its dropdown')
+  const box = await page.locator('.map canvas, canvas').first().boundingBox()
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+  await page.waitForTimeout(200)
+  check(!(await drop.count()), 'clicking the map closes the search dropdown')
+  const focused = await page.evaluate(() => document.activeElement?.className ?? '')
+  check(!focused.includes('cmd__input'), 'and gives up focus, so `/` reopens it')
+  await page.locator('.cmd__input').click()
+  await page.keyboard.press('Escape')
+  check(!(await drop.count()), 'Escape still closes it')
 }
 
 /* ------------------------------------------------------------------- run */

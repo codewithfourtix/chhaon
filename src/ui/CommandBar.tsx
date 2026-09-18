@@ -21,6 +21,7 @@ export function CommandBar() {
   const [result, setResult] = useState<QueryResult | null>(null)
   const [open, setOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
 
   const region = useApp((s) => s.region)
   const { grid, sites } = useRegionData(region)
@@ -60,6 +61,28 @@ export function CommandBar() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Closes when you click or tab anywhere else — the map, a panel, the rail.
+  // It used to close only on Escape, so once opened it sat over the map for good.
+  useEffect(() => {
+    if (!open) return
+    const outside = (t: EventTarget | null) =>
+      !(t instanceof Node && rootRef.current?.contains(t))
+    const onPointer = (e: PointerEvent) => {
+      if (!outside(e.target)) return
+      setOpen(false)
+      inputRef.current?.blur()
+    }
+    const onFocus = (e: FocusEvent) => {
+      if (outside(e.target)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointer, true)
+    document.addEventListener('focusin', onFocus)
+    return () => {
+      document.removeEventListener('pointerdown', onPointer, true)
+      document.removeEventListener('focusin', onFocus)
+    }
+  }, [open])
+
   const run = () => {
     const r = parseQuery(text, { years: grid?.years, species })
     setResult(r)
@@ -87,7 +110,7 @@ export function CommandBar() {
   }
 
   return (
-    <div className={`cmd ${open ? 'is-open' : ''}`}>
+    <div ref={rootRef} className={`cmd ${open ? 'is-open' : ''}`}>
       <form
         className="cmd__form"
         onSubmit={(e) => {
