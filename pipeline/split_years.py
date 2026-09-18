@@ -40,26 +40,48 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import OUT, REGIONS  # noqa: E402
 
 
+def period_path(region_id, period):
+    """
+    The filename the browser derives for one NDVI layer. Keep in sync with load.ts.
+
+    Two cadences share this shape, distinguished by an `m` in the name so a
+    directory listing is readable and a glob can pick out one cadence:
+
+        '2018'    -> <region>-ndvi-2018.json
+        '2026-06' -> <region>-ndvi-m-2026-06.json
+    """
+    period = str(period)
+    infix = "m-" if "-" in period else ""
+    return f"{OUT}/{region_id}-ndvi-{infix}{period}.json"
+
+
+def write_period(region_id, period, grid, values):
+    """
+    One NDVI layer — a season-locked year or a calendar month — with enough shape
+    to detect a stale split.
+    """
+    period = str(period)
+    doc = {
+        "region": region_id,
+        "period": period,
+        "cols": grid["cols"],
+        "rows": grid["rows"],
+        "ndvi": values,
+    }
+    # `year` stays on yearly layers for anything still reading that field.
+    if "-" not in period:
+        doc["year"] = int(period)
+    with open(period_path(region_id, period), "w", encoding="utf-8") as f:
+        json.dump(doc, f, separators=(",", ":"), allow_nan=False)
+
+
+# The old name, kept because run.py imports it and a yearly write is the common
+# case. Both go through the same writer, so the two cadences cannot drift apart.
+write_year = write_period
+
+
 def year_path(region_id, year):
-    """The filename the browser derives for a year. Keep in sync with load.ts."""
-    return f"{OUT}/{region_id}-ndvi-{year}.json"
-
-
-def write_year(region_id, year, grid, values):
-    """One year of NDVI, with enough shape to detect a stale split."""
-    with open(year_path(region_id, year), "w", encoding="utf-8") as f:
-        json.dump(
-            {
-                "region": region_id,
-                "year": int(year),
-                "cols": grid["cols"],
-                "rows": grid["rows"],
-                "ndvi": values,
-            },
-            f,
-            separators=(",", ":"),
-            allow_nan=False,
-        )
+    return period_path(region_id, year)
 
 
 def split(region_id):

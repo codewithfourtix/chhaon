@@ -124,6 +124,53 @@ def check_region(rid, meta):
     print(f"  ndvi     {len(ndvi)}/{len(g['years'])} years resolved "
           f"({latest} inline, {len(ndvi) - 1} on demand)")
 
+    # --- monthly composites, if the stage has been run ---
+    mpath = f"{OUT}/{rid}-monthly.json"
+    if os.path.exists(mpath):
+        mdoc = strict_load(mpath, rid)
+        if mdoc is not None:
+            usable = [p for p in mdoc["periods"] if p["usable"]]
+            unusable = [p for p in mdoc["periods"] if not p["usable"]]
+            print(f"  monthly  {len(usable)}/{len(mdoc['periods'])} months usable, "
+                  f"{mdoc['latestUsable']} latest")
+
+            # Every usable month must have a raster behind it. A month on the
+            # scrubber with no file is a dead tick, and the layer would silently
+            # keep showing the previous one.
+            for p_ in usable:
+                ypath = f"{OUT}/{rid}-ndvi-m-{p_['period']}.json"
+                if not os.path.exists(ypath):
+                    bad(f"{rid}: month {p_['period']} is usable but "
+                        f"{os.path.basename(ypath)} is missing")
+                    continue
+                ydoc = strict_load(ypath, rid)
+                if ydoc is None:
+                    continue
+                if len(ydoc["ndvi"]) != n:
+                    bad(f"{rid}: {os.path.basename(ypath)} has {len(ydoc['ndvi'])} "
+                        f"values, expected {n}")
+
+            # And every unusable one must say why — a blank reads as a bug.
+            for p_ in unusable:
+                if not p_.get("reason"):
+                    bad(f"{rid}: month {p_['period']} is unusable with no reason given")
+
+            # A month is a composite; below the scene floor it is one reading with
+            # a haze artefact, which is the thing compositing exists to prevent.
+            thin = [p_ for p_ in usable if p_["scenes"] < mdoc["minScenes"]]
+            if thin:
+                bad(f"{rid}: {len(thin)} usable month(s) composited from fewer than "
+                    f"{mdoc['minScenes']} scenes: {[p_['period'] for p_ in thin]}")
+
+            veg = [p_["vegPct"] for p_ in usable if p_["vegPct"] is not None]
+            if veg:
+                print(f"  monthly veg {min(veg):.1f}–{max(veg):.1f}%")
+                # The monthly series exists to show the season. If it were flat,
+                # either the compositing or the window is wrong.
+                if max(veg) - min(veg) < 2:
+                    bad(f"{rid}: monthly vegetated share barely moves across the "
+                        "year — the series is not measuring the season")
+
     lu = Counter(g["landuse"])
     plantable = n - lu.get(0, 0)
     print(f"  plantable {plantable} cells ({100*plantable/n:.1f}%)")

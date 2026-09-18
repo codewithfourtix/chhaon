@@ -169,6 +169,39 @@ RECENT_SCENE_HAZE_RATIO = 0.55
 # several observations so haze in one of them cannot manufacture a loss.
 RECENT_BASELINE_PASSES = 3
 
+# --------------------------------------------------------------------------
+# Monthly composites — the recent window at a cadence you can act on
+# --------------------------------------------------------------------------
+#
+# The yearly layers answer "is 2025 different from 2017". They cannot answer
+# "what has the canopy been doing lately", because one reading a year is the
+# coarsest possible sampling of a signal that moves every month.
+#
+# So the recent window also gets **monthly** composites, while everything before
+# it stays yearly. Two cadences, each where it makes sense: a decade of
+# season-locked annual readings for comparing years, and two years of monthly
+# readings for knowing what is happening now.
+#
+# Monthly and not fortnightly, and that is measured rather than assumed. Over the
+# last 24 months of Model Town, counting only scenes under the cloud bar:
+#
+#   monthly    14 of 16 non-smog months have >= 3 scenes
+#   fortnightly 19 of 32 non-smog fortnights do; 10 have one or two, 3 have none
+#
+# A single scene cannot be trusted here — haze depresses NDVI, which is the whole
+# reason the yearly layers are multi-scene composites — so a fortnightly series
+# would be largely single-scene readings, reintroducing exactly the artefact that
+# made Model Town read 34% -> 23% -> 8% -> 47% on near-identical dates. Monthly is
+# the finest cadence Lahore's sky actually supports.
+MONTHLY_MONTHS = 24
+MONTHLY_MAX_CLOUD = 40
+# Below this a month is reported without a raster: one or two scenes is not a
+# composite, and calling it one would be the artefact above.
+MONTHLY_MIN_SCENES = 3
+# Same bar as the yearly layers: a hole in the raster reads as "no trees" when it
+# means "no data".
+MONTHLY_MIN_COVERAGE = 0.92
+
 STAC_S2 = "https://earth-search.aws.element84.com/v1/search"
 STAC_MPC = "https://planetarycomputer.microsoft.com/api/stac/v1/search"
 MPC_SAS = "https://planetarycomputer.microsoft.com/api/sas/v1/token/landsat-c2-l2"

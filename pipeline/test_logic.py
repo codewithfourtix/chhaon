@@ -326,6 +326,73 @@ def test_baseline_is_bounded_to_recent_passes():
     print("  June peak excluded by keep=2, so a steady September is not 'loss'")
 
 
+def test_months_back_walks_year_boundaries():
+    """Off-by-one here would silently shift the whole monthly series by a month."""
+    from datetime import date
+    from change import months_back
+    ms = months_back(date(2026, 9, 18), 24)
+    assert len(ms) == 24
+    assert ms[-1] == "2026-09", ms[-1]
+    assert ms[0] == "2024-10", ms[0]
+    # January must step back to the previous December, not month zero.
+    assert months_back(date(2026, 1, 5), 3) == ["2025-11", "2025-12", "2026-01"]
+    print(f"  {ms[0]} .. {ms[-1]}, and January steps back to December")
+
+
+def test_a_month_needs_three_scenes_to_composite():
+    """
+    One or two scenes is not a composite, and compositing is the only thing that
+    rejects haze. A single-scene month would reintroduce the artefact that made
+    Model Town read 34% -> 23% -> 8% -> 47% on near-identical dates.
+    """
+    from change import new_period, too_few_scenes
+    rec = new_period("2026-07", 2)
+    assert rec["usable"] is False, "a month must not start out usable"
+    too_few_scenes(rec, 2)
+    assert rec["usable"] is False
+    assert "2 usable scenes" in rec["reason"], rec["reason"]
+    assert "composite" in rec["reason"]
+    # Singular reads correctly too — this text goes on screen.
+    assert "1 usable scene " in too_few_scenes(new_period("2026-07", 1), 1)["reason"]
+    print(f"  2 scenes -> {rec['reason'][:56]}...")
+
+
+def test_smog_months_carry_a_reason_not_a_blank():
+    """
+    Nov-Feb is reported, never dropped. A blank stretch in the series looks like a
+    broken chart; a labelled one is the finding that a third of the Lahore year
+    cannot be read from orbit.
+    """
+    from change import new_period, smog_month
+    rec = smog_month(new_period("2025-12", 0))
+    assert rec["usable"] is False
+    assert "smog" in rec["reason"] and "Nov-Feb" in rec["reason"]
+    assert rec["vegPct"] is None, "an unreadable month must publish no figure"
+    print(f"  {rec['period']} -> {rec['reason'][:52]}...")
+
+
+def test_monthly_composite_uses_the_coverage_bar_not_the_pass_bar():
+    """
+    A monthly composite is held to the yearly layers' 92% coverage, not the 60%
+    a single pass is allowed. A composite with a hole in it would read as "no
+    trees" exactly where we could not see, and unlike a single pass it has no
+    excuse — it had several scenes to fill from.
+    """
+    from change import classify_pass, new_period
+    from config import MONTHLY_MIN_COVERAGE, RECENT_MIN_COVERAGE
+    assert MONTHLY_MIN_COVERAGE > RECENT_MIN_COVERAGE
+
+    cells = np.full((10, 10), 0.5, dtype="float32")
+    cells[:2, :] = np.nan                      # 80% visible
+    rec = classify_pass(new_period("2026-06", 4), cells, min_coverage=MONTHLY_MIN_COVERAGE)
+    assert rec["usable"] is False, "80% coverage must fail the composite bar"
+    # The same grid would have been fine as a single pass.
+    ok = classify_pass(new_period("2026-06", 4), cells, min_coverage=RECENT_MIN_COVERAGE)
+    assert ok["usable"] is True
+    print(f"  80% visible: rejected at {MONTHLY_MIN_COVERAGE:.0%}, "
+          f"accepted at {RECENT_MIN_COVERAGE:.0%}")
+
+
 def test_a_pass_must_earn_being_usable():
     """
     A pass starts unusable and has to clear the coverage floor. Getting this

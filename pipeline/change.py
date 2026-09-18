@@ -13,7 +13,7 @@ Nothing here touches the network, the filesystem, or a coordinate system.
 import numpy as np
 
 from config import (
-    NDVI_VEG_THRESHOLD, RECENT_DROP_NDVI, RECENT_MIN_COVERAGE,
+    MONTHLY_MIN_SCENES, NDVI_VEG_THRESHOLD, RECENT_DROP_NDVI, RECENT_MIN_COVERAGE,
     RECENT_MIN_EVENT_CELLS, RECENT_SCENE_HAZE_RATIO, RECENT_SEVERE_CELLS,
     RECENT_WAS_VEGETATED, SMOG_MONTHS,
 )
@@ -90,6 +90,61 @@ def read_failed(record: dict, err: BaseException) -> dict:
     """A pass we could not read is unusable, and says which way it failed."""
     record["usable"] = False
     record["reason"] = f"read failed: {type(err).__name__}"
+    return record
+
+
+def months_back(today, count):
+    """The last `count` calendar months, oldest first, as 'YYYY-MM'."""
+    out = []
+    y, m = today.year, today.month
+    for _ in range(count):
+        out.append(f"{y:04d}-{m:02d}")
+        m -= 1
+        if m == 0:
+            y, m = y - 1, 12
+    return list(reversed(out))
+
+
+def new_period(period: str, scenes: int) -> dict:
+    """
+    The record for one month, before anything is known about what it shows.
+
+    Starts unusable for the same reason a pass does: a month wrongly called usable
+    puts a raster on the scrubber that nobody can defend.
+    """
+    return {
+        "period": period,
+        "scenes": scenes,
+        "usable": False,
+        "reason": None,
+        "coverage": None,
+        "vegPct": None,
+        "meanNdvi": None,
+        "dates": [],
+    }
+
+
+def too_few_scenes(record: dict, have: int, need=MONTHLY_MIN_SCENES) -> dict:
+    """
+    A month with one or two scenes is reported, not composited.
+
+    Compositing is what rejects haze; with fewer than three scenes there is
+    nothing to take a maximum over, and a single hazy reading is exactly the
+    artefact that made Model Town appear to lose two thirds of its vegetation
+    between 2018 and 2019.
+    """
+    record["usable"] = False
+    record["reason"] = (
+        f"only {have} usable scene{'' if have == 1 else 's'} this month — "
+        f"{need} are needed to composite haze out"
+    )
+    return record
+
+
+def smog_month(record: dict) -> dict:
+    """Nov-Feb: the aerosol makes a monthly composite meaningless too."""
+    record["usable"] = False
+    record["reason"] = "smog season (Nov-Feb): aerosol depresses NDVI scene-wide"
     return record
 
 
