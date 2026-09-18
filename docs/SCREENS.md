@@ -82,9 +82,9 @@ Dismisses on Escape, on outside click, and on selecting another site.
 
 ---
 
-## 5. Year Scrubber
+## 5. Scrubber
 
-**Job:** Show observed green cover per year — as an observation, not a trend.
+**Job:** Walk the timeline — yearly for comparing years, monthly for the season.
 
 A horizontal scale along the bottom of the workspace. Moving it re-reads the
 canopy layer for that year, and the cast shade grows and shrinks with the
@@ -98,6 +98,16 @@ once the map is idle — so a drag never waits on the network.
 
 The label says what this is: an observation. Interannual variation here is
 dominated by rainfall, and the interface must not imply otherwise.
+
+**Two cadences, switched rather than merged.** Yearly walks the season-locked
+annual composites from 2017; monthly walks calendar months over the recent two
+years. The toggle only appears where monthly data exists, and the two are never one
+timeline — the annual window is locked precisely so a spring reading and a
+September reading are not neighbours.
+
+On the monthly track, months with no composite are drawn as faint stubs with their
+reason on hover: Nov–Feb smog, or a monsoon month with too few scenes to composite
+haze out. About a third of the Lahore year, and it is shown rather than skipped.
 
 ---
 

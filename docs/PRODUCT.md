@@ -334,6 +334,51 @@ to be gated on their open flags as well as lazily imported, because they render
 anyway. That is 8.7 KB gzip and, more usefully, no hooks running for a panel nobody
 opened.
 
+### 3.14a Two cadences over one measurement, and why they are never joined
+
+The yearly layers answer "is 2025 different from 2017", and the season-locked window
+is what makes that question answerable. They cannot answer "what has the canopy been
+doing lately": one reading a year is the coarsest possible sampling of something that
+moves every month.
+
+| | window | answers |
+|---|---|---|
+| 2017–2024 | one fixed spring window a year | is this year different from that one? |
+| 2024–2026 | every calendar month | what is happening now, and how does this month compare with the same month last year? |
+
+**They share `grid.ndvi`, keyed by period, and they are never plotted as one
+series.** Keeping the rasters in one map means the layer code needs no idea which
+cadence it is drawing — a period key is a period key. But joining the *series* would
+undo the annual window's entire purpose: a spring reading and a September reading are
+not neighbouring points, which is precisely why the annual one is locked.
+
+**Monthly rather than fortnightly, decided by counting.** Over the last 24 months of
+Model Town, scenes under the cloud bar:
+
+    monthly      14 of 16 non-smog months have >= 3 scenes
+    fortnightly  19 of 32 non-smog fortnights do; 10 have one or two, 3 have none
+
+Three scenes is the floor because compositing is the only thing that rejects haze.
+A fortnightly series would be largely single-scene readings — the exact artefact
+that produced 34% -> 23% -> 8% -> 47% on near-identical dates. The finest honest
+cadence is the one the sky supports, not the one the satellite revisit suggests.
+
+**A monthly series measures the season, and the UI says so in those words.** Model
+Town: ~56% vegetated in October, 31% by June, 58% the following September. That
+intra-year swing is larger than anything the decade of annual readings shows, which
+is the product's own central claim made visible — and it is also why the only
+year-on-year figure the panel offers is month-against-same-month.
+
+**A third of the year is unreadable and the series shows it.** 13–15 of 24 months
+per region carry a composite. The rest are Nov–Feb smog or monsoon months below the
+scene floor, each drawn as a gap carrying its reason, in the scrubber and the chart
+both. Zero would read as "no vegetation"; a labelled stub reads as "we could not
+see", which is the truth.
+
+Monthly composites are held to the yearly layers' 92% coverage bar rather than the
+60% a single pass gets. A single pass is one observation and allowed to be partial;
+a composite had several scenes to fill from and has no excuse.
+
 ### 3.15 Recent passes are a separate analysis, never mixed with the yearly ones
 
 The yearly composites are locked to one spring window precisely so that 2017 and
@@ -595,6 +640,7 @@ pip install rasterio pyproj shapely numpy
 python pipeline/run.py            # all five regions (slow, results are cached)
 python pipeline/run.py model-town # one region
 python pipeline/recent.py         # the fast rolling stage — recent passes, detected loss
+python pipeline/monthly.py        # monthly composites, recent 24 months (~2 min/region)
 python pipeline/split_years.py    # re-shape committed grids into core + per-year files
 ```
 
@@ -674,6 +720,8 @@ invisible in the UI: the layer simply keeps showing the previous year.
 | The Priority legend disagreed with the map | Priority's domain comes from the ranking, not the grid, so `domainFor()` returned a hard-coded 0.25–0.95 while the circles were painted from the real spread (0.33–0.80 in Model Town). Four views honoured the single-source rule and the fifth quietly did not |
 | The 3G load figure was measured wrong, twice | The probe waited on `window.__map` (dev-only, so production reported its 182 s timeout), then on any `<li>` in the ranked list — which matches the empty-state row, so it fired before any data arrived and reported 2.5 s. A perf probe that can pass without the thing it measures will eventually put a wrong number in a README |
 | Area-select and report placement could not be told apart | Both armed the map's click handler. Placement now skips when the other is armed, and arming either disarms the other in the store |
+| `write_year` could not write a month | It called `int(period)` on '2024-10'. Generalised to `write_period`, with the cadence in the filename rather than inferred |
+| The legend check started comparing the wrong view | It inherited whatever view the previous check left behind, and a new check began leaving the map on Canopy — so it compared the canopy domain against site scores and failed for a reason that was not there. A test that depends on running order will eventually lie |
 
 The pattern in most of these: **the failure was silent.** Nothing threw. That is
 why the checks now count rendered features and parse strictly, rather than

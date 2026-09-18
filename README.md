@@ -110,6 +110,44 @@ states, the tools get thumb-height chips, the legend turns horizontal, and every
 panel becomes a sheet. `node scripts/mobileshots.mjs` asserts no horizontal
 overflow and no tap target under 34&nbsp;px.
 
+### Two cadences, kept apart
+
+One reading a year is the coarsest possible sampling of a signal that moves every
+month. So the record now carries two cadences, each where it makes sense:
+
+| | | |
+|---|---|---|
+| **2017–2024** | yearly, locked to one spring window | for comparing one year with another |
+| **2024–2026** | monthly composites | for knowing what is happening now |
+
+They are never drawn as one line. The annual window is season-locked *precisely*
+so that a spring reading and a September reading are not treated as neighbouring
+points — joining them would throw away the one control that makes the yearly
+series mean anything.
+
+**Monthly, not fortnightly, and that was measured.** Over the last 24 months of
+Model Town, counting only scenes under the cloud bar: **14 of 16** non-smog months
+have at least three scenes, against **19 of 32** non-smog fortnights. A single
+scene cannot be trusted — haze depresses NDVI, which is why the yearly layers are
+composites at all — so a fortnightly series would be mostly single-scene readings,
+reintroducing the artefact that made Model Town read 34 % → 23 % → 8 % → 47 % on
+near-identical dates. Monthly is the finest cadence Lahore's sky supports.
+
+**The monthly series shows the season, and says so.** Model Town runs about
+56 % vegetated in October, 31 % by June, and back to 58 % the following September.
+A fall across those months is the year turning, not trees coming down — so the only
+year-on-year figure offered is the same month a year earlier. September against
+September says something; September against June says only that the monsoon
+happened.
+
+**About a third of the year cannot be read at all**, and the series shows that
+rather than smoothing over it. Of 24 months per region, 13–15 carry a composite;
+the rest are Nov–Feb smog season or monsoon months with too few scenes, each drawn
+as a labelled gap. A blank stretch nobody explains looks like a broken chart.
+
+The scrubber switches cadence, the Green cover panel charts whichever one is
+active, and `#c=monthly&mo=2026-06` sends a specific month to someone.
+
 ### Catching change while it is still news
 
 The yearly layers are locked to one spring window so 2017 and 2025 are
@@ -334,6 +372,9 @@ water instead.
   Citizen Portal is where a complaint gets a tracking number.
 - **We cannot see the ground from November to February.** Smog-season passes are
   kept and marked unusable, never silently dropped.
+- **The monthly series is the season, not a trend.** It is deliberately not
+  season-locked, so month-to-month movement is the monsoon and the winter rain.
+  Compare a month with the same month a year earlier, never with the one before it.
 
 ---
 
@@ -352,6 +393,7 @@ pip install rasterio pyproj shapely numpy
 python pipeline/run.py              # all five regions — slow, the decade of yearly layers
 python pipeline/run.py model-town   # just one
 python pipeline/recent.py           # the fast rolling stage: recent passes and detected loss
+python pipeline/monthly.py          # monthly composites for the recent 24 months
 python pipeline/split_years.py      # re-shape committed grids into core + per-year files
 ```
 
