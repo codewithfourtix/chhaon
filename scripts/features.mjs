@@ -475,6 +475,105 @@ const testFonts = async (page) => {
   await enterWorkspace(page)
 }
 
+/* --------------------------------------------------------------- cadence */
+
+/**
+ * The monthly cadence, and the fact that it is kept apart from the yearly one.
+ *
+ * The product now has two timelines over the same measurement, and the danger is
+ * not that either is wrong — it is that they get read as one. The annual series is
+ * locked to one spring window precisely so a spring reading and a September
+ * reading are never treated as neighbouring points, so this checks that switching
+ * cadence really switches the data, that the gaps carry their reasons, and that
+ * the only year-on-year figure offered is month-against-same-month.
+ */
+const testCadence = async (page) => {
+  console.log('\nMonthly cadence')
+
+  await page.getByRole('button', { name: /^Canopy/ }).click()
+  await page.waitForTimeout(2200)
+
+  const toggle = page.locator('.cadence')
+  if (!(await toggle.count())) {
+    console.log('SKIP — no monthly data. Run `python pipeline/monthly.py` first.')
+    return
+  }
+  const yearTicks = await page.locator('.scrubber__tick').count()
+
+  await page.getByRole('button', { name: 'Monthly' }).click()
+  await page.waitForTimeout(3000)
+
+  const monthTicks = await page.locator('.scrubber__tick').count()
+  const gaps = await page.locator('.scrubber__gap').count()
+  check(monthTicks > yearTicks, `monthly gives more ticks than yearly (${yearTicks} -> ${monthTicks})`)
+  check(gaps > 0, `unreadable months are shown as gaps, not omitted (${gaps})`)
+
+  const label = (await page.locator('.scrubber__year').innerText()).trim()
+  check(/^[A-Z][a-z]{2} \d{4}$/.test(label), `the scrubber names the month (${label})`)
+
+  // A gap must explain itself, or it reads as a broken scrubber.
+  const gapTitle = await page.locator('.scrubber__gap').first().getAttribute('title')
+  check(
+    /smog|scene|visible/i.test(gapTitle ?? ''),
+    `each gap carries its reason (${(gapTitle ?? '').slice(0, 52)})`
+  )
+
+  const cover = await page.locator('.cover').innerText()
+  check(/the season/i.test(cover), 'the chart says this is the season, not loss')
+  check(
+    /points against [A-Z][a-z]{2} \d{4}/.test(cover),
+    'the only year-on-year figure is month against the same month'
+  )
+  check(
+    /months carry no reading/.test(cover),
+    'it states how much of the year could not be read'
+  )
+  check(
+    (await page.locator('.cover__gapbar').count()) > 0,
+    'and draws those months as gaps rather than zeroes'
+  )
+
+  // Switching months must actually repaint the raster, not just move a label.
+  const urlLen = () =>
+    page.evaluate(() => window.__map.getStyle().sources.field?.url?.length ?? 0)
+  const before = await urlLen()
+  const bars = await page.locator('.cover__bar').all()
+  await bars[Math.max(0, bars.length - 4)].click()
+  await page.waitForTimeout(3000)
+  const after = await urlLen()
+  check(before !== after, `picking another month repaints the raster (${before} -> ${after})`)
+
+  // The two cadences must not be sharing a period key.
+  check(
+    await page.evaluate(() => location.hash.includes('c=monthly') && /mo=\d{4}-\d{2}/.test(location.hash)),
+    'the URL carries the cadence and the month, so a month can be sent to someone'
+  )
+
+  // Arrow keys should walk months while on this cadence.
+  const monthNow = await page.evaluate(
+    () => new URLSearchParams(location.hash.slice(1)).get('mo')
+  )
+  await page.locator('.map-canvas').click({ position: { x: 5, y: 5 } }).catch(() => null)
+  await page.keyboard.press('ArrowLeft')
+  await page.waitForTimeout(2200)
+  const monthAfter = await page.evaluate(
+    () => new URLSearchParams(location.hash.slice(1)).get('mo')
+  )
+  check(monthNow !== monthAfter, `the arrows step months (${monthNow} -> ${monthAfter})`)
+
+  // Back to yearly, and the yearly track must be intact.
+  await page.getByRole('button', { name: 'Yearly' }).click()
+  await page.waitForTimeout(2500)
+  check(
+    (await page.locator('.scrubber__tick').count()) === yearTicks,
+    'switching back restores the yearly track unchanged'
+  )
+  check(
+    (await page.locator('.cover').innerText()).includes('not a trend'),
+    'and the yearly chart keeps its own caveat'
+  )
+}
+
 /* ------------------------------------------------------------ legend honesty */
 
 /**
@@ -489,6 +588,14 @@ const testFonts = async (page) => {
  */
 const testLegendMatchesMap = async (page) => {
   console.log('\nLegend matches the painted range')
+
+  // Set the view explicitly rather than inheriting whatever the previous check
+  // left behind. This compares the *Priority* legend against site scores, and it
+  // silently started comparing the canopy domain instead once the cadence check
+  // began leaving the map on Canopy — a test that depends on running order will
+  // eventually report a failure that is not there.
+  await page.getByRole('button', { name: /^Priority/ }).click()
+  await page.waitForTimeout(2500)
 
   // Compared against the region's own sites file, NOT queryRenderedFeatures —
   // that returns only what is inside the viewport, so a zoomed-in camera would
@@ -622,6 +729,7 @@ const run = async () => {
   await testReportLocation(browser)
   await testEmptyChangeState(page)
   await testChangeAndWatches(page)
+  await testCadence(page)
   await testLegendMatchesMap(page)
   await testQueryBar(page)
 

@@ -24,6 +24,18 @@ interface AppState {
   region: RegionId
   /** null until the pipeline's year list has loaded. */
   year: number | null
+  /**
+   * Which cadence the canopy layer and the scrubber are on.
+   *
+   * 'yearly' walks the season-locked annual composites, 2017 onward. 'monthly'
+   * walks calendar-month composites over the recent two years. Deliberately a
+   * mode rather than one merged timeline: a spring-locked annual reading and a
+   * September monthly reading are not points on the same series, and the annual
+   * window is locked precisely so they are not.
+   */
+  cadence: 'yearly' | 'monthly'
+  /** 'YYYY-MM' while on the monthly cadence. */
+  month: string | null
   selectedSiteId: string | null
   theme: Theme
   basemap: BasemapMode
@@ -71,6 +83,8 @@ interface AppState {
   setView: (v: ViewId) => void
   setRegion: (r: RegionId) => void
   setYear: (y: number) => void
+  setCadence: (c: 'yearly' | 'monthly') => void
+  setMonth: (m: string) => void
   selectSite: (id: string | null) => void
   toggleTheme: () => void
   setBasemap: (b: BasemapMode) => void
@@ -108,6 +122,8 @@ export const useApp = create<AppState>((set) => ({
   view: 'priority',
   region: 'model-town',
   year: null,
+  cadence: 'yearly',
+  month: null,
   selectedSiteId: null,
   theme: INITIAL_THEME,
   basemap: INITIAL_BASEMAP,
@@ -137,10 +153,15 @@ export const useApp = create<AppState>((set) => ({
   setRegion: (region) =>
     set({
       region, selectedSiteId: null, filters: NO_FILTERS, area: null, drawing: false,
+      // The month list is per region, so a month that existed in one may not in
+      // the next. Cleared and re-derived rather than carried over.
+      month: null,
       // A half-placed report belongs to the map the user was looking at.
       placingReport: false, pendingReport: null, selectedReportId: null,
     }),
   setYear: (year) => set({ year }),
+  setCadence: (cadence) => set({ cadence }),
+  setMonth: (month) => set({ month }),
   selectSite: (selectedSiteId) => set({ selectedSiteId }),
   setBasemap: (basemap) => set({ basemap }),
   toggleList: () => set((s) => ({ listOpen: !s.listOpen })),

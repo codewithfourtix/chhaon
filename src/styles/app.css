@@ -492,7 +492,47 @@
 .scrubber__label { display: flex; align-items: baseline; gap: calc(var(--u) * 2.5); }
 .scrubber__year { font-size: 1.625rem; }
 
+/* Cadence switch. Reuses the segmented language of the basemap toggle, because
+   it is the same kind of control: two readings of the same thing, not a filter. */
+.cadence {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--plate-2);
+  border-radius: 999px;
+}
+.cadence__btn {
+  min-height: 26px;
+  padding: 0 calc(var(--u) * 2.5);
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cadence__btn:hover { color: var(--ink-0); }
+.cadence__btn.is-active { background: var(--plate-0); color: var(--ink-0); }
+
 .scrubber__track { position: relative; flex: 1; height: 44px; min-width: 120px; }
+
+/* A month with no usable composite. Present so the gap is visible and titled,
+   never a clickable tick — there is nothing behind it to show. */
+.scrubber__gap {
+  position: absolute;
+  top: 50%;
+  width: 2px;
+  height: 6px;
+  margin-top: -3px;
+  margin-left: -1px;
+  background: var(--hairline-firm);
+  border-radius: 1px;
+}
 
 .scrubber__rule {
   position: absolute;
@@ -1175,6 +1215,18 @@ kbd {
   line-height: 1.5;
 }
 .cover__caveat strong { color: var(--ink-1); }
+
+/* A month with no composite, in the chart. Same width as a bar so the shape of the
+   year stays truthful, but a hairline stub rather than a zero — zero would read as
+   "no vegetation" when it means "we could not see". */
+.cover__gapbar {
+  flex: 1;
+  align-self: flex-end;
+  min-width: 2px;
+  height: 4px;
+  background: var(--hairline-firm);
+  border-radius: 1px 1px 0 0;
+}
 
 /* Years arrive progressively, so the stated range is provisional until they are
    all in. A quiet line, not a warning — nothing is wrong, it is just not final. */

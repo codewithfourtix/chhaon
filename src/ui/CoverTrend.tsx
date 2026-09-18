@@ -1,5 +1,8 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { allYearsLoaded, useNdviYears } from '../data/load'
+import {
+  blindSpots, loadMonthly, monthLabel, usableMonths, yearOnYear, type MonthlyDoc,
+} from '../data/monthly'
 import { statsForBox } from '../data/subarea'
 import { downloadGeoPng, downloadGridGeoJson } from '../data/exportLayers'
 import { useRegionData } from '../data/useRegionData'
@@ -27,6 +30,7 @@ export function CoverTrend() {
   const region = useApp((s) => s.region)
   const view = useApp((s) => s.view)
   const year = useApp((s) => s.year)
+  const cadence = useApp((s) => s.cadence)
   const theme = useApp((s) => s.theme)
   const setYear = useApp((s) => s.setYear)
   const area = useApp((s) => s.area)
@@ -51,6 +55,7 @@ export function CoverTrend() {
   }, [stats, grid])
 
   if (view !== 'canopy' || !grid) return null
+  if (cadence === 'monthly') return <MonthlyCover />
 
   const lo = series.length ? Math.min(...series.map((d) => d.pct)) : 0
   const hi = series.length ? Math.max(...series.map((d) => d.pct)) : 1
@@ -180,7 +185,7 @@ export function CoverTrend() {
           className="footBtn"
           title="This layer as a georeferenced PNG plus world file"
           onClick={() =>
-            downloadGeoPng(grid, 'canopy', year, {
+            downloadGeoPng(grid, 'canopy', year === null ? null : String(year), {
               stops: RAMP[theme],
               lo: 0,
               hi: Math.max(0.35, hi / 100 + 0.2),
@@ -191,5 +196,174 @@ export function CoverTrend() {
         </button>
       </div>
     </aside>
+  )
+}
+
+/**
+ * Green cover month by month, over the recent two years.
+ *
+ * A different question from the yearly chart above, and it must not be read as the
+ * same one. The yearly series is locked to one spring window so that 2017 and 2025
+ * are comparable; this one deliberately is not locked, which makes it a picture of
+ * **the season**. Model Town runs about 56% vegetated in October, 31% by June, and
+ * back to 58% the following September — a fall across those months is the year
+ * turning, not trees coming down.
+ *
+ * So the only year-on-year figure offered here is the same month a year earlier.
+ * September against September says something; September against June says only
+ * that the monsoon happened.
+ *
+ * Months with no composite are drawn as gaps with their reason, because about a
+ * third of the Lahore year cannot be read from orbit at all and a blank stretch
+ * nobody explains looks like a broken chart.
+ */
+function MonthlyCover() {
+  const region = useApp((s) => s.region)
+  const month = useApp((s) => s.month)
+  const setMonth = useApp((s) => s.setMonth)
+  const area = useApp((s) => s.area)
+  const { grid } = useRegionData(region)
+
+  const [doc, setDoc] = useState<MonthlyDoc | null>(null)
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    let live = true
+    setLoading(true)
+    loadMonthly(region).then((d) => {
+      if (!live) return
+      setDoc(d)
+      setLoading(false)
+    })
+    return () => {
+      live = false
+    }
+  }, [region])
+
+  const months = useMemo(() => usableMonths(doc), [doc])
+  if (!grid) return null
+
+  const current = months.find((p) => p.period === month) ?? months[months.length - 1]
+  const prior = doc && current ? yearOnYear(doc, current.period) : null
+
+  const pcts = months.map((p) => p.vegPct ?? 0)
+  const lo = pcts.length ? Math.min(...pcts) : 0
+  const hi = pcts.length ? Math.max(...pcts) : 1
+  const span = Math.max(1, hi - lo)
+
+  return (
+    <aside className="cover" aria-label="Observed vegetated cover by month">
+      <header className="cover__head">
+        <div>
+          <h2 className="cover__title">Green cover</h2>
+          <p className="t-unit">{grid.name} · by month</p>
+        </div>
+      </header>
+
+      {loading ? (
+        <p className="cover__hint t-unit">Reading the monthly series…</p>
+      ) : !doc || months.length < 2 ? (
+        <div className="alertsPanel__empty">
+          <p className="t-unit">
+            No monthly composites for {grid.name} yet. The yearly layers come from{' '}
+            <span className="t-data">pipeline/run.py</span>; the monthly series needs:
+          </p>
+          <p className="t-data alertsPanel__cmd">python pipeline/monthly.py {region}</p>
+        </div>
+      ) : (
+        <>
+          <div className="cover__now">
+            <span className="t-figure cover__pct">{current.vegPct?.toFixed(1)}%</span>
+            <span className="t-unit">
+              of ground vegetated in {monthLabel(current.period)}
+              {current.scenes ? `, from ${current.scenes} scenes` : ''}
+            </span>
+          </div>
+
+          <div
+            className="cover__chart"
+            role="img"
+            aria-label={`Vegetated cover by month, ${lo.toFixed(0)} to ${hi.toFixed(0)} percent across ${months.length} months`}
+          >
+            {(doc.periods ?? []).map((p) =>
+              p.usable ? (
+                <button
+                  key={p.period}
+                  type="button"
+                  className={`cover__bar ${p.period === current.period ? 'is-active' : ''}`}
+                  style={{ height: `${18 + (((p.vegPct ?? 0) - lo) / span) * 82}%` }}
+                  title={`${monthLabel(p.period)}: ${p.vegPct}% · ${p.scenes} scenes`}
+                  aria-label={`Show ${monthLabel(p.period)}, ${p.vegPct} percent`}
+                  onClick={() => setMonth(p.period)}
+                />
+              ) : (
+                // A month we could not read. Drawn at its true position so the
+                // shape of the year stays honest, and titled with the reason.
+                <span
+                  key={p.period}
+                  className="cover__gapbar"
+                  title={`${monthLabel(p.period)} — ${p.reason}`}
+                />
+              )
+            )}
+          </div>
+          <div className="cover__axis t-unit">
+            <span>{monthLabel(doc.periods[0].period)}</span>
+            <span>{monthLabel(doc.periods[doc.periods.length - 1].period)}</span>
+          </div>
+
+          {/* The only honest year-on-year comparison a monthly series can make. */}
+          {prior ? (
+            <p className="cover__change t-data">
+              {(current.vegPct ?? 0) - (prior.vegPct ?? 0) >= 0 ? '+' : ''}
+              {((current.vegPct ?? 0) - (prior.vegPct ?? 0)).toFixed(1)} points
+              <span className="t-unit"> against {monthLabel(prior.period)}</span>
+            </p>
+          ) : (
+            <p className="t-unit cover__extra">
+              No reading for {monthLabel(current.period).slice(0, 3)} a year earlier,
+              so there is nothing to compare this month against.
+            </p>
+          )}
+
+          <p className="t-unit cover__caveat">
+            This is <strong>the season</strong>, not loss. Vegetation here moves with
+            the monsoon and the winter rain — this series swings{' '}
+            {lo.toFixed(0)}–{hi.toFixed(0)}% within the year, far more than it moves
+            between years. Compare a month with the same month, never with the one
+            before it.
+          </p>
+
+          <MonthlyGaps doc={doc} />
+
+          {area && (
+            <p className="t-unit cover__pending">
+              The monthly figures are for the whole of {grid.name}. A drawn area is
+              only recomputed on the yearly cadence.
+            </p>
+          )}
+        </>
+      )}
+    </aside>
+  )
+}
+
+/** What we could not see, and why. A third of the year, and it needs saying. */
+function MonthlyGaps({ doc }: { doc: MonthlyDoc }) {
+  const { smog, thin, partial } = blindSpots(doc)
+  const total = smog + thin + partial
+  if (!total) return null
+
+  const parts = [
+    smog && `${smog} in smog season`,
+    thin && `${thin} with too few scenes to composite`,
+    partial && `${partial} only partly visible`,
+  ].filter(Boolean)
+
+  return (
+    <p className="t-unit cover__pending">
+      {total} of {doc.periods.length} months carry no reading: {parts.join(', ')}.
+      Nov–Feb aerosol and the monsoon are why, and they are the reason this is a
+      series with holes rather than a smooth line.
+    </p>
   )
 }

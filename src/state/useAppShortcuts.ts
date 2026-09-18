@@ -1,5 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { REGIONS, VIEWS } from '../data/regions'
+import { loadMonthly, usableMonths } from '../data/monthly'
 import { useRegionData } from '../data/useRegionData'
 import { useApp } from './store'
 import type { RegionId, ViewId } from '../data/types'
@@ -18,6 +19,20 @@ const isTyping = (t: EventTarget | null) =>
 export function useAppShortcuts() {
   const s = useApp()
   const { grid, sites } = useRegionData(s.region)
+
+  // The months that carry a reading, for the arrow keys to walk. Loaded here
+  // rather than threaded through props because the shortcut handler is the only
+  // consumer that needs them outside the scrubber.
+  const [monthlyPeriods, setMonthlyPeriods] = useState<string[]>([])
+  useEffect(() => {
+    let live = true
+    loadMonthly(s.region).then((doc) => {
+      if (live) setMonthlyPeriods(usableMonths(doc).map((p) => p.period))
+    })
+    return () => {
+      live = false
+    }
+  }, [s.region])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -42,14 +57,20 @@ export function useAppShortcuts() {
 
       const years = grid?.years ?? []
       const feats = sites?.features ?? []
+      // Whichever cadence is on: the arrows step the timeline the user can see.
+      const periods = s.cadence === 'monthly' ? monthlyPeriods : years
 
       switch (k) {
         case 'ArrowLeft':
         case 'ArrowRight': {
-          if (!years.length) return
-          const i = Math.max(0, years.indexOf(s.year ?? years[years.length - 1]))
+          if (!periods.length) return
+          const cur = s.cadence === 'monthly' ? s.month : s.year
+          const i = Math.max(0, periods.indexOf((cur ?? periods[periods.length - 1]) as never))
           const next = k === 'ArrowLeft' ? i - 1 : i + 1
-          if (next >= 0 && next < years.length) s.setYear(years[next])
+          if (next >= 0 && next < periods.length) {
+            if (s.cadence === 'monthly') s.setMonth(periods[next] as string)
+            else s.setYear(periods[next] as number)
+          }
           e.preventDefault()
           break
         }
@@ -133,7 +154,7 @@ export function useAppShortcuts() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [s, grid, sites])
+  }, [s, grid, sites, monthlyPeriods])
 }
 
 /**
@@ -153,6 +174,8 @@ export function useUrlState() {
     const site = h.get('s')
     const theme = h.get('t')
     const base = h.get('b')
+    const cadence = h.get('c')
+    const month = h.get('mo')
 
     if (REGIONS.some((x) => x.id === region)) patch.region = region
     if (VIEWS.some((x) => x.id === view)) patch.view = view
@@ -163,6 +186,10 @@ export function useUrlState() {
       document.documentElement.dataset.theme = theme
     }
     if (base === 'map' || base === 'satellite') patch.basemap = base
+    if (cadence === 'yearly' || cadence === 'monthly') patch.cadence = cadence
+    // Shape-checked rather than trusted: a malformed month would ask the loader
+    // for a file that cannot exist.
+    if (month && /^\d{4}-\d{2}$/.test(month)) patch.month = month
     if (Object.keys(patch).length) {
       patch.stage = 'workspace'
       s.hydrate(patch)
@@ -177,9 +204,11 @@ export function useUrlState() {
     h.set('r', s.region)
     h.set('v', s.view)
     if (s.year) h.set('y', String(s.year))
+    if (s.cadence !== 'yearly') h.set('c', s.cadence)
+    if (s.month) h.set('mo', s.month)
     if (s.selectedSiteId) h.set('s', s.selectedSiteId)
     h.set('t', s.theme)
     h.set('b', s.basemap)
     window.history.replaceState(null, '', `#${h.toString()}`)
-  }, [s.stage, s.region, s.view, s.year, s.selectedSiteId, s.theme, s.basemap])
+  }, [s.stage, s.region, s.view, s.year, s.cadence, s.month, s.selectedSiteId, s.theme, s.basemap])
 }

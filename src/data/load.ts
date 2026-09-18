@@ -79,13 +79,42 @@ export function useNdviYears(): number {
   )
 }
 
-interface YearDoc {
+interface PeriodDoc {
   region: RegionId
-  year: number
+  /** '2018' for a season-locked year, '2026-06' for a calendar month. */
+  period?: string
+  year?: number
   cols: number
   rows: number
   ndvi: QGrid
 }
+
+/**
+ * Where one NDVI layer lives. Keep in sync with `period_path` in split_years.py.
+ *
+ * Two cadences share `grid.ndvi`, keyed by the period string, because they are the
+ * same shape of thing — a grid of vegetation index over this region — and keeping
+ * them in one map means the raster code needs no idea which cadence it is drawing.
+ * What must never happen is plotting them as one *series*: a spring-locked annual
+ * reading and a September monthly reading are not comparable points, which is the
+ * entire reason the annual window is locked.
+ */
+export const isMonthly = (period: string) => period.includes('-')
+
+const periodUrl = (region: RegionId, period: string) =>
+  `data/${region}-ndvi-${isMonthly(period) ? 'm-' : ''}${period}.json`
+
+/**
+ * The period key the canopy layer should be drawing, given the cadence.
+ *
+ * One helper so the map, the legend, the scrubber and the export cannot disagree
+ * about which layer is on screen — the same reason `domainFor` is shared.
+ */
+export const activePeriod = (
+  cadence: 'yearly' | 'monthly',
+  year: number | null,
+  month: string | null
+): string | null => (cadence === 'monthly' ? month : year === null ? null : String(year))
 
 /**
  * Keyed by region and year, holding the actual promise rather than a flag — so a
@@ -95,25 +124,27 @@ interface YearDoc {
  */
 const inFlight = new Map<string, Promise<void>>()
 
-/** Ensure one year of NDVI is in `grid.ndvi`. */
-export function loadNdviYear(g: RegionGrid, year: number): Promise<void> {
-  const key = String(year)
+/**
+ * Ensure one period of NDVI is in `grid.ndvi`.
+ *
+ * `period` is '2018' for a season-locked year or '2026-06' for a calendar month.
+ */
+export function loadNdviPeriod(g: RegionGrid, period: string): Promise<void> {
+  const key = String(period)
   if (g.ndvi[key]) return Promise.resolve()
 
-  const memoKey = `ndvi:${g.region}:${year}`
+  const memoKey = `ndvi:${g.region}:${key}`
   const joined = inFlight.get(memoKey)
   if (joined) return joined
-  // Bumped on start as well as on completion, so the loading hairline can appear
-  // for a year the scrubber is waiting on rather than only for a region change.
 
-  const task = getJSON<YearDoc>(`data/${g.region}-ndvi-${year}.json`)
+  const task = getJSON<PeriodDoc>(periodUrl(g.region, key))
     .then((doc) => {
       // A stale split would otherwise paint one region's values through another
       // region's corners, which looks like real data and is not.
       if (doc.cols !== g.cols || doc.rows !== g.rows) {
         throw new Error(
-          `data/${g.region}-ndvi-${year}.json is ${doc.cols}x${doc.rows}, ` +
-            `but the grid is ${g.cols}x${g.rows} — run \`python pipeline/split_years.py\``
+          `${periodUrl(g.region, key)} is ${doc.cols}x${doc.rows}, ` +
+            `but the grid is ${g.cols}x${g.rows} — regenerate it`
         )
       }
       g.ndvi[key] = doc.ndvi
@@ -141,8 +172,12 @@ export function loadNdviYear(g: RegionGrid, year: number): Promise<void> {
  * background fetches nobody asked for would mean the map looks permanently busy
  * for the first minute. Only a year that is actually being displayed counts.
  */
-export const ndviPending = (region: RegionId, year: number | null) =>
-  year !== null && inFlight.has(`ndvi:${region}:${year}`)
+export const ndviPending = (region: RegionId, period: string | number | null) =>
+  period !== null && inFlight.has(`ndvi:${region}:${period}`)
+
+/** The yearly caller's name for the same thing. */
+export const loadNdviYear = (g: RegionGrid, year: number) =>
+  loadNdviPeriod(g, String(year))
 
 /** True once every year the region claims is in memory. */
 export const allYearsLoaded = (g: RegionGrid) => g.years.every((y) => !!g.ndvi[String(y)])
@@ -198,7 +233,7 @@ const domainMemo = new Map<string, [number, number]>()
 export function domainFor(
   g: RegionGrid,
   view: ViewId,
-  year: number | null,
+  period: string | null,
   /**
    * Every ranked score in the region, required for the `priority` view.
    *
@@ -212,7 +247,7 @@ export function domainFor(
    */
   scores?: number[]
 ): [number, number] {
-  const key = `${g.region}:${view}:${view === 'canopy' ? year : ''}`
+  const key = `${g.region}:${view}:${view === 'canopy' ? period : ''}`
   const hit = domainMemo.get(key)
   if (hit) return hit
 
@@ -231,8 +266,7 @@ export function domainFor(
     lo = 0
     hi = 1
   } else if (view === 'canopy') {
-    const y = year !== null && g.years.includes(year) ? year : g.years[g.years.length - 1]
-    const vals = g.ndvi[String(y)]
+    const vals = g.ndvi[period ?? String(g.years[g.years.length - 1])]
     lo = 0
     // A year still in flight has no values yet, and memoising a domain derived
     // from nothing would pin the legend to a wrong range for the rest of the

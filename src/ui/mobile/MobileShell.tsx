@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { REGIONS, SOURCE_RES, UNIT, VIEWS } from '../../data/regions'
-import { domainFor, useNdviYears } from '../../data/load'
+import { activePeriod, domainFor, useNdviYears } from '../../data/load'
 import { RISK_BANDS, riskFor } from '../../data/risk'
 import { statsForBox } from '../../data/subarea'
 import { estimateCost, formatPkr } from '../../data/cost'
@@ -297,6 +297,8 @@ function MobileLegend() {
   const view = useApp((s) => s.view)
   const region = useApp((s) => s.region)
   const year = useApp((s) => s.year)
+  const cadence = useApp((s) => s.cadence)
+  const month = useApp((s) => s.month)
   const { grid, sites } = useRegionData(region)
   // Recompute the canopy domain when the displayed year arrives.
   useNdviYears()
@@ -317,7 +319,7 @@ function MobileLegend() {
     )
   }
 
-  const [lo, hi] = domainFor(grid, view, year,
+  const [lo, hi] = domainFor(grid, view, activePeriod(cadence, year, month),
     sites?.features.map((f) => f.properties.score))
   const dp = view === 'canopy' || view === 'priority' ? 2 : 0
   const ramp = view === 'canopy' ? 'canopy' : view === 'people' ? 'people' : 'heat'

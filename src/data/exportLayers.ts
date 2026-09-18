@@ -136,10 +136,10 @@ export async function downloadGridGeoJson(g: RegionGrid) {
 export async function downloadGeoPng(
   g: RegionGrid,
   view: ViewId,
-  year: number | null,
+  period: string | null,
   ramp: Ramp
 ) {
-  const raster = rasterizeGrid(g, view, year, ramp)
+  const raster = rasterizeGrid(g, view, period, ramp)
   if (!raster) return
 
   const [[wLon, nLat], , [eLon, sLat]] = [

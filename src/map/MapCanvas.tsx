@@ -5,7 +5,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { buildBasemapStyle, LIGHT_TOKENS, DARK_TOKENS, FIRST_LABEL_LAYER } from './basemapStyle'
 import { LAHORE_BOUNDS, REGIONS } from '../data/regions'
 import {
-  domainFor, loadNdviYear, prefetchNdviYears, rampBreaks, useNdviYears,
+  activePeriod, domainFor, loadNdviPeriod, prefetchNdviYears, rampBreaks, useNdviYears,
 } from '../data/load'
 import { rasterizeGrid } from './rasterize'
 import {
@@ -69,6 +69,8 @@ export function MapCanvas() {
   const view = useApp((s) => s.view)
   const region = useApp((s) => s.region)
   const year = useApp((s) => s.year)
+  const cadence = useApp((s) => s.cadence)
+  const month = useApp((s) => s.month)
   const theme = useApp((s) => s.theme)
   const basemap = useApp((s) => s.basemap)
   const selectedSiteId = useApp((s) => s.selectedSiteId)
@@ -170,12 +172,13 @@ export function MapCanvas() {
     // in the core file. Kick the fetch and leave the current layer alone: tearing
     // it down would blank the map mid-scrub and read as a broken scrubber rather
     // than a loading one. The progress hairline already says data is coming.
-    if (view === 'canopy') {
-      const y = year !== null && grid.years.includes(year) ? year : grid.years[grid.years.length - 1]
-      if (!grid.ndvi[String(y)]) {
-        void loadNdviYear(grid, y)
-        return
-      }
+    // Any period key, either cadence: only the latest year ships in the core file
+    // and every month is fetched on demand.
+    const period = activePeriod(cadence, year, month)
+      ?? String(grid.years[grid.years.length - 1])
+    if (view === 'canopy' && !grid.ndvi[period]) {
+      void loadNdviPeriod(grid, period)
+      return
     }
 
     for (const id of DATA_LAYERS) if (m.getLayer(id)) m.removeLayer(id)
@@ -232,7 +235,7 @@ export function MapCanvas() {
       //
       // Unfiltered on purpose: filtering to roadside sites must not re-scale the
       // ramp, or the same site changes colour depending on what else is shown.
-      const [slo, shi] = domainFor(grid, 'priority', year,
+      const [slo, shi] = domainFor(grid, 'priority', period,
         sites.features.map((f) => f.properties.score))
       // Size by score. MapLibre requires the zoom expression at the TOP level of
       // a paint property — wrapping it in a multiply makes the whole property
@@ -298,7 +301,7 @@ export function MapCanvas() {
     // Everything else is a measured field, so it is drawn as an interpolated
     // raster rather than one polygon per cell. See ./rasterize.ts.
     const canopy = view === 'canopy'
-    const [lo, hi] = domainFor(grid, view, year)
+    const [lo, hi] = domainFor(grid, view, period)
     const risk = view === 'risk'
     const stops = canopy
       ? (dark ? CANOPY_DARK : CANOPY_LIGHT)
@@ -308,7 +311,7 @@ export function MapCanvas() {
           ? (dark ? PEOPLE_DARK : PEOPLE_LIGHT)
           : (dark ? HEAT_DARK : HEAT_LIGHT)
 
-    const raster = rasterizeGrid(grid, view, year, { stops, lo, hi, discrete: risk },
+    const raster = rasterizeGrid(grid, view, period, { stops, lo, hi, discrete: risk },
       canopy
         ? {
             // The signature: canopy casts shade, one cell down and to the right.
@@ -337,7 +340,7 @@ export function MapCanvas() {
         'raster-contrast': satellite ? 0.06 : 0,
       },
     }, FIRST_LABEL_LAYER)
-  }, [view, grid, sites, dark, year, styleEpoch, basemap, filters, ndviVersion])
+  }, [view, grid, sites, dark, year, cadence, month, styleEpoch, basemap, filters, ndviVersion])
 
   /**
    * Citizen reports.

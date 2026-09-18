@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { REGIONS, SOURCE_RES, UNIT, VIEWS } from '../data/regions'
-import { domainFor, ndviPending, useNdviYears } from '../data/load'
+import { activePeriod, domainFor, ndviPending, useNdviYears } from '../data/load'
+import { loadMonthly, monthLabel, usableMonths, type MonthlyDoc } from '../data/monthly'
 import { RISK_BANDS, riskFor } from '../data/risk'
 import { useRegionData } from '../data/useRegionData'
 import { useApp } from '../state/store'
@@ -129,6 +130,8 @@ export function ThermalScale() {
   const view = useApp((s) => s.view)
   const region = useApp((s) => s.region)
   const year = useApp((s) => s.year)
+  const cadence = useApp((s) => s.cadence)
+  const month = useApp((s) => s.month)
   const { grid, sites } = useRegionData(region)
   // The canopy domain is read from the year's own values, so the legend has to
   // recompute when a year arrives — otherwise it keeps the fallback range.
@@ -140,7 +143,7 @@ export function ThermalScale() {
   // while the map painted the real range.
   let ends: [string, string] = ['—', '—']
   if (grid) {
-    const [lo, hi] = domainFor(grid, view, year,
+    const [lo, hi] = domainFor(grid, view, activePeriod(cadence, year, month),
       sites?.features.map((f) => f.properties.score))
     const dp = view === 'canopy' || view === 'priority' ? 2 : 0
     ends = [lo.toFixed(dp), hi.toFixed(dp)]
@@ -192,15 +195,40 @@ export function ThermalScale() {
   )
 }
 
-/** Year scrubber plus the live readout, in the space the bottom bar already had. */
+/**
+ * The scrubber and the live readout.
+ *
+ * Two cadences, switched rather than merged. The yearly track walks the
+ * season-locked annual composites; the monthly track walks calendar months over
+ * the recent two years. They are deliberately not one timeline: the annual window
+ * is locked to one spring precisely so that a spring reading and a September
+ * reading are never treated as neighbouring points, and joining them here would
+ * throw that away in the one place a user would trust it most.
+ */
 export function BottomBar() {
   const year = useApp((s) => s.year)
   const setYear = useApp((s) => s.setYear)
+  const cadence = useApp((s) => s.cadence)
+  const setCadence = useApp((s) => s.setCadence)
+  const month = useApp((s) => s.month)
+  const setMonth = useApp((s) => s.setMonth)
   const region = useApp((s) => s.region)
   const view = useApp((s) => s.view)
   const { grid, sites, meta, loading } = useRegionData(region)
 
+  const [monthly, setMonthly] = useState<MonthlyDoc | null>(null)
+  useEffect(() => {
+    let live = true
+    loadMonthly(region).then((d) => {
+      if (live) setMonthly(d)
+    })
+    return () => {
+      live = false
+    }
+  }, [region])
+
   const years = grid?.years ?? []
+  const months = usableMonths(monthly)
 
   // Default to the most recent year the data actually has.
   useEffect(() => {
@@ -209,10 +237,28 @@ export function BottomBar() {
     }
   }, [years, year, setYear])
 
+  // Same for the month, and re-derived when the region changes: the month list is
+  // per region, so one region's September may not exist in another's.
+  useEffect(() => {
+    if (!months.length) return
+    if (month === null || !months.some((p) => p.period === month)) {
+      setMonth(months[months.length - 1].period)
+    }
+  }, [months, month, setMonth])
+
   const first = years[0]
   const last = years[years.length - 1]
   const span = Math.max(1, (last ?? 1) - (first ?? 0))
   const rm = meta?.regions?.[region]
+
+  // Every month in the window, usable or not, so the track can show the gaps
+  // where they fall. An unexplained hole looks like a bug; a labelled one is the
+  // finding that Lahore is unreadable from orbit for a third of the year.
+  const allMonths = monthly?.periods ?? []
+  const monthAt = (period: string) =>
+    allMonths.length > 1
+      ? (allMonths.findIndex((p) => p.period === period) / (allMonths.length - 1)) * 100
+      : 0
 
   return (
     <div className="bottombar">
@@ -220,27 +266,83 @@ export function BottomBar() {
         {years.length ? (
           <>
             <div className="scrubber__label">
-              <span className="t-label">Year</span>
-              <span className="t-figure scrubber__year">{year ?? last}</span>
+              {/* Only offered when the monthly stage has actually been run for
+                  this region. A toggle that leads nowhere is worse than none. */}
+              {months.length > 1 ? (
+                <div className="cadence" role="group" aria-label="Cadence">
+                  {(['yearly', 'monthly'] as const).map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      className={`cadence__btn ${cadence === c ? 'is-active' : ''}`}
+                      aria-pressed={cadence === c}
+                      title={
+                        c === 'yearly'
+                          ? 'One season-locked reading a year, for comparing years'
+                          : 'Calendar months over the recent two years, for the season'
+                      }
+                      onClick={() => setCadence(c)}
+                    >
+                      {c === 'yearly' ? 'Yearly' : 'Monthly'}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <span className="t-label">Year</span>
+              )}
+              <span className="t-figure scrubber__year">
+                {cadence === 'monthly'
+                  ? monthLabel(month ?? months[months.length - 1]?.period ?? '')
+                  : (year ?? last)}
+              </span>
             </div>
 
             <div className="scrubber__track">
               <span className="scrubber__rule" aria-hidden="true" />
-              {/* Ticks sit at true temporal positions, so a year with no usable
+              {/* Ticks sit at true temporal positions, so a period with no usable
                   imagery reads as a real gap rather than being quietly skipped. */}
-              {years.map((y) => (
-                <button
-                  key={y}
-                  type="button"
-                  className={`scrubber__tick ${y === year ? 'is-active' : ''}`}
-                  style={{ left: `${((y - first) / span) * 100}%` }}
-                  aria-label={`Show ${y}`}
-                  aria-current={y === year}
-                  onClick={() => setYear(y)}
-                >
-                  <span className="t-unit scrubber__tickyear">{y}</span>
-                </button>
-              ))}
+              {cadence === 'yearly'
+                ? years.map((y) => (
+                    <button
+                      key={y}
+                      type="button"
+                      className={`scrubber__tick ${y === year ? 'is-active' : ''}`}
+                      style={{ left: `${((y - first) / span) * 100}%` }}
+                      aria-label={`Show ${y}`}
+                      aria-current={y === year}
+                      onClick={() => setYear(y)}
+                    >
+                      <span className="t-unit scrubber__tickyear">{y}</span>
+                    </button>
+                  ))
+                : allMonths.map((p) =>
+                    p.usable ? (
+                      <button
+                        key={p.period}
+                        type="button"
+                        className={`scrubber__tick ${p.period === month ? 'is-active' : ''}`}
+                        style={{ left: `${monthAt(p.period)}%` }}
+                        aria-label={`Show ${monthLabel(p.period)}, ${p.vegPct}% vegetated`}
+                        aria-current={p.period === month}
+                        title={`${monthLabel(p.period)} · ${p.vegPct}% vegetated · ${p.scenes} scenes`}
+                        onClick={() => setMonth(p.period)}
+                      >
+                        <span className="t-unit scrubber__tickyear">
+                          {p.period.slice(5, 7)}
+                        </span>
+                      </button>
+                    ) : (
+                      // Not a button: there is nothing to show. Present, faint and
+                      // titled, so the gap carries its own explanation.
+                      <span
+                        key={p.period}
+                        className="scrubber__gap"
+                        style={{ left: `${monthAt(p.period)}%` }}
+                        title={`${monthLabel(p.period)} — ${p.reason}`}
+                        aria-hidden="true"
+                      />
+                    )
+                  )}
             </div>
           </>
         ) : (
@@ -254,8 +356,16 @@ export function BottomBar() {
           <dd className="t-data">{loading ? '—' : (sites?.features.length ?? 0)}</dd>
         </div>
         <div className="stats__item">
-          <dt className="t-label">Years</dt>
-          <dd className="t-data">{years.length ? `${first}–${last}` : '—'}</dd>
+          <dt className="t-label">{cadence === 'monthly' ? 'Months' : 'Years'}</dt>
+          <dd className="t-data">
+            {cadence === 'monthly'
+              ? months.length
+                ? `${months.length} of ${allMonths.length}`
+                : '—'
+              : years.length
+                ? `${first}–${last}`
+                : '—'}
+          </dd>
         </div>
         <div className="stats__item">
           <dt className="t-label">Source</dt>
@@ -290,10 +400,12 @@ export function LoadingBar() {
   const error = useApp((s) => s.dataError)
   const region = useApp((s) => s.region)
   const year = useApp((s) => s.year)
+  const cadence = useApp((s) => s.cadence)
+  const month = useApp((s) => s.month)
   useNdviYears()
   // A year fetched on demand is also "data in flight", and the hairline is the
   // only thing telling the user the scrubber is working rather than stuck.
-  const waitingOnYear = ndviPending(region, year)
+  const waitingOnYear = ndviPending(region, activePeriod(cadence, year, month))
   if (error) {
     return (
       <div className="databar databar--error">
