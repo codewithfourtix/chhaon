@@ -13,6 +13,7 @@ import {
 } from './reportMarkers'
 import { loadRecent, type LossEvent } from '../data/recent'
 import { imageryFor, loadImagery, type ImageryDoc } from '../data/imagery'
+import { prefetchTiles, shouldSkipPrefetch, visibleTiles } from './imageryPrefetch'
 import { RISK_COLOURS } from '../data/risk'
 import { useRegionData } from '../data/useRegionData'
 import { useReports } from '../data/useReports'
@@ -487,6 +488,62 @@ export function MapCanvas() {
     // principle as map-performance's "commit the scrubber's final value".
     const t = window.setTimeout(() => src.setTiles?.([choice.tiles]), 350)
     return () => window.clearTimeout(t)
+  }, [imagery, region, cadence, year, month, basemap, styleEpoch, stage])
+
+  /**
+   * Have the other periods' photographs in the browser before they are asked for.
+   *
+   * The archive serves a tile in a median 1.65 s, so a year click used to take
+   * ~11 s to draw fully. Once the map settles, this fetches the on-screen tiles of
+   * every *other* distinct photograph for the cadence, nearest period first, into
+   * the HTTP cache; MapLibre's own request for them is then a cache hit. Restarted
+   * on every move, and skipped on Save-Data or slow connections — see
+   * imageryPrefetch.ts for why it is restrained.
+   */
+  useEffect(() => {
+    const m = map.current
+    if (!m || !styleReadyRef.current || basemap !== 'satellite') return
+    if (stage !== 'workspace' || !imagery || shouldSkipPrefetch()) return
+    const r = imagery.regions[region]
+    const current = activePeriod(cadence, year, month)
+    if (!r || !current) return
+
+    const periods = Object.keys(cadence === 'monthly' ? r.byMonth : r.byYear).sort()
+    const at = Math.max(0, periods.indexOf(current))
+    const byDistance = periods
+      .map((p, i) => ({ p, d: Math.abs(i - at) }))
+      .sort((a, b) => a.d - b.d)
+    const showing = imageryFor(imagery, region, current)?.tiles
+    const templates: string[] = []
+    for (const { p } of byDistance) {
+      const t = imageryFor(imagery, region, p)?.tiles
+      if (t && t !== showing && !templates.includes(t)) templates.push(t)
+    }
+    if (!templates.length) return
+
+    let ctrl: AbortController | null = null
+    let timer = 0
+    const run = () => {
+      ctrl?.abort()
+      window.clearTimeout(timer)
+      // After the visible photograph has had its turn at the connection.
+      timer = window.setTimeout(() => {
+        ctrl = new AbortController()
+        void prefetchTiles(templates, visibleTiles(m), ctrl.signal)
+      }, 1200)
+    }
+    const stop = () => {
+      ctrl?.abort()
+      window.clearTimeout(timer)
+    }
+    run()
+    m.on('movestart', stop)
+    m.on('moveend', run)
+    return () => {
+      stop()
+      m.off('movestart', stop)
+      m.off('moveend', run)
+    }
   }, [imagery, region, cadence, year, month, basemap, styleEpoch, stage])
 
   // Recent-pass data, fetched per region and absent until the rolling stage has

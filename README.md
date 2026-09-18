@@ -170,6 +170,14 @@ The capture date, sensor and resolution sit in the readout — *10 Feb 2017 ·
 GeoEye-1 · 0.46 m* — and hovering says how much of the region that date covers,
 since a mosaic can straddle two capture strips.
 
+The archive is slow — a median 1.65 s per tile, so a year click took up to 11 s to
+draw. Once the map settles, the on-screen tiles of the other years' photographs are
+fetched in the background, nearest year first, into the browser's HTTP cache (the
+tiles are cacheable for 24 h). A year click now draws in 1.0–1.5 s instead of
+4–11 s. It restarts when the map moves and is skipped on Save-Data or 2G/3G, where
+a few MB of speculative photographs would cost more than the wait
+(`src/map/imageryPrefetch.ts`).
+
 ### Catching change while it is still news
 
 The yearly layers are locked to one spring window so 2017 and 2025 are
