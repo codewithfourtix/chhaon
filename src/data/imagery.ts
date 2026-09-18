@@ -51,6 +51,18 @@ export interface ImageryDoc {
 
 let memo: Promise<ImageryDoc | null> | null = null
 
+// Resolves the first time anyone actually asks for the index. The map asks once
+// the workspace has settled; the readout only listens, so it never pulls the file
+// onto the startup path itself.
+let requested: () => void = () => {}
+const firstRequest = new Promise<void>((r) => {
+  requested = r
+})
+
+/** The index, once the map has asked for it. Never triggers the fetch itself. */
+export const whenImagery = (): Promise<ImageryDoc | null> =>
+  firstRequest.then(() => memo ?? Promise.resolve(null))
+
 /**
  * The imagery index. Absent before `pipeline/imagery.py` has run, in which case the
  * basemap stays the current live mosaic — the product's behaviour before this
@@ -58,6 +70,7 @@ let memo: Promise<ImageryDoc | null> | null = null
  */
 export function loadImagery(): Promise<ImageryDoc | null> {
   if (memo) return memo
+  queueMicrotask(requested)
   memo = fetch('data/imagery.json')
     .then(async (res) => {
       if (!res.ok) return null

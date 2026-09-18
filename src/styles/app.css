@@ -526,6 +526,7 @@
    the ground and the data are from different moments, not an error. */
 .stats__item--imagery.is-earlier dd { color: var(--heat-4); }
 .stats__item--imagery { cursor: help; }
+.stats__item--scope { cursor: help; }
 
 /* A month with no usable composite. Present so the gap is visible and titled,
    never a clickable tick — there is nothing behind it to show. */

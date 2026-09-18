@@ -1,3 +1,4 @@
+import { heatLayer, heatYear } from '../data/load'
 import { riskFor } from '../data/risk'
 import type { RegionGrid, ViewId } from '../data/types'
 
@@ -71,8 +72,13 @@ function sample(
  * pending year would blank the canopy layer mid-scrub.
  */
 function valuesFor(g: RegionGrid, view: ViewId, period: string | null): (number | null)[] {
-  if (view === 'risk') return riskFor(g).values
-  if (view === 'heat') return g.lst.map((v) => (v === null ? null : v / 10))
+  // Heat and risk follow the scrubber too: that year's summer scene. Empty while
+  // it loads, which the caller treats as "not ready", exactly like NDVI.
+  if (view === 'risk') return riskFor(g, heatYear(g, period)).values
+  if (view === 'heat') {
+    const h = heatLayer(g, heatYear(g, period))
+    return h ? h.lst.map((v) => (v === null ? null : v / 10)) : []
+  }
   if (view === 'people') return g.pop.map((v) => (v === null ? null : v / 10))
   // Any period key: '2018' for a season-locked year, '2026-06' for a month. The
   // raster does not need to know which cadence it is drawing.

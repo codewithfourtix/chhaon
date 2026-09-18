@@ -1,3 +1,4 @@
+import { heatLayer } from './load'
 import type { RegionGrid } from './types'
 
 /**
@@ -52,25 +53,44 @@ export interface RiskSummary {
 
 const memo = new Map<string, RiskSummary>()
 
-/** Per-cell risk for the region's most recent year, plus the band breakdown. */
-export function riskFor(g: RegionGrid): { values: (number | null)[]; summary: RiskSummary } {
-  const year = g.years[g.years.length - 1]
-  const nd = g.ndvi[String(year)] ?? []
+const EMPTY: { values: (number | null)[]; summary: RiskSummary } = {
+  values: [],
+  summary: { shares: [0, 0, 0, 0], elevated: 0, assessed: 0 },
+}
+
+/**
+ * Per-cell risk for one year, plus the band breakdown. Defaults to the latest.
+ *
+ * Heat, canopy and baseline all come from the *same* year: that year's summer
+ * scene, that year's spring NDVI, and the shaded baseline measured in that scene.
+ * Mixing one year's heat with another's canopy would score cells against a
+ * morning they were never measured on.
+ *
+ * Returns no values while either layer is still loading, which callers treat as
+ * "not ready" rather than "no risk".
+ */
+export function riskFor(
+  g: RegionGrid,
+  year: number = g.years[g.years.length - 1]
+): { values: (number | null)[]; summary: RiskSummary } {
+  const heat = heatLayer(g, year)
+  const nd = g.ndvi[String(year)]
+  if (!heat || !nd) return EMPTY
   const counts = [0, 0, 0, 0]
   let assessed = 0
 
-  const values = g.lst.map((raw, i) => {
+  const values = heat.lst.map((raw, i) => {
     const ndviRaw = nd[i]
     if (raw === null || raw === undefined || ndviRaw === null || ndviRaw === undefined) {
       return null
     }
-    const v = riskValue(raw / 10, ndviRaw / 100, g.baselineC)
+    const v = riskValue(raw / 10, ndviRaw / 100, heat.baselineC)
     counts[RISK_BANDS.indexOf(riskBand(v))]++
     assessed++
     return v
   })
 
-  const key = g.region
+  const key = `${g.region}:${year}`
   let summary = memo.get(key)
   if (!summary) {
     summary = {

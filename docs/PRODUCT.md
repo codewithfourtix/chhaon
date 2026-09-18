@@ -437,6 +437,38 @@ And the collapsed rail hid its labels with `display:none`, which also removed th
 from the accessibility tree: below 1100 px the view and region buttons had no
 accessible name. They carry `aria-label` now.
 
+### 3.14c Heat and risk follow the year; people and the plan say they do not
+
+Asked: "does heat, risk and this data also update with each year?" They did not.
+Heat was the single most recent Landsat scene, so Heat and Risk were identical under
+every year — with nothing on screen to say so.
+
+`pipeline/heat_years.py` gives every year its own scene, chosen the way `run.py`
+chooses one (May–June, nearest 1 June, under 20% scene cloud), then **masked per
+pixel** with Landsat's QA flags and kept only if 90% of the grid is clear. The latest
+year stays inline in the core file when it is the same scene, so first paint does
+not grow and the ranked sites, scored against it, still agree with the map.
+
+What one scene a year can say is narrower than it looks. Region medians range from
+41 °C (2025) to 52 °C (2022) — mostly that morning's weather. So:
+
+- the heat ramp spans **each year's own range**: it shows where it was hot that
+  morning, not whether the year was hotter;
+- **risk is always heat above the same scene's shaded baseline**, with that year's
+  NDVI, so no cell is scored against a morning it was not measured on;
+- the export carries `heat_above_baseline_c_<year>` for comparing years, and the
+  readout's per-year "Shade worth" is the same-scene comparison `run.py` leads with.
+
+Monthly cadence shows the latest year's heat, labelled "Heat · yearly only": Landsat
+passes every 8–16 days and smog and monsoon cloud leave most months without one clear
+scene.
+
+**People and Priority do not change, on purpose, and now say so** ("People · every
+year: WorldPop 2020"; "Plan · every year"). Population is not interpolated between
+censuses we do not have. The planting plan is ranked on today's OSM roads, buildings
+and land use; re-ranking it with 2017 heat would produce a plan that could not have
+existed in 2017.
+
 ### 3.15 Recent passes are a separate analysis, never mixed with the yearly ones
 
 The yearly composites are locked to one spring window precisely so that 2017 and
@@ -779,6 +811,8 @@ invisible in the UI: the layer simply keeps showing the previous year.
 | The 3G load figure was measured wrong, twice | The probe waited on `window.__map` (dev-only, so production reported its 182 s timeout), then on any `<li>` in the ranked list — which matches the empty-state row, so it fired before any data arrived and reported 2.5 s. A perf probe that can pass without the thing it measures will eventually put a wrong number in a README |
 | Area-select and report placement could not be told apart | Both armed the map's click handler. Placement now skips when the other is armed, and arming either disarms the other in the store |
 | The intro fetched ten photographs | The first version of the fix followed the year everywhere, including the intro's countdown, which steps through every year: 10 archived releases and 200 tiles, ~5 MB, in eleven seconds. `prodcheck` caught it as tiles still in flight from superseded releases. The imagery now ignores the intro and waits 350 ms for the year to settle, so holding an arrow key fetches the year you stop on |
+| Heat and Risk ignored the scrubber | One Landsat scene under every year. Now one clear, cloud-masked summer scene per year; Risk rebuilt from the same year's heat, canopy and baseline |
+| The readout fetched the imagery index at startup | It listens for the map's request now, instead of making its own |
 | A year click took up to 11 s to draw | Esri's Wayback archive serves a tile in a median 1.65 s. Other years' on-screen tiles are now prefetched into the HTTP cache after the map settles (not on Save-Data or 2G/3G): 1.0–1.5 s |
 | Clicking a year changed nothing | The satellite basemap was one current mosaic, and the default view is not year-dependent at all. The photograph now follows the scrubber, chosen by capture date |
 | The workspace opened on a random year | The intro countdown's position when the button was pressed |

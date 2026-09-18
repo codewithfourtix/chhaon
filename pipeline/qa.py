@@ -257,6 +257,54 @@ def check_region(rid, meta):
             bad(f"{rid}: vegetated ground is not cooler than bare ground")
 
 
+def check_heat_years(meta):
+    """
+    Per-year surface temperature: every year the canopy has, in its own summer
+    window, the right shape, and never borrowed from another year.
+    """
+    print("Heat per year (Landsat, one clear summer scene each)")
+    for rid in REGIONS:
+        rm = meta.get("regions", {}).get(rid, {})
+        hy = rm.get("heatYears")
+        if hy is None:
+            print(f"  {rid:12} not built — Heat and Risk show the latest year only")
+            continue
+        g = strict_load(f"{OUT}/{rid}.json", rid)
+        if g is None:
+            continue
+        years = [str(y) for y in rm.get("years", [])]
+        missing = [y for y in years if y not in hy]
+        seen = set()
+        for y, v in hy.items():
+            scene_day = v["scene"]["datetime"][:10]
+            # The scene must be from the year it is shown under, in the window.
+            if scene_day[:4] != y or not ("05-01" <= scene_day[5:] <= "06-30"):
+                bad(f"{rid}: {y} heat is from {scene_day}, outside {y}'s May-June window")
+            if v["scene"]["id"] in seen:
+                bad(f"{rid}: scene {v['scene']['id']} is used for two years")
+            seen.add(v["scene"]["id"])
+            if v["coverage"] < 0.9:
+                bad(f"{rid}: {y} heat covers only {v['coverage']:.0%} of the grid")
+            if v.get("inline"):
+                if v["scene"]["id"] != rm.get("lstScene", {}).get("id"):
+                    bad(f"{rid}: {y} claims the inline layer but is a different scene")
+                continue
+            path = f"{OUT}/{rid}-lst-{y}.json"
+            if not os.path.exists(path):
+                bad(f"{rid}: {y} heat listed in meta but {os.path.basename(path)} is missing")
+                continue
+            doc = strict_load(path, rid)
+            if doc is None:
+                continue
+            if (doc["cols"], doc["rows"]) != (g["cols"], g["rows"]) or                     len(doc["lst"]) != g["cols"] * g["rows"]:
+                bad(f"{rid}: {os.path.basename(path)} does not match the grid shape")
+            if abs(doc["baselineC"] - v["baselineC"]) > 0.05:
+                bad(f"{rid}: {y} baseline differs between meta and its file")
+        print(f"  {rid:12} {len(hy)}/{len(years)} years"
+              + (f", none for {missing} (shown as a gap)" if missing else ""))
+    print()
+
+
 def check_imagery(meta):
     """
     The historical basemap, checked against the rule that makes it honest: a year
@@ -313,6 +361,7 @@ def main():
             check_region(rid, meta)
         print()
 
+    check_heat_years(meta)
     check_imagery(meta)
 
     if PROBLEMS:

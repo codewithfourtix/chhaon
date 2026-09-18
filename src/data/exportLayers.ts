@@ -1,5 +1,5 @@
 import { rasterizeGrid, type Ramp } from '../map/rasterize'
-import { ensureAllNdviYears } from './load'
+import { ensureAllNdviYears, heatLayer, loadLstYear } from './load'
 import { riskBand, riskFor } from './risk'
 import type { RegionGrid, ViewId } from './types'
 
@@ -61,6 +61,10 @@ export async function downloadGridGeoJson(g: RegionGrid) {
   // a missing ndvi_2019 column in someone else's GIS is indistinguishable from
   // a year we never measured.
   await ensureAllNdviYears(g)
+  // Same for heat: one column per year, or a missing year would be
+  // indistinguishable from one without a clear scene.
+  await Promise.all(g.years.map((y) => loadLstYear(g, y)))
+  const heat = g.years.map((y) => [y, heatLayer(g, y)] as const)
 
   const at = corners(g)
   const { values: risk } = riskFor(g)
@@ -87,6 +91,14 @@ export async function downloadGridGeoJson(g: RegionGrid) {
         props.surface_temp_c = lst / 10
         props.heat_above_baseline_c = Number((lst / 10 - g.baselineC).toFixed(1))
         any = true
+      }
+      // Per year, each against its own scene's baseline. Absolute °C are one
+      // morning each, so heat_above_baseline is the column to compare years on.
+      for (const [y, h] of heat) {
+        const t = h?.lst[i]
+        if (!h || t === null || t === undefined) continue
+        props[`surface_temp_c_${y}`] = t / 10
+        props[`heat_above_baseline_c_${y}`] = Number((t / 10 - h.baselineC).toFixed(1))
       }
       const pop = g.pop[i]
       if (pop !== null && pop !== undefined) {

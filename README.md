@@ -178,6 +178,30 @@ tiles are cacheable for 24 h). A year click now draws in 1.0–1.5 s instead of
 a few MB of speculative photographs would cost more than the wait
 (`src/map/imageryPrefetch.ts`).
 
+### Heat and risk follow the year too
+
+Only canopy used to change with the scrubber. Heat was one Landsat scene (4 Jun
+2025) drawn under every year, so Heat and Risk looked identical in 2017 and 2025.
+`pipeline/heat_years.py` now picks one clear summer scene per year — same May–June
+window, nearest 1 June, as `run.py` — and Risk is rebuilt from **that year's** heat,
+canopy and shaded baseline. 45 of 45 region-years have a scene; 17 s for all five
+regions.
+
+Two honesty rules come with it:
+
+- **Each year is one morning**, and region medians swing from 41 °C to 52 °C
+  between years mostly on the weather. So °C are never compared across years:
+  the heat ramp spans each year's own range, and risk measures heat above the
+  baseline *of the same scene*. The per-year "Shade worth" figure is comparable,
+  because both halves of it share that morning.
+- **Clouds are masked per pixel** using Landsat's own QA flags, and a year must be
+  90% clear. A cloud over the region would otherwise read as a cool, "shaded" block.
+
+Two views deliberately do not change, and the readout says so:
+**People** is WorldPop 2020, the latest release at 100 m, never extrapolated; and
+**Priority** is a planting plan for now, ranked on today's roads and buildings —
+a "2017 plan" would be a plan nobody could have made in 2017.
+
 ### Catching change while it is still news
 
 The yearly layers are locked to one spring window so 2017 and 2025 are
@@ -335,7 +359,7 @@ basemap is still streaming — on a slow connection it competes with the map the
 user is actually looking at.
 
 Measured, not assumed: `node scripts/budget.mjs --3g` reports what is on the
-critical path — **about 3&nbsp;s** (2.7–3.6&nbsp;s across runs and days) to
+critical path — **about 3–4&nbsp;s** (2.7–4.0&nbsp;s across runs and machines) to
 measurements on screen on the production build, throttled to Fast 3G. The imagery
 index is kept off that path: it loads once the workspace is open and the map has
 settled. `node scripts/progressive.mjs --3g`
@@ -427,6 +451,7 @@ python pipeline/run.py model-town   # just one
 python pipeline/recent.py           # the fast rolling stage: recent passes and detected loss
 python pipeline/monthly.py          # monthly composites for the recent 24 months
 python pipeline/imagery.py          # historical satellite imagery, matched by capture date
+python pipeline/heat_years.py       # one clear summer heat scene per year (rerun after run.py)
 python pipeline/split_years.py      # re-shape committed grids into core + per-year files
 ```
 

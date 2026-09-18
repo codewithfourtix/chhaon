@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
 import { REGIONS, SOURCE_RES, UNIT, VIEWS } from '../data/regions'
-import { activePeriod, domainFor, ndviPending, useNdviYears } from '../data/load'
+import {
+  activePeriod, domainFor, heatLayer, heatMissing, heatYear, lstPending, ndviPending,
+  shadeGapC, useNdviYears,
+} from '../data/load'
 import { loadMonthly, monthLabel, usableMonths, type MonthlyDoc } from '../data/monthly'
 import {
-  captureLabel, imageryFor, loadImagery, sensorName, type ImageryDoc,
+  captureLabel, imageryFor, sensorName, whenImagery, type ImageryDoc,
 } from '../data/imagery'
 import { RISK_BANDS, riskFor } from '../data/risk'
 import { useRegionData } from '../data/useRegionData'
 import { useApp } from '../state/store'
-import type { ViewId } from '../data/types'
+import type { RegionGrid, RegionMeta, ViewId } from '../data/types'
 import {
   IconCanopy, IconHeat, IconMethod, IconPeople, IconPriority, IconRegion,
   IconRisk, IconTheme,
@@ -226,10 +229,18 @@ export function BottomBar() {
   const view = useApp((s) => s.view)
   const basemap = useApp((s) => s.basemap)
   const { grid, sites, meta, loading } = useRegionData(region)
+  // Baseline, risk and shade gap are per year now, and re-read when a year lands.
+  useNdviYears()
 
   const [imagery, setImagery] = useState<ImageryDoc | null>(null)
   useEffect(() => {
-    loadImagery().then(setImagery)
+    // Listens rather than fetches: the map requests the index once it has
+    // settled, and this readout has nothing to say before then anyway.
+    let live = true
+    whenImagery().then((d) => live && setImagery(d))
+    return () => {
+      live = false
+    }
   }, [])
 
   const [monthly, setMonthly] = useState<MonthlyDoc | null>(null)
@@ -404,23 +415,13 @@ export function BottomBar() {
           <dt className="t-label">Source</dt>
           <dd className="t-data">{SOURCE_RES[view]}</dd>
         </div>
-        <div className="stats__item">
-          <dt className="t-label">Baseline</dt>
-          <dd className="t-data">{grid ? `${grid.baselineC.toFixed(1)}°C` : '—'}</dd>
-        </div>
         {grid && (
-          <div className="stats__item">
-            <dt className="t-label">High risk</dt>
-            <dd className="t-data">
-              {(riskFor(grid).summary.elevated * 100).toFixed(0)}%
-            </dd>
-          </div>
-        )}
-        {rm?.heatGapC != null && (
-          <div className="stats__item stats__item--accent">
-            <dt className="t-label">Shade worth</dt>
-            <dd className="t-data">{rm.heatGapC.toFixed(1)}°C</dd>
-          </div>
+          <HeatStats
+            grid={grid}
+            rm={rm}
+            view={view}
+            period={activePeriod(cadence, year, month)}
+          />
         )}
       </dl>
     </div>
@@ -438,7 +439,12 @@ export function LoadingBar() {
   useNdviYears()
   // A year fetched on demand is also "data in flight", and the hairline is the
   // only thing telling the user the scrubber is working rather than stuck.
-  const waitingOnYear = ndviPending(region, activePeriod(cadence, year, month))
+  const view = useApp((s) => s.view)
+  const { grid } = useRegionData(region)
+  const period = activePeriod(cadence, year, month)
+  const waitingOnYear = ndviPending(region, period) ||
+    (!!grid && (view === 'heat' || view === 'risk') &&
+      lstPending(region, heatYear(grid, period)))
   if (error) {
     return (
       <div className="databar databar--error">
@@ -447,6 +453,105 @@ export function LoadingBar() {
     )
   }
   return loading || waitingOnYear ? <div className="databar" aria-hidden="true" /> : null
+}
+
+/**
+ * What year the numbers are from, and which views do not follow the scrubber.
+ *
+ * Heat, baseline, risk and the shade gap are all per year: one clear summer
+ * Landsat scene each (pipeline/heat_years.py). Two things are not, and the
+ * readout says so rather than letting the scrubber imply otherwise:
+ *
+ *  - People is WorldPop 2020, the latest release at this resolution. It is never
+ *    extrapolated to other years.
+ *  - Priority is the planting plan. It is ranked on today's roads, buildings and
+ *    land use, so a "2017 plan" would be today's map scored with old heat —
+ *    a plan nobody could have made in 2017.
+ */
+function HeatStats({
+  grid,
+  rm,
+  view,
+  period,
+}: {
+  grid: RegionGrid
+  rm: RegionMeta | undefined
+  view: ViewId
+  period: string | null
+}) {
+  const latest = grid.years[grid.years.length - 1]
+  const monthly = !!period && period.includes('-')
+  const hy = heatYear(grid, period)
+  const layer = heatLayer(grid, hy)
+  const missing = heatMissing(grid.region, hy)
+  const scene = rm?.heatYears?.[String(hy)]?.scene ?? (hy === latest ? rm?.lstScene : undefined)
+  const when = scene ? captureLabel(scene.datetime.slice(0, 10)) : String(hy)
+
+  const risk = layer ? riskFor(grid, hy).summary : null
+  const gap = hy === latest && rm?.heatGapC != null ? rm.heatGapC : shadeGapC(grid, hy)
+
+  let scope: { label: string; value: string; title: string } | null = null
+  if (view === 'people') {
+    scope = {
+      label: 'People · every year',
+      value: 'WorldPop 2020',
+      title: 'Population is WorldPop 2020 at 100 m, the most recent release at this ' +
+        'resolution. It is the same under every year and is not extrapolated.',
+    }
+  } else if (view === 'priority') {
+    scope = {
+      label: 'Plan · every year',
+      value: `Data of ${latest}`,
+      title: 'The ranked sites are a planting plan for now: today’s roads, buildings ' +
+        'and land use, scored with the latest heat and canopy. Earlier years are ' +
+        'in the Heat, Canopy and Risk views.',
+    }
+  } else if (view === 'heat' || view === 'risk') {
+    scope = missing
+      ? {
+          label: `Heat · none in ${hy}`,
+          value: 'No clear scene',
+          title: `No Landsat scene in May–June ${hy} was at least 90% cloud-free ` +
+            'over this area. Not filled in from another year.',
+        }
+      : {
+          label: monthly ? 'Heat · yearly only' : 'Heat',
+          value: when,
+          title: `Landsat surface temperature, one morning (~10:30 local) on ${when}. ` +
+            'Each year is a different morning, so compare where it is hot, not the ' +
+            '°C between years; risk measures heat above that same morning’s baseline.' +
+            (monthly ? ' There is no monthly heat: Landsat passes every 8–16 days ' +
+              'and smog and monsoon cloud leave most months without a clear scene.' : ''),
+        }
+  }
+
+  return (
+    <>
+      {scope && (
+        <div className="stats__item stats__item--scope" title={scope.title}>
+          <dt className="t-label">{scope.label}</dt>
+          <dd className="t-data">{scope.value}</dd>
+        </div>
+      )}
+      <div className="stats__item" title={`Shaded-ground temperature in the ${when} scene`}>
+        <dt className="t-label">Baseline</dt>
+        <dd className="t-data">{layer ? `${layer.baselineC.toFixed(1)}°C` : '—'}</dd>
+      </div>
+      <div className="stats__item">
+        <dt className="t-label">High risk</dt>
+        <dd className="t-data">
+          {risk && risk.assessed ? `${(risk.elevated * 100).toFixed(0)}%` : '—'}
+        </dd>
+      </div>
+      {gap != null && (
+        <div className="stats__item stats__item--accent"
+          title={`Bare ground ran this much hotter than well-vegetated ground in the ${when} scene`}>
+          <dt className="t-label">Shade worth</dt>
+          <dd className="t-data">{gap.toFixed(1)}°C</dd>
+        </div>
+      )}
+    </>
+  )
 }
 
 /**

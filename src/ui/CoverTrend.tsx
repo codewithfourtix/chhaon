@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { allYearsLoaded, useNdviYears } from '../data/load'
+import { activePeriod, allYearsLoaded, heatYear, useNdviYears } from '../data/load'
 import {
   blindSpots, loadMonthly, monthLabel, usableMonths, yearOnYear, type MonthlyDoc,
 } from '../data/monthly'
@@ -45,7 +45,11 @@ export function CoverTrend() {
   // Recomputed over whichever cells the drawn box contains — no new data, and
   // the same arithmetic the whole-region figure uses.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const stats = useMemo(() => (grid ? statsForBox(grid, area) : null), [grid, area, ndviVersion])
+  const month = useApp((s) => s.month)
+  const heatYr = grid ? heatYear(grid, activePeriod(cadence, year, month)) : null
+  const stats = useMemo(
+    () => (grid && heatYr !== null ? statsForBox(grid, area, heatYr) : null),
+    [grid, area, heatYr, ndviVersion])
 
   const series = useMemo(() => {
     if (!stats || !grid) return []
@@ -140,7 +144,7 @@ export function CoverTrend() {
 
           {stats && (
             <p className="t-unit cover__extra">
-              {stats.meanLstC !== null && <>Mean surface {stats.meanLstC.toFixed(1)}°C. </>}
+              {stats.meanLstC !== null && <>Mean surface {stats.meanLstC.toFixed(1)}°C in summer {heatYr}. </>}
               {stats.people !== null && <>About {stats.people.toLocaleString()} people. </>}
               {stats.cells.toLocaleString()} cells.
             </p>

@@ -848,6 +848,72 @@ const testQueryBar = async (page) => {
   check(!(await drop.count()), 'Escape still closes it')
 }
 
+/* ------------------------------------------------- heat follows the year */
+
+/**
+ * Asked: "does heat, risk and this data also update with each year?" It did not:
+ * one Landsat scene sat under every year. Now each year has its own clear summer
+ * scene, and risk is rebuilt from that year's heat and canopy. People and the
+ * planting plan genuinely do not change, and must say so on screen.
+ */
+const testHeatFollowsYear = async (page) => {
+  console.log('\nHeat and risk follow the year')
+  const years = await page.evaluate(() =>
+    [...document.querySelectorAll('.scrubber__tick')].map((t) => t.getAttribute('aria-label')?.replace('Show ', '')))
+  const first = years[0]
+  const latest = years[years.length - 1]
+
+  const snap = () => page.evaluate(() => {
+    const item = (label) => [...document.querySelectorAll('.stats__item')]
+      .find((el) => el.querySelector('dt')?.textContent?.startsWith(label))
+    const dd = (label) => item(label)?.querySelector('dd')?.textContent ?? null
+    return {
+      raster: window.__map.getStyle().sources.field?.url ?? '',
+      heat: dd('Heat'),
+      baseline: dd('Baseline'),
+      risk: dd('High risk'),
+      scope: document.querySelector('.stats__item--scope dt')?.textContent ?? null,
+    }
+  })
+  const pick = async (y) => {
+    await page.getByRole('button', { name: `Show ${y}`, exact: true }).click()
+    await page.waitForFunction(
+      () => !document.querySelector('.databar') && !!window.__map.getSource('field'),
+      null, { timeout: 30_000 })
+    await page.waitForTimeout(600)
+  }
+
+  for (const view of ['Heat', 'Risk']) {
+    await page.getByRole('button', { name: new RegExp(`^${view}`) }).click()
+    await pick(latest)
+    const now = await snap()
+    await pick(first)
+    const then = await snap()
+    check(!!then.raster && then.raster !== now.raster,
+      `${view}: the map repaints for ${first} (a different image from ${latest})`)
+    check(then.heat?.includes(first) && now.heat?.includes(latest),
+      `${view}: the readout names each year's scene (${then.heat} / ${now.heat})`)
+    if (view === 'Heat') {
+      check(then.baseline !== now.baseline,
+        `the baseline is that year's own (${then.baseline} in ${first}, ${now.baseline} in ${latest})`)
+    } else {
+      check(then.risk !== '—' && now.risk !== '—',
+        `risk is computed for both years (${then.risk} / ${now.risk})`)
+    }
+  }
+
+  for (const [view, expect] of [['People', 'People · every year'], ['Priority', 'Plan · every year']]) {
+    await page.getByRole('button', { name: new RegExp(`^${view}`) }).click()
+    await page.waitForTimeout(500)
+    const s = await snap()
+    check(s.scope === expect, `${view} says it does not change with the year (${s.scope})`)
+  }
+  // Leave the scrubber where later tests expect it. Not `pick`: Priority draws
+  // sites, not a field raster, so there is no field source to wait for.
+  await page.getByRole('button', { name: `Show ${latest}`, exact: true }).click()
+  await page.waitForTimeout(600)
+}
+
 /* ------------------------------------------------------------------- run */
 
 const run = async () => {
@@ -864,6 +930,7 @@ const run = async () => {
   await testScrubberMovesTheGround(page)
   await testCadence(page)
   await testLegendMatchesMap(page)
+  await testHeatFollowsYear(page)
   await testQueryBar(page)
 
   check(errors.length === 0, `no page errors (${[...new Set(errors)].slice(0, 2).join(' | ') || 'none'})`)

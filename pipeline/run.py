@@ -797,7 +797,7 @@ def write_meta(new_regions):
             "resolution": {"ndvi": "10 m / px", "lst": "100 m / px",
                            "pop": "100 m / px", "grid": f"{CELL_M} m / cell"},
             "regions": existing,
-        }, f, indent=1)
+        }, f, separators=(",", ":"), allow_nan=False)
     return path
 
 

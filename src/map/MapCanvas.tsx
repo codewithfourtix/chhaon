@@ -5,7 +5,8 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { buildBasemapStyle, LIGHT_TOKENS, DARK_TOKENS, FIRST_LABEL_LAYER } from './basemapStyle'
 import { LAHORE_BOUNDS, REGIONS } from '../data/regions'
 import {
-  activePeriod, domainFor, loadNdviPeriod, prefetchNdviYears, rampBreaks, useNdviYears,
+  activePeriod, domainFor, heatLayer, heatMissing, heatYear, loadLstYear, loadNdviPeriod,
+  loadNdviYear, prefetchLstYears, prefetchNdviYears, rampBreaks, useNdviYears,
 } from '../data/load'
 import { rasterizeGrid } from './rasterize'
 import {
@@ -182,6 +183,16 @@ export function MapCanvas() {
     if (view === 'canopy' && !grid.ndvi[period]) {
       void loadNdviPeriod(grid, period)
       return
+    }
+    // Heat and risk: that year's summer scene, and for risk that year's canopy
+    // too. Same rule — keep the current layer until it lands. A year with no clear
+    // scene falls through and draws nothing; the readout says why.
+    if (view === 'heat' || view === 'risk') {
+      const hy = heatYear(grid, period)
+      const waits: Promise<void>[] = []
+      if (!heatLayer(grid, hy) && !heatMissing(grid.region, hy)) waits.push(loadLstYear(grid, hy))
+      if (view === 'risk' && !grid.ndvi[String(hy)]) waits.push(loadNdviYear(grid, hy))
+      if (waits.length) return
     }
 
     for (const id of DATA_LAYERS) if (m.getLayer(id)) m.removeLayer(id)
@@ -679,6 +690,20 @@ export function MapCanvas() {
       m.off('idle', start)
     }
   }, [grid])
+
+  // Heat years only once someone is looking at heat or risk: ~30 KB a year that
+  // the canopy and priority views never read, so nobody else pays for them.
+  const wantsHeat = view === 'heat' || view === 'risk'
+  useEffect(() => {
+    const m = map.current
+    if (!m || !grid || !wantsHeat) return
+    const start = () => prefetchLstYears(grid)
+    if (m.loaded()) start()
+    else m.once('idle', start)
+    return () => {
+      m.off('idle', start)
+    }
+  }, [grid, wantsHeat])
 
   // Selection ring — a paint update, never a layer rebuild.
   useEffect(() => {

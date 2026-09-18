@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { REGIONS, SOURCE_RES, UNIT, VIEWS } from '../../data/regions'
-import { activePeriod, domainFor, useNdviYears } from '../../data/load'
+import {
+  activePeriod, domainFor, heatLayer, heatYear, shadeGapC, useNdviYears,
+} from '../../data/load'
 import { RISK_BANDS, riskFor } from '../../data/risk'
 import { statsForBox } from '../../data/subarea'
 import { estimateCost, formatPkr } from '../../data/cost'
@@ -154,7 +156,7 @@ export function MobileShell() {
             <span>Method</span>
           </button>
           <p className="t-unit">
-            {grid ? `${SOURCE_RES[view]} · baseline ${grid.baselineC.toFixed(1)}°C` : ''}
+            {grid ? `${SOURCE_RES[view]} · baseline ${grid.years[grid.years.length - 1]} ${grid.baselineC.toFixed(1)}°C` : ''}
           </p>
         </footer>
       </Sheet>
@@ -376,6 +378,9 @@ function MobileBody({ onExpand }: { onExpand: () => void }) {
   const selectedId = useApp((s) => s.selectedSiteId)
   const select = useApp((s) => s.selectSite)
   const costPkr = useApp((s) => s.costPkr)
+  const year = useApp((s) => s.year)
+  const cadence = useApp((s) => s.cadence)
+  const month = useApp((s) => s.month)
   const { sites, grid, meta } = useRegionData(region)
 
   const rm = meta?.regions?.[region]
@@ -481,27 +486,38 @@ function MobileBody({ onExpand }: { onExpand: () => void }) {
     )
   }
 
-  const risk = riskFor(grid)
+  // Heat, baseline, risk and shade gap all follow the scrubber — that year's
+  // summer scene. See HeatStats in Chrome.tsx for the desktop equivalent.
+  const period = activePeriod(cadence, year, month)
+  const hy = heatYear(grid, period)
+  const latest = grid.years[grid.years.length - 1]
+  const layer = heatLayer(grid, hy)
+  const risk = riskFor(grid, hy)
+  const gap = hy === latest && rm?.heatGapC != null ? rm.heatGapC : shadeGapC(grid, hy)
+  const scene = rm?.heatYears?.[String(hy)]?.scene ?? (hy === latest ? rm?.lstScene : undefined)
   return (
     <>
       <div className="mstats">
         {view === 'heat' && (
-          <Stat label="Baseline" value={`${grid.baselineC.toFixed(1)}°C`} />
+          <Stat label={`Baseline ${hy}`} value={layer ? `${layer.baselineC.toFixed(1)}°C` : '—'} />
         )}
         {view === 'heat' && (
-          <Stat label="Shade worth" value={`${rm?.heatGapC?.toFixed(1) ?? '—'}°C`} accent />
+          <Stat label="Shade worth" value={gap != null ? `${gap.toFixed(1)}°C` : '—'} accent />
         )}
         {view === 'people' && stats?.people != null && (
           <Stat label={area ? 'In area' : 'People'} value={stats.people.toLocaleString()} />
         )}
-        <Stat label="High risk" value={`${(risk.summary.elevated * 100).toFixed(0)}%`} />
+        <Stat
+          label={`High risk ${hy}`}
+          value={risk.summary.assessed ? `${(risk.summary.elevated * 100).toFixed(0)}%` : '—'}
+        />
       </div>
       <p className="t-unit msheet__note">
         {view === 'heat'
-          ? 'Landsat surface temperature, mid-morning overpass — not air temperature.'
+          ? `Landsat surface temperature, one morning${scene ? ` (${scene.datetime.slice(0, 10)})` : ''} — not air temperature. Compare where it is hot, not °C between years.${period?.includes('-') ? ' Yearly only: no monthly heat.' : ''}`
           : view === 'people'
-            ? 'WorldPop 2020 constrained, 100 m grid.'
-            : 'Heat and shade deficit, in four fixed bands so a band means the same thing in every region.'}
+            ? 'WorldPop 2020 constrained, 100 m grid. The same under every year.'
+            : `Heat and shade deficit in ${hy}, in four fixed bands so a band means the same thing in every region.`}
       </p>
     </>
   )

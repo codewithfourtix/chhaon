@@ -28,6 +28,28 @@ export interface RegionGrid {
   landuse: number[]
   built: number[]
   baselineC: number
+  /**
+   * Surface temperature for earlier years, filled in as the scrubber asks for
+   * them. The latest year is `lst` above and is never duplicated here.
+   */
+  lstYears?: Record<string, HeatLayer>
+}
+
+/** One year's surface temperature and the shaded baseline measured in it. */
+export interface HeatLayer {
+  /** °C x10 */
+  lst: QGrid
+  baselineC: number
+}
+
+export interface HeatYear {
+  scene: { id: string; datetime: string; cloud: number }
+  baselineC: number
+  medianC: number
+  /** Share of cells with a clear reading. */
+  coverage: number
+  /** The latest year: the core file's `lst`, not a separate file. */
+  inline?: boolean
 }
 
 export interface SiteProps {
@@ -64,6 +86,8 @@ export interface RegionMeta {
     composited?: number; dates?: string[]
   }>
   lstScene: { id: string; datetime: string; cloud: number }
+  /** One summer scene per year, from pipeline/heat_years.py. Absent before it runs. */
+  heatYears?: Record<string, HeatYear>
   baselineC: number
   siteCount: number
   /** Median surface-temperature gap between bare and well-vegetated ground. */

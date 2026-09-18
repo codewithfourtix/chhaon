@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import type { FeatureCollection, Point } from 'geojson'
-import type { Meta, QGrid, RegionGrid, RegionId, SiteProps, ViewId } from './types'
+import type { HeatLayer, Meta, QGrid, RegionGrid, RegionId, SiteProps, ViewId } from './types'
 
 /**
  * Loads the pipeline's output. Everything is a static file committed to the
@@ -212,6 +212,133 @@ export function prefetchNdviYears(g: RegionGrid): void {
   idle(next)
 }
 
+/* --------------------------------------------------------------------------
+ * Surface temperature per year
+ * --------------------------------------------------------------------------
+ *
+ * Heat used to be one Landsat scene drawn under every year, so clicking 2017 in
+ * the Heat or Risk view changed nothing. pipeline/heat_years.py now writes one
+ * clear summer scene per year; the latest stays inline in the core file, the
+ * rest are fetched the way NDVI years are, and share the same version counter.
+ *
+ * Each year is one morning, so its absolute °C carry that day's weather.
+ * Nothing here compares °C across years: the colour ramp spans each year's own
+ * range, and risk measures heat above the baseline *of the same scene*.
+ */
+
+/**
+ * The year whose heat is on screen.
+ *
+ * Yearly: the selected year. Monthly: the latest year — there is no monthly heat
+ * (Landsat passes every 8–16 days, and smog and monsoon cloud would leave most
+ * months empty), which the readout says.
+ */
+export function heatYear(g: RegionGrid, period: string | null): number {
+  const latest = g.years[g.years.length - 1]
+  if (!period || isMonthly(period)) return latest
+  const y = Number(period)
+  return g.years.includes(y) ? y : latest
+}
+
+/** That year's heat, or null until it has loaded (or if it has no clear scene). */
+export function heatLayer(g: RegionGrid, year: number): HeatLayer | null {
+  const hit = g.lstYears?.[String(year)]
+  if (hit) return hit
+  if (year === g.years[g.years.length - 1]) return { lst: g.lst, baselineC: g.baselineC }
+  return null
+}
+
+interface LstDoc {
+  region: RegionId
+  year: number
+  cols: number
+  rows: number
+  lst: QGrid
+  baselineC: number
+}
+
+/** Years with no clear summer scene, so the map stops asking and says so. */
+const lstMissing = new Set<string>()
+
+export const heatMissing = (region: RegionId, year: number) =>
+  lstMissing.has(`${region}:${year}`)
+
+export function loadLstYear(g: RegionGrid, year: number): Promise<void> {
+  if (heatLayer(g, year) || heatMissing(g.region, year)) return Promise.resolve()
+  const memoKey = `lst:${g.region}:${year}`
+  const joined = inFlight.get(memoKey)
+  if (joined) return joined
+
+  const url = `data/${g.region}-lst-${year}.json`
+  const task = getJSON<LstDoc>(url)
+    .then((doc) => {
+      if (doc.cols !== g.cols || doc.rows !== g.rows) {
+        throw new Error(`${url} is ${doc.cols}x${doc.rows}, but the grid is ` +
+          `${g.cols}x${g.rows} — regenerate it`)
+      }
+      g.lstYears = { ...g.lstYears, [String(year)]: { lst: doc.lst, baselineC: doc.baselineC } }
+    })
+    .catch((e: unknown) => {
+      // Missing means no clear scene that year (or heat_years.py not yet run).
+      // Shown as a gap, never filled in from a neighbouring year.
+      lstMissing.add(`${g.region}:${year}`)
+      console.error('[lst]', e)
+    })
+    .finally(() => {
+      inFlight.delete(memoKey)
+      bumpNdvi()
+    })
+
+  inFlight.set(memoKey, task)
+  bumpNdvi()
+  return task
+}
+
+export const lstPending = (region: RegionId, year: number) =>
+  inFlight.has(`lst:${region}:${year}`)
+
+/** Background fill for heat, after the NDVI years, one at a time. */
+export function prefetchLstYears(g: RegionGrid): void {
+  const missing = g.years.filter((y) => !heatLayer(g, y))
+  const next = () => {
+    const y = missing.shift()
+    if (y === undefined) return
+    loadLstYear(g, y).then(() => setTimeout(next, 300))
+  }
+  next()
+}
+
+const median = (v: number[]) => {
+  if (!v.length) return NaN
+  const s = [...v].sort((a, b) => a - b)
+  const m = s.length >> 1
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
+}
+
+/**
+ * How much cooler shaded ground ran than bare ground, in one year's scene.
+ *
+ * The same measurement run.py makes for the latest year (median of NDVI < 0.15
+ * minus median of NDVI ≥ 0.45, same scene), so it is comparable across years in
+ * a way absolute temperature is not: both halves share that morning's weather.
+ */
+export function shadeGapC(g: RegionGrid, year: number): number | null {
+  const h = heatLayer(g, year)
+  const nd = g.ndvi[String(year)]
+  if (!h || !nd) return null
+  const bare: number[] = []
+  const veg: number[] = []
+  for (let i = 0; i < h.lst.length; i++) {
+    const t = h.lst[i]
+    const n = nd[i]
+    if (t === null || n === null) continue
+    if (n < 15) bare.push(t / 10)
+    else if (n >= 45) veg.push(t / 10)
+  }
+  if (bare.length <= 30 || veg.length <= 30) return null
+  return median(bare) - median(veg)
+}
+
 /** Percentile of the finite values in a quantised grid. */
 export function percentile(grid: (number | null)[], p: number, scale: number): number {
   const vals = grid.filter((v): v is number => v !== null).sort((a, b) => a - b)
@@ -247,15 +374,20 @@ export function domainFor(
    */
   scores?: number[]
 ): [number, number] {
-  const key = `${g.region}:${view}:${view === 'canopy' ? period : ''}`
+  const key = `${g.region}:${view}:${
+    view === 'canopy' ? period : view === 'heat' ? heatYear(g, period) : ''}`
   const hit = domainMemo.get(key)
   if (hit) return hit
 
   let lo: number
   let hi: number
   if (view === 'heat') {
-    lo = percentile(g.lst, 0.02, 10)
-    hi = percentile(g.lst, 0.98, 10)
+    // That year's own range. Each year is one morning, so a shared scale would
+    // colour a hotter day as a hotter neighbourhood.
+    const h = heatLayer(g, heatYear(g, period))
+    if (!h) return [percentile(g.lst, 0.02, 10), percentile(g.lst, 0.98, 10)]
+    lo = percentile(h.lst, 0.02, 10)
+    hi = percentile(h.lst, 0.98, 10)
   } else if (view === 'people') {
     lo = percentile(g.pop, 0.02, 10)
     hi = percentile(g.pop, 0.98, 10)

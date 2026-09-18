@@ -1,3 +1,4 @@
+import { heatLayer } from './load'
 import type { RegionGrid } from './types'
 
 /**
@@ -39,7 +40,15 @@ function centre(g: RegionGrid, r: number, c: number): [number, number] {
   ]
 }
 
-export function statsForBox(g: RegionGrid, box: Box | null): AreaStats | null {
+/**
+ * @param heatYr  Whose summer scene to average for `meanLstC`. Defaults to the
+ *                latest; null in the result while that year is still loading.
+ */
+export function statsForBox(
+  g: RegionGrid,
+  box: Box | null,
+  heatYr: number = g.years[g.years.length - 1]
+): AreaStats | null {
   const idx: number[] = []
 
   for (let r = 0; r < g.rows; r++) {
@@ -74,8 +83,9 @@ export function statsForBox(g: RegionGrid, box: Box | null): AreaStats | null {
   let lstN = 0
   let popSum = 0
   let popN = 0
+  const lst = heatLayer(g, heatYr)?.lst ?? []
   for (const i of idx) {
-    const l = g.lst[i]
+    const l = lst[i]
     if (l !== null && l !== undefined) {
       lstSum += l / 10
       lstN++
