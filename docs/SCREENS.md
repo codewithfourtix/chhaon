@@ -109,6 +109,13 @@ On the monthly track, months with no composite are drawn as faint stubs with the
 reason on hover: Nov–Feb smog, or a monsoon month with too few scenes to composite
 haze out. About a third of the Lahore year, and it is shown rather than skipped.
 
+**The photograph under the data follows the scrubber**, chosen by the date it was
+taken rather than the date it was published. The readout states that date; where
+no photograph exists for the year, it says "none in 2018" and shows the most recent
+earlier one — never a later one.
+
+Opens on the most recent measurement, not wherever the intro countdown stopped.
+
 ---
 
 ## 6. Command Bar

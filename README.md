@@ -148,6 +148,28 @@ as a labelled gap. A blank stretch nobody explains looks like a broken chart.
 The scrubber switches cadence, the Green cover panel charts whichever one is
 active, and `#c=monthly&mo=2026-06` sends a specific month to someone.
 
+### The photograph follows the year
+
+Clicking 2017 used to change the measured overlay and leave today's photograph
+underneath, because the satellite basemap was one current mosaic. It now swaps to
+Esri's archived imagery — but chosen by the date each photograph was **taken**,
+not the date it was published.
+
+That distinction is the whole feature. Esri's release of 18 Sep 2019 shows Model
+Town as it was photographed on **10 Feb 2017**; labelling it "2019" would show
+two-year-old ground as current. `pipeline/imagery.py` asks every archived release
+what it actually shows over each region and picks, per year, the capture taken
+inside that year nearest the spring window the NDVI is locked to.
+
+Where no photograph was taken that year, it shows the most recent **earlier** one
+and the readout says **"Imagery · none in 2018"**. Never a later one: that would put
+a photograph of the future under a past measurement. Across the five regions, 5–7
+of the 9 years have a photograph of their own.
+
+The capture date, sensor and resolution sit in the readout — *10 Feb 2017 ·
+GeoEye-1 · 0.46 m* — and hovering says how much of the region that date covers,
+since a mosaic can straddle two capture strips.
+
 ### Catching change while it is still news
 
 The yearly layers are locked to one spring window so 2017 and 2025 are
@@ -394,6 +416,7 @@ python pipeline/run.py              # all five regions — slow, the decade of y
 python pipeline/run.py model-town   # just one
 python pipeline/recent.py           # the fast rolling stage: recent passes and detected loss
 python pipeline/monthly.py          # monthly composites for the recent 24 months
+python pipeline/imagery.py          # historical satellite imagery, matched by capture date
 python pipeline/split_years.py      # re-shape committed grids into core + per-year files
 ```
 

@@ -379,6 +379,64 @@ Monthly composites are held to the yearly layers' 92% coverage bar rather than t
 60% a single pass gets. A single pass is one observation and allowed to be partial;
 a composite had several scenes to fill from and has no excuse.
 
+### 3.14b The photograph is chosen by when it was taken, not when it was published
+
+Reported as a bug: "when I click 2017 I still see the 2026 satellite view, nothing
+changes." Three things were true at once.
+
+**The photograph never changed.** The satellite basemap was Esri's single current
+mosaic, so the scrubber changed a translucent overlay and left today's ground
+underneath. From the default Priority view, where the year affects no layer at all,
+clicking a year visibly did nothing.
+
+Esri archives every past release as Wayback, which fixes that — but **a release is
+not a capture**. The 18 Sep 2019 release shows Model Town as photographed on
+10 Feb 2017. Picking by release would have labelled two-year-old ground "2019",
+which is exactly the kind of quiet mislabelling this product exists to refuse.
+
+Each release publishes a metadata layer with the source date of every patch, so
+`pipeline/imagery.py` asks all ~160 releases since 2016 what they show at each
+region, collapses them to distinct photographs, and chooses per year:
+
+- a capture **inside** the year, nearest the 1 April anchor the yearly NDVI is
+  locked to, so the ground and the measurement over it are from the same season;
+- otherwise the most recent capture **before** the year, and the readout says
+  "none in 2018". **Never a later one** — a future photograph under a past
+  measurement is the one mistake this could make that nobody would catch by eye.
+
+Result: 5–7 of 9 years per region get a photograph of their own. Resolved offline
+into `public/data/imagery.json`, so the app makes no metadata calls; only tiles are
+fetched live, as the current basemap's already were. `qa.py` fails if any year is
+ever given a later photograph.
+
+Mosaics are not uniform, so each chosen release is sampled at five points. Model
+Town's dates hold everywhere; Gulberg's often do not, and the readout's tooltip
+says so rather than presenting one date as covering the whole region.
+
+**The workspace opened on an arbitrary year.** The intro counts backwards through
+the years, and whichever it had reached when the button was pressed stayed selected —
+2023 one time, 2019 the next — over data from the latest year. It now always opens
+on the most recent measurement.
+
+**Clicks landed on the wrong year.** On an ordinary laptop the readout kept its full
+width and left the scrubber 120–190 px for nine years: ticks 15–24 px apart with
+40 px hit areas, every one overlapping the next, so a click on 2020 hit 2021, which
+sits later in the DOM and on top. Below 1700 px the readout now takes its own line
+under the scrubber, giving the track 540–840 px — which is what the design spec
+("full width between rail and scale") already said. Hit areas are also capped at
+the spacing to the next tick, so they cannot overlap at any width.
+
+The first version of this fix followed the year everywhere, including through the
+intro — whose countdown steps through every year, so it fetched ten archived
+releases and 200 tiles, roughly 5 MB, in the first eleven seconds. `prodcheck` flagged
+it as tiles still in flight from superseded releases, which was the right alarm for
+the wrong-looking reason. The photograph now ignores the intro and waits 350 ms for
+the year to settle.
+
+And the collapsed rail hid its labels with `display:none`, which also removed them
+from the accessibility tree: below 1100 px the view and region buttons had no
+accessible name. They carry `aria-label` now.
+
 ### 3.15 Recent passes are a separate analysis, never mixed with the yearly ones
 
 The yearly composites are locked to one spring window precisely so that 2017 and
@@ -720,6 +778,11 @@ invisible in the UI: the layer simply keeps showing the previous year.
 | The Priority legend disagreed with the map | Priority's domain comes from the ranking, not the grid, so `domainFor()` returned a hard-coded 0.25–0.95 while the circles were painted from the real spread (0.33–0.80 in Model Town). Four views honoured the single-source rule and the fifth quietly did not |
 | The 3G load figure was measured wrong, twice | The probe waited on `window.__map` (dev-only, so production reported its 182 s timeout), then on any `<li>` in the ranked list — which matches the empty-state row, so it fired before any data arrived and reported 2.5 s. A perf probe that can pass without the thing it measures will eventually put a wrong number in a README |
 | Area-select and report placement could not be told apart | Both armed the map's click handler. Placement now skips when the other is armed, and arming either disarms the other in the store |
+| The intro fetched ten photographs | The first version of the fix followed the year everywhere, including the intro's countdown, which steps through every year: 10 archived releases and 200 tiles, ~5 MB, in eleven seconds. `prodcheck` caught it as tiles still in flight from superseded releases. The imagery now ignores the intro and waits 350 ms for the year to settle, so holding an arrow key fetches the year you stop on |
+| Clicking a year changed nothing | The satellite basemap was one current mosaic, and the default view is not year-dependent at all. The photograph now follows the scrubber, chosen by capture date |
+| The workspace opened on a random year | The intro countdown's position when the button was pressed |
+| Clicks on one year landed on the next | The readout squeezed the scrubber to 120–190 px on a laptop, so 40 px tick hit areas overlapped their neighbours. The readout moved to its own line, and hit areas are capped at tick spacing |
+| Collapsed rail buttons had no accessible name | `display:none` on the label removes it from the accessibility tree, not just from sight |
 | `write_year` could not write a month | It called `int(period)` on '2024-10'. Generalised to `write_period`, with the cadence in the filename rather than inferred |
 | The legend check started comparing the wrong view | It inherited whatever view the previous check left behind, and a new check began leaving the map on Canopy — so it compared the canopy domain against site scores and failed for a reason that was not there. A test that depends on running order will eventually lie |
 
