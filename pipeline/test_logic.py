@@ -393,6 +393,64 @@ def test_monthly_composite_uses_the_coverage_bar_not_the_pass_bar():
           f"accepted at {RECENT_MIN_COVERAGE:.0%}")
 
 
+def _caps(*dates):
+    return [{"captured": d, "source": "X", "resM": 0.5, "release": i} for i, d in enumerate(dates)]
+
+
+def test_imagery_prefers_a_same_year_capture_nearest_spring():
+    """
+    The photograph under a year should be from that year, and from the season the
+    yearly NDVI is locked to, so the ground and the measurement over it agree.
+    """
+    from imagery import pick, spring_anchor
+    caps = _caps("2020-02-06", "2020-04-21", "2020-10-22")
+    c, same = pick(caps, 2020, spring_anchor(2020))
+    assert same and c["captured"] == "2020-04-21", c
+    print("  2020 -> 21 Apr 2020 (nearest 1 Apr), not Feb or Oct")
+
+
+def test_imagery_never_shows_a_future_photograph():
+    """
+    The rule that matters most. With no capture in a year, the answer is the most
+    recent one BEFORE it — never a later one. Showing 2020 ground for 2018 would put
+    a photograph of the future under a past measurement.
+    """
+    from imagery import pick, spring_anchor
+    caps = _caps("2017-02-10", "2020-04-21")
+    c, same = pick(caps, 2018, spring_anchor(2018))
+    assert not same, "2018 has no capture of its own"
+    assert c["captured"] == "2017-02-10", f"picked {c['captured']} for 2018"
+    for year in range(2017, 2026):
+        c, _ = pick(caps, year, spring_anchor(year))
+        assert c["captured"][:4] <= str(year), f"{year} was given a {c['captured']} photograph"
+    print("  2018 -> 10 Feb 2017, and no year is ever given a later photograph")
+
+
+def test_imagery_release_date_is_not_capture_date():
+    """
+    Keyed on the date the photograph was taken, never the release date. Esri's
+    2019-09-18 release shows Model Town as photographed on 2017-02-10; picking by
+    release would label two-year-old ground as 2019.
+    """
+    from imagery import pick, spring_anchor
+    caps = [{"captured": "2017-02-10", "source": "GE01", "resM": 0.46,
+             "release": 9892, "releaseDate": "2019-09-18"}]
+    c, same = pick(caps, 2019, spring_anchor(2019))
+    assert not same, "a 2017 photograph must not count as 2019 because of its release date"
+    print("  released 2019-09-18, captured 2017-02-10 -> not a 2019 photograph")
+
+
+def test_imagery_for_a_month_stops_at_that_months_end():
+    """A monthly period gets the latest photograph taken on or before its last day."""
+    from imagery import pick_month
+    caps = _caps("2025-04-16", "2025-10-08")
+    c, same = pick_month(caps, "2025-09")
+    assert c["captured"] == "2025-04-16" and not same, c
+    c, same = pick_month(caps, "2025-10")
+    assert c["captured"] == "2025-10-08" and same, c
+    print("  Sep 2025 -> 16 Apr 2025 (earlier), Oct 2025 -> 8 Oct 2025 (same month)")
+
+
 def test_a_pass_must_earn_being_usable():
     """
     A pass starts unusable and has to clear the coverage floor. Getting this

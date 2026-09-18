@@ -257,6 +257,46 @@ def check_region(rid, meta):
             bad(f"{rid}: vegetated ground is not cooler than bare ground")
 
 
+def check_imagery(meta):
+    """
+    The historical basemap, checked against the rule that makes it honest: a year
+    is never shown a photograph taken after it.
+    """
+    path = f"{OUT}/imagery.json"
+    if not os.path.exists(path):
+        print("imagery   not built — the satellite basemap stays the live mosaic")
+        print()
+        return
+    doc = strict_load(path, "imagery")
+    if doc is None:
+        return
+    print("Imagery (Esri Wayback, by capture date)")
+    for rid, r in doc.get("regions", {}).items():
+        dates = {c["captured"] for c in r["captures"]}
+        years = meta.get("regions", {}).get(rid, {}).get("years", [])
+        missing = [y for y in years if str(y) not in r["byYear"]]
+        if missing:
+            bad(f"{rid}: years {missing} have no imagery chosen")
+        for y, v in r["byYear"].items():
+            if v["capture"] not in dates:
+                bad(f"{rid}: {y} points at {v['capture']}, which is not a known capture")
+            # The rule that matters: never a future photograph under a past year.
+            if v["capture"][:4] > y:
+                bad(f"{rid}: {y} is shown a photograph from {v['capture']} — later "
+                    "than the year it is under")
+            if v["sameYear"] != (v["capture"][:4] == y):
+                bad(f"{rid}: {y} claims sameYear={v['sameYear']} for a "
+                    f"{v['capture']} photograph")
+        for m, v in r.get("byMonth", {}).items():
+            if v["capture"][:7] > m:
+                bad(f"{rid}: {m} is shown a photograph from {v['capture']} — after "
+                    "that month")
+        same = sum(1 for v in r["byYear"].values() if v["sameYear"])
+        print(f"  {rid:12} {len(r['captures'])} captures, {same}/{len(r['byYear'])} years "
+              "with a same-year photograph")
+    print()
+
+
 def main():
     mpath = f"{OUT}/meta.json"
     if not os.path.exists(mpath):
@@ -272,6 +312,8 @@ def main():
         else:
             check_region(rid, meta)
         print()
+
+    check_imagery(meta)
 
     if PROBLEMS:
         print(f"{len(PROBLEMS)} PROBLEM(S):")

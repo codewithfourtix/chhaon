@@ -1,0 +1,1298 @@
+{
+ "generated": "2026-09-18T16:38:37+00:00",
+ "source": "Esri World Imagery Wayback",
+ "tileUrl": "https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/{release}/{z}/{y}/{x}",
+ "anchor": "04-01",
+ "monthsWindow": 24,
+ "regions": {
+  "model-town": {
+   "captures": [
+    {
+     "captured": "2013-05-06",
+     "source": "Pleiades",
+     "resM": 0.5,
+     "release": 3515,
+     "releaseDate": "2016-01-13",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2017-02-10",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 13161,
+     "releaseDate": "2018-01-08",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2020-02-06",
+     "source": "WV03",
+     "resM": 0.31,
+     "release": 27659,
+     "releaseDate": "2021-04-28",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2020-04-21",
+     "source": "WV03_VNIR",
+     "resM": 0.31,
+     "release": 119,
+     "releaseDate": "2020-10-14",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2020-10-22",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 16749,
+     "releaseDate": "2021-10-13",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2022-05-22",
+     "source": "WV03",
+     "resM": 0.31,
+     "release": 45441,
+     "releaseDate": "2022-08-31",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2023-04-04",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 64776,
+     "releaseDate": "2023-08-31",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2023-11-22",
+     "source": "WV03",
+     "resM": 0.31,
+     "release": 20337,
+     "releaseDate": "2024-09-19",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2025-04-16",
+     "source": "LG04",
+     "resM": 0.34,
+     "release": 52304,
+     "releaseDate": "2025-09-04",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2025-10-08",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 22869,
+     "releaseDate": "2026-03-26",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    }
+   ],
+   "byYear": {
+    "2017": {
+     "capture": "2017-02-10",
+     "sameYear": true
+    },
+    "2018": {
+     "capture": "2017-02-10",
+     "sameYear": false
+    },
+    "2019": {
+     "capture": "2017-02-10",
+     "sameYear": false
+    },
+    "2020": {
+     "capture": "2020-04-21",
+     "sameYear": true
+    },
+    "2021": {
+     "capture": "2020-10-22",
+     "sameYear": false
+    },
+    "2022": {
+     "capture": "2022-05-22",
+     "sameYear": true
+    },
+    "2023": {
+     "capture": "2023-04-04",
+     "sameYear": true
+    },
+    "2024": {
+     "capture": "2023-11-22",
+     "sameYear": false
+    },
+    "2025": {
+     "capture": "2025-04-16",
+     "sameYear": true
+    }
+   },
+   "byMonth": {
+    "2024-10": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2024-11": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2024-12": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2025-01": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2025-02": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2025-03": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2025-04": {
+     "capture": "2025-04-16",
+     "samePeriod": true
+    },
+    "2025-05": {
+     "capture": "2025-04-16",
+     "samePeriod": false
+    },
+    "2025-06": {
+     "capture": "2025-04-16",
+     "samePeriod": false
+    },
+    "2025-07": {
+     "capture": "2025-04-16",
+     "samePeriod": false
+    },
+    "2025-08": {
+     "capture": "2025-04-16",
+     "samePeriod": false
+    },
+    "2025-09": {
+     "capture": "2025-04-16",
+     "samePeriod": false
+    },
+    "2025-10": {
+     "capture": "2025-10-08",
+     "samePeriod": true
+    },
+    "2025-11": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2025-12": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-01": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-02": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-03": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-04": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-05": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-06": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-07": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-08": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-09": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    }
+   }
+  },
+  "gulberg": {
+   "captures": [
+    {
+     "captured": "2013-05-06",
+     "source": "Pleiades",
+     "resM": 0.5,
+     "release": 3515,
+     "releaseDate": "2016-01-13",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2017-02-10",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 13161,
+     "releaseDate": "2018-01-08",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2020-02-06",
+     "source": "WV03",
+     "resM": 0.31,
+     "release": 27659,
+     "releaseDate": "2021-04-28",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2020-04-21",
+     "source": "WV03_VNIR",
+     "resM": 0.31,
+     "release": 119,
+     "releaseDate": "2020-10-14",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2020-05-18",
+     "source": "WV02",
+     "resM": 0.5,
+     "release": 16749,
+     "releaseDate": "2021-10-13",
+     "samples": 5,
+     "matching": 3,
+     "otherDates": [
+      "2020-10-22"
+     ]
+    },
+    {
+     "captured": "2021-06-12",
+     "source": "WV03",
+     "resM": 0.31,
+     "release": 7110,
+     "releaseDate": "2022-11-02",
+     "samples": 5,
+     "matching": 3,
+     "otherDates": [
+      "2022-05-22"
+     ]
+    },
+    {
+     "captured": "2022-05-22",
+     "source": "WV03",
+     "resM": 0.31,
+     "release": 45441,
+     "releaseDate": "2022-08-31",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2023-04-04",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 64776,
+     "releaseDate": "2023-08-31",
+     "samples": 5,
+     "matching": 4,
+     "otherDates": [
+      "2022-05-22"
+     ]
+    },
+    {
+     "captured": "2023-11-22",
+     "source": "WV03",
+     "resM": 0.31,
+     "release": 32553,
+     "releaseDate": "2024-08-15",
+     "samples": 5,
+     "matching": 1,
+     "otherDates": [
+      "2023-04-04",
+      "2024-02-08"
+     ]
+    },
+    {
+     "captured": "2025-01-27",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 64001,
+     "releaseDate": "2026-02-26",
+     "samples": 5,
+     "matching": 3,
+     "otherDates": [
+      "2025-04-16"
+     ]
+    },
+    {
+     "captured": "2025-05-17",
+     "source": "LG01",
+     "resM": 0.34,
+     "release": 52304,
+     "releaseDate": "2025-09-04",
+     "samples": 5,
+     "matching": 3,
+     "otherDates": [
+      "2025-04-16"
+     ]
+    },
+    {
+     "captured": "2025-10-08",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 22869,
+     "releaseDate": "2026-03-26",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    }
+   ],
+   "byYear": {
+    "2017": {
+     "capture": "2017-02-10",
+     "sameYear": true
+    },
+    "2018": {
+     "capture": "2017-02-10",
+     "sameYear": false
+    },
+    "2019": {
+     "capture": "2017-02-10",
+     "sameYear": false
+    },
+    "2020": {
+     "capture": "2020-04-21",
+     "sameYear": true
+    },
+    "2021": {
+     "capture": "2021-06-12",
+     "sameYear": true
+    },
+    "2022": {
+     "capture": "2022-05-22",
+     "sameYear": true
+    },
+    "2023": {
+     "capture": "2023-04-04",
+     "sameYear": true
+    },
+    "2024": {
+     "capture": "2023-11-22",
+     "sameYear": false
+    },
+    "2025": {
+     "capture": "2025-05-17",
+     "sameYear": true
+    }
+   },
+   "byMonth": {
+    "2024-10": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2024-11": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2024-12": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2025-01": {
+     "capture": "2025-01-27",
+     "samePeriod": true
+    },
+    "2025-02": {
+     "capture": "2025-01-27",
+     "samePeriod": false
+    },
+    "2025-03": {
+     "capture": "2025-01-27",
+     "samePeriod": false
+    },
+    "2025-04": {
+     "capture": "2025-01-27",
+     "samePeriod": false
+    },
+    "2025-05": {
+     "capture": "2025-05-17",
+     "samePeriod": true
+    },
+    "2025-06": {
+     "capture": "2025-05-17",
+     "samePeriod": false
+    },
+    "2025-07": {
+     "capture": "2025-05-17",
+     "samePeriod": false
+    },
+    "2025-08": {
+     "capture": "2025-05-17",
+     "samePeriod": false
+    },
+    "2025-09": {
+     "capture": "2025-05-17",
+     "samePeriod": false
+    },
+    "2025-10": {
+     "capture": "2025-10-08",
+     "samePeriod": true
+    },
+    "2025-11": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2025-12": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-01": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-02": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-03": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-04": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-05": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-06": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-07": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-08": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-09": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    }
+   }
+  },
+  "dha": {
+   "captures": [
+    {
+     "captured": "2013-05-06",
+     "source": "Pleiades",
+     "resM": 0.5,
+     "release": 3515,
+     "releaseDate": "2016-01-13",
+     "samples": 5,
+     "matching": 3,
+     "otherDates": [
+      "2010-02-02"
+     ]
+    },
+    {
+     "captured": "2017-02-10",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 13161,
+     "releaseDate": "2018-01-08",
+     "samples": 5,
+     "matching": 3,
+     "otherDates": [
+      "2016-04-11"
+     ]
+    },
+    {
+     "captured": "2020-02-06",
+     "source": "WV03",
+     "resM": 0.31,
+     "release": 27659,
+     "releaseDate": "2021-04-28",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2020-04-21",
+     "source": "WV03_VNIR",
+     "resM": 0.31,
+     "release": 119,
+     "releaseDate": "2020-10-14",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2020-10-22",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 16749,
+     "releaseDate": "2021-10-13",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2022-05-22",
+     "source": "WV03",
+     "resM": 0.31,
+     "release": 45441,
+     "releaseDate": "2022-08-31",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2023-11-22",
+     "source": "WV03",
+     "resM": 0.31,
+     "release": 20337,
+     "releaseDate": "2024-09-19",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2025-01-27",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 64001,
+     "releaseDate": "2026-02-26",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2025-05-17",
+     "source": "LG01",
+     "resM": 0.34,
+     "release": 52304,
+     "releaseDate": "2025-09-04",
+     "samples": 5,
+     "matching": 2,
+     "otherDates": [
+      "2025-03-05"
+     ]
+    },
+    {
+     "captured": "2025-10-08",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 22869,
+     "releaseDate": "2026-03-26",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    }
+   ],
+   "byYear": {
+    "2017": {
+     "capture": "2017-02-10",
+     "sameYear": true
+    },
+    "2018": {
+     "capture": "2017-02-10",
+     "sameYear": false
+    },
+    "2019": {
+     "capture": "2017-02-10",
+     "sameYear": false
+    },
+    "2020": {
+     "capture": "2020-04-21",
+     "sameYear": true
+    },
+    "2021": {
+     "capture": "2020-10-22",
+     "sameYear": false
+    },
+    "2022": {
+     "capture": "2022-05-22",
+     "sameYear": true
+    },
+    "2023": {
+     "capture": "2023-11-22",
+     "sameYear": true
+    },
+    "2024": {
+     "capture": "2023-11-22",
+     "sameYear": false
+    },
+    "2025": {
+     "capture": "2025-05-17",
+     "sameYear": true
+    }
+   },
+   "byMonth": {
+    "2024-10": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2024-11": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2024-12": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2025-01": {
+     "capture": "2025-01-27",
+     "samePeriod": true
+    },
+    "2025-02": {
+     "capture": "2025-01-27",
+     "samePeriod": false
+    },
+    "2025-03": {
+     "capture": "2025-01-27",
+     "samePeriod": false
+    },
+    "2025-04": {
+     "capture": "2025-01-27",
+     "samePeriod": false
+    },
+    "2025-05": {
+     "capture": "2025-05-17",
+     "samePeriod": true
+    },
+    "2025-06": {
+     "capture": "2025-05-17",
+     "samePeriod": false
+    },
+    "2025-07": {
+     "capture": "2025-05-17",
+     "samePeriod": false
+    },
+    "2025-08": {
+     "capture": "2025-05-17",
+     "samePeriod": false
+    },
+    "2025-09": {
+     "capture": "2025-05-17",
+     "samePeriod": false
+    },
+    "2025-10": {
+     "capture": "2025-10-08",
+     "samePeriod": true
+    },
+    "2025-11": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2025-12": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-01": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-02": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-03": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-04": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-05": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-06": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-07": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-08": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-09": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    }
+   }
+  },
+  "johar-town": {
+   "captures": [
+    {
+     "captured": "2013-05-06",
+     "source": "Pleiades",
+     "resM": 0.5,
+     "release": 3515,
+     "releaseDate": "2016-01-13",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2017-02-10",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 13161,
+     "releaseDate": "2018-01-08",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2018-11-28",
+     "source": "WV03",
+     "resM": 0.31,
+     "release": 21485,
+     "releaseDate": "2020-01-30",
+     "samples": 5,
+     "matching": 4,
+     "otherDates": [
+      "2017-02-10"
+     ]
+    },
+    {
+     "captured": "2020-02-18",
+     "source": "WV03",
+     "resM": 0.31,
+     "release": 27659,
+     "releaseDate": "2021-04-28",
+     "samples": 5,
+     "matching": 3,
+     "otherDates": [
+      "2020-02-06"
+     ]
+    },
+    {
+     "captured": "2020-04-21",
+     "source": "WV03_VNIR",
+     "resM": 0.31,
+     "release": 119,
+     "releaseDate": "2020-10-14",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2021-04-30",
+     "source": "WV03",
+     "resM": 0.31,
+     "release": 16749,
+     "releaseDate": "2021-10-13",
+     "samples": 5,
+     "matching": 3,
+     "otherDates": [
+      "2020-10-22"
+     ]
+    },
+    {
+     "captured": "2022-04-07",
+     "source": "WV03",
+     "resM": 0.31,
+     "release": 45441,
+     "releaseDate": "2022-08-31",
+     "samples": 5,
+     "matching": 3,
+     "otherDates": [
+      "2022-05-22"
+     ]
+    },
+    {
+     "captured": "2023-04-04",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 64776,
+     "releaseDate": "2023-08-31",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2023-11-22",
+     "source": "WV03",
+     "resM": 0.31,
+     "release": 20337,
+     "releaseDate": "2024-09-19",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2025-04-16",
+     "source": "LG04",
+     "resM": 0.34,
+     "release": 52304,
+     "releaseDate": "2025-09-04",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2025-10-08",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 22869,
+     "releaseDate": "2026-03-26",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    }
+   ],
+   "byYear": {
+    "2017": {
+     "capture": "2017-02-10",
+     "sameYear": true
+    },
+    "2018": {
+     "capture": "2018-11-28",
+     "sameYear": true
+    },
+    "2019": {
+     "capture": "2018-11-28",
+     "sameYear": false
+    },
+    "2020": {
+     "capture": "2020-04-21",
+     "sameYear": true
+    },
+    "2021": {
+     "capture": "2021-04-30",
+     "sameYear": true
+    },
+    "2022": {
+     "capture": "2022-04-07",
+     "sameYear": true
+    },
+    "2023": {
+     "capture": "2023-04-04",
+     "sameYear": true
+    },
+    "2024": {
+     "capture": "2023-11-22",
+     "sameYear": false
+    },
+    "2025": {
+     "capture": "2025-04-16",
+     "sameYear": true
+    }
+   },
+   "byMonth": {
+    "2024-10": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2024-11": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2024-12": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2025-01": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2025-02": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2025-03": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2025-04": {
+     "capture": "2025-04-16",
+     "samePeriod": true
+    },
+    "2025-05": {
+     "capture": "2025-04-16",
+     "samePeriod": false
+    },
+    "2025-06": {
+     "capture": "2025-04-16",
+     "samePeriod": false
+    },
+    "2025-07": {
+     "capture": "2025-04-16",
+     "samePeriod": false
+    },
+    "2025-08": {
+     "capture": "2025-04-16",
+     "samePeriod": false
+    },
+    "2025-09": {
+     "capture": "2025-04-16",
+     "samePeriod": false
+    },
+    "2025-10": {
+     "capture": "2025-10-08",
+     "samePeriod": true
+    },
+    "2025-11": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2025-12": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-01": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-02": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-03": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-04": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-05": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-06": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-07": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-08": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-09": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    }
+   }
+  },
+  "iqbal-town": {
+   "captures": [
+    {
+     "captured": "2013-05-06",
+     "source": "Pleiades",
+     "resM": 0.5,
+     "release": 3515,
+     "releaseDate": "2016-01-13",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2017-02-10",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 13161,
+     "releaseDate": "2018-01-08",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2018-11-28",
+     "source": "WV03",
+     "resM": 0.31,
+     "release": 21485,
+     "releaseDate": "2020-01-30",
+     "samples": 5,
+     "matching": 3,
+     "otherDates": [
+      "2017-02-10"
+     ]
+    },
+    {
+     "captured": "2020-02-06",
+     "source": "WV03",
+     "resM": 0.31,
+     "release": 27659,
+     "releaseDate": "2021-04-28",
+     "samples": 5,
+     "matching": 3,
+     "otherDates": [
+      "2020-02-18"
+     ]
+    },
+    {
+     "captured": "2020-04-21",
+     "source": "WV03_VNIR",
+     "resM": 0.31,
+     "release": 119,
+     "releaseDate": "2020-10-14",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2020-10-22",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 16749,
+     "releaseDate": "2021-10-13",
+     "samples": 5,
+     "matching": 4,
+     "otherDates": [
+      "2021-04-30"
+     ]
+    },
+    {
+     "captured": "2022-05-22",
+     "source": "WV03",
+     "resM": 0.31,
+     "release": 45441,
+     "releaseDate": "2022-08-31",
+     "samples": 5,
+     "matching": 3,
+     "otherDates": [
+      "2022-04-07"
+     ]
+    },
+    {
+     "captured": "2023-04-04",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 64776,
+     "releaseDate": "2023-08-31",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2023-11-22",
+     "source": "WV03",
+     "resM": 0.31,
+     "release": 20337,
+     "releaseDate": "2024-09-19",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    },
+    {
+     "captured": "2025-01-27",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 64001,
+     "releaseDate": "2026-02-26",
+     "samples": 5,
+     "matching": 3,
+     "otherDates": [
+      "2025-04-16"
+     ]
+    },
+    {
+     "captured": "2025-04-09",
+     "source": "LG03",
+     "resM": 0.34,
+     "release": 52304,
+     "releaseDate": "2025-09-04",
+     "samples": 5,
+     "matching": 3,
+     "otherDates": [
+      "2025-04-16"
+     ]
+    },
+    {
+     "captured": "2025-10-08",
+     "source": "GE01",
+     "resM": 0.46,
+     "release": 22869,
+     "releaseDate": "2026-03-26",
+     "samples": 5,
+     "matching": 5,
+     "otherDates": []
+    }
+   ],
+   "byYear": {
+    "2017": {
+     "capture": "2017-02-10",
+     "sameYear": true
+    },
+    "2018": {
+     "capture": "2018-11-28",
+     "sameYear": true
+    },
+    "2019": {
+     "capture": "2018-11-28",
+     "sameYear": false
+    },
+    "2020": {
+     "capture": "2020-04-21",
+     "sameYear": true
+    },
+    "2021": {
+     "capture": "2020-10-22",
+     "sameYear": false
+    },
+    "2022": {
+     "capture": "2022-05-22",
+     "sameYear": true
+    },
+    "2023": {
+     "capture": "2023-04-04",
+     "sameYear": true
+    },
+    "2024": {
+     "capture": "2023-11-22",
+     "sameYear": false
+    },
+    "2025": {
+     "capture": "2025-04-09",
+     "sameYear": true
+    }
+   },
+   "byMonth": {
+    "2024-10": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2024-11": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2024-12": {
+     "capture": "2023-11-22",
+     "samePeriod": false
+    },
+    "2025-01": {
+     "capture": "2025-01-27",
+     "samePeriod": true
+    },
+    "2025-02": {
+     "capture": "2025-01-27",
+     "samePeriod": false
+    },
+    "2025-03": {
+     "capture": "2025-01-27",
+     "samePeriod": false
+    },
+    "2025-04": {
+     "capture": "2025-04-09",
+     "samePeriod": true
+    },
+    "2025-05": {
+     "capture": "2025-04-09",
+     "samePeriod": false
+    },
+    "2025-06": {
+     "capture": "2025-04-09",
+     "samePeriod": false
+    },
+    "2025-07": {
+     "capture": "2025-04-09",
+     "samePeriod": false
+    },
+    "2025-08": {
+     "capture": "2025-04-09",
+     "samePeriod": false
+    },
+    "2025-09": {
+     "capture": "2025-04-09",
+     "samePeriod": false
+    },
+    "2025-10": {
+     "capture": "2025-10-08",
+     "samePeriod": true
+    },
+    "2025-11": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2025-12": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-01": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-02": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-03": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-04": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-05": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-06": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-07": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-08": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    },
+    "2026-09": {
+     "capture": "2025-10-08",
+     "samePeriod": false
+    }
+   }
+  }
+ }
+}
